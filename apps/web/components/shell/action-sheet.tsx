@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarPlus, ClipboardList, type LucideIcon, UserPlus } from "lucide-react";
+import { CalendarPlus, ClipboardList, type LucideIcon, Medal, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,13 +8,18 @@ import { useTranslations } from "next-intl";
 import { Sheet } from "@/components/ui/sheet";
 import { listItemVariants, tap } from "@/lib/motion";
 
-const ACTIONS: { href: string; key: "book" | "report" | "guest"; icon: LucideIcon }[] = [
+const ACTIONS: {
+  href: string;
+  key: "book" | "report" | "guest" | "tournaments";
+  icon: LucideIcon;
+}[] = [
   { href: "/app/courts", key: "book", icon: CalendarPlus },
   { href: "/app/matches/report", key: "report", icon: ClipboardList },
   { href: "/app/guests?new=1", key: "guest", icon: UserPlus },
+  { href: "/app/tournaments", key: "tournaments", icon: Medal },
 ];
 
-/** The central "+" menu: book a court, report a result, invite a guest. */
+/** The central "+" menu: book a court, report a result, invite a guest, tournaments. */
 export function ActionSheet({
   open,
   onOpenChange,

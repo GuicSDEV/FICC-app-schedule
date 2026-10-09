@@ -9,7 +9,7 @@ import type {
 } from "../enums";
 import type { CoachSummary, CourtSummary, IsoDateTime, PlayerSummary, SlotSummary } from "./common";
 
-export type ScheduleCellState = "free" | "lesson" | "booking" | "frozen";
+export type ScheduleCellState = "free" | "lesson" | "booking" | "tournament" | "frozen";
 
 export interface ScheduleLessonInfo {
   id: string;
@@ -43,11 +43,20 @@ export interface FreezeSummary {
   courtIds: string[];
 }
 
+export interface ScheduleTournamentInfo {
+  matchId: string;
+  tournamentId: string;
+  tournamentName: string;
+  categoryName: string;
+  /** "Ana x Bia", or the round name while the players are not known yet. */
+  label: string;
+}
+
 export interface ScheduleCell {
   date: IsoDate;
   courtId: string;
   timeSlotId: string;
-  /** Frozen wins over everything; then lesson, booking, free. */
+  /** Frozen wins over everything; then lesson, booking, tournament match, free. */
   state: ScheduleCellState;
   /** The slot has already started. */
   past: boolean;
@@ -55,6 +64,7 @@ export interface ScheduleCell {
   favorite: boolean;
   lesson: ScheduleLessonInfo | null;
   booking: ScheduleBookingInfo | null;
+  tournament: ScheduleTournamentInfo | null;
   freeze: Pick<FreezeSummary, "id" | "reason"> | null;
 }
 

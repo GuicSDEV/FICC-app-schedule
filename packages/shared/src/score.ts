@@ -99,6 +99,58 @@ export const matchScoreSchema = z
 
 export type MatchScoreInput = z.input<typeof matchScoreSchema>;
 
+/** Best of 3 where the deciding set is a regular set too (no match tie-break). */
+export const bestOfThreeFullSetsSchema = z
+  .array(setScoreSchema)
+  .transform((sets, ctx): MatchScore => {
+    const tiebreak = sets.findIndex((set) => set.tiebreak);
+    if (tiebreak >= 0) {
+      ctx.addIssue({ code: "custom", path: [tiebreak], message: "validation.score.noTiebreak" });
+      return z.NEVER;
+    }
+    const result = matchScoreSchema.safeParse(sets);
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        ctx.addIssue({
+          code: "custom",
+          message: issue.message,
+          path: issue.path,
+          ...("params" in issue && issue.params ? { params: issue.params } : {}),
+        });
+      }
+      return z.NEVER;
+    }
+    return result.data;
+  });
+
+/** Winner of a pro-set to 8: 8-0 … 8-6, 9-7, or 9-8 (tie-break at 8-all). */
+export function proSetWinner({ a, b }: Pick<SetScore, "a" | "b">): TeamSide | null {
+  const high = Math.max(a, b);
+  const low = Math.min(a, b);
+  const valid = (high === 8 && low <= 6) || (high === 9 && (low === 7 || low === 8));
+  if (!valid) return null;
+  return a > b ? "A" : "B";
+}
+
+/** One pro-set to 8 games. */
+export const proSetSchema = z
+  .array(setScoreSchema)
+  .length(1, { message: "validation.score.oneSet" })
+  .transform((sets, ctx): MatchScore => {
+    const set = sets[0]!;
+    const winner = set.tiebreak ? null : proSetWinner(set);
+    if (!winner) {
+      ctx.addIssue({
+        code: "custom",
+        path: [0],
+        message: "validation.score.invalidProSet",
+        params: { score: `${set.a}-${set.b}` },
+      });
+      return z.NEVER;
+    }
+    return { sets, winner, setsWon: { A: winner === "A" ? 1 : 0, B: winner === "B" ? 1 : 0 } };
+  });
+
 const SET_TOKEN = /^(\[)?\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(\])?$/;
 
 /** Thrown by {@link splitScoreText} for a token that is not a set ("6-4" or "[10-8]"). */

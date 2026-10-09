@@ -4,6 +4,7 @@ import {
   type LeaderboardUpdatedEvent,
   SOCKET_EVENTS,
   type ScheduleUpdatedEvent,
+  type TournamentUpdatedEvent,
 } from "@ficc/shared";
 import type { Server } from "socket.io";
 
@@ -34,6 +35,10 @@ export class RealtimeService {
 
   freezeUpdated(event: FreezeUpdatedEvent): void {
     this.toClub(SOCKET_EVENTS.freezeUpdated, event);
+  }
+
+  tournamentUpdated(event: TournamentUpdatedEvent): void {
+    this.toClub(SOCKET_EVENTS.tournamentUpdated, event);
   }
 
   /** User ids are globally unique, so personal rooms need no club prefix. */

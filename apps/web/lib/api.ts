@@ -1,5 +1,34 @@
 import type {
   ActiveFreeze,
+  Announcement,
+  AutoScheduleInput,
+  AutoScheduleResult,
+  CircuitDetail,
+  CircuitSummary,
+  CreateTournamentRequest,
+  DrawView,
+  EntrySummary,
+  ManageEntryInput,
+  MyTournamentItem,
+  OrderOfPlay,
+  OrganizerEntryRequest,
+  PendingResults,
+  PlayerTitle,
+  PublicTournament,
+  RegisterEntryRequest,
+  ScheduleBoard,
+  ScheduleMatchInput,
+  TournamentCategoryRequest,
+  TournamentDetail,
+  TournamentListQuery,
+  TournamentOutcomeRequest,
+  TournamentStatus,
+  TournamentSummary,
+  UpdateEntryInput,
+  UpdateTournamentRequest,
+  CircuitInput,
+  UpdateCircuitInput,
+  SetScore,
   AdminGuestPassItem,
   AdminMemberItem,
   ApiErrorBody,
@@ -74,7 +103,7 @@ export class ApiError extends Error {
 type Query = Record<string, string | number | undefined | null>;
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   query?: Query;
   signal?: AbortSignal;
@@ -136,6 +165,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return data as T;
 }
 
+const put = <T>(path: string, body: unknown) => request<T>(path, { method: "PUT", body });
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body ?? {} });
 const patch = <T>(path: string, body: unknown) => request<T>(path, { method: "PATCH", body });
@@ -197,6 +227,85 @@ export const api = {
     create: (input: CreateGuestPassRequest) => post<GuestPassItem>("/guest-passes", input),
     cancel: (id: string) => post<GuestPassItem>(`/guest-passes/${id}/cancel`),
   },
+  tournaments: {
+    list: (query: TournamentListQuery = {}) =>
+      request<TournamentSummary[]>("/tournaments", { query }),
+    mine: () => request<MyTournamentItem[]>("/tournaments/mine"),
+    get: (id: string) => request<TournamentDetail>(`/tournaments/${id}`),
+    create: (input: CreateTournamentRequest) => post<TournamentDetail>("/tournaments", input),
+    update: (id: string, input: UpdateTournamentRequest) =>
+      patch<TournamentDetail>(`/tournaments/${id}`, input),
+    setStatus: (id: string, status: TournamentStatus) =>
+      post<TournamentDetail>(`/tournaments/${id}/status`, { status }),
+    setOrganizers: (id: string, userIds: string[]) =>
+      put<TournamentDetail>(`/tournaments/${id}/organizers`, { userIds }),
+    duplicate: (id: string) => post<TournamentDetail>(`/tournaments/${id}/duplicate`),
+    addCategory: (id: string, input: TournamentCategoryRequest) =>
+      post<TournamentDetail>(`/tournaments/${id}/categories`, input),
+    updateCategory: (id: string, categoryId: string, input: TournamentCategoryRequest) =>
+      patch<TournamentDetail>(`/tournaments/${id}/categories/${categoryId}`, input),
+    deleteCategory: (id: string, categoryId: string) =>
+      request<TournamentDetail>(`/tournaments/${id}/categories/${categoryId}`, {
+        method: "DELETE",
+      }),
+    register: (id: string, categoryId: string, input: RegisterEntryRequest) =>
+      post<EntrySummary>(`/tournaments/${id}/categories/${categoryId}/entries`, input),
+    addEntry: (id: string, categoryId: string, input: OrganizerEntryRequest) =>
+      post<EntrySummary>(`/tournaments/${id}/categories/${categoryId}/entries/manual`, input),
+    entries: (id: string) => request<EntrySummary[]>(`/tournaments/${id}/entries`),
+    entriesCsvUrl: (id: string) => `${API_URL}${API_PREFIX}/tournaments/${id}/entries.csv`,
+    draw: (id: string, categoryId: string) =>
+      request<DrawView>(`/tournaments/${id}/draws/${categoryId}`),
+    generateDraw: (id: string, categoryId: string) =>
+      post<DrawView>(`/tournaments/${id}/draws/${categoryId}/generate`),
+    swapDraw: (id: string, categoryId: string, entryA: string, entryB: string) =>
+      post<DrawView>(`/tournaments/${id}/draws/${categoryId}/swap`, { entryA, entryB }),
+    publishDraw: (id: string, categoryId: string) =>
+      post<DrawView>(`/tournaments/${id}/draws/${categoryId}/publish`),
+    orderOfPlay: (id: string) => request<OrderOfPlay[]>(`/tournaments/${id}/order-of-play`),
+    publishDay: (id: string, date: string) =>
+      post<void>(`/tournaments/${id}/order-of-play/publish`, { date }),
+    board: (id: string, date: string) =>
+      request<ScheduleBoard>(`/tournaments/${id}/schedule-board`, { query: { date } }),
+    autoSchedule: (id: string, input: AutoScheduleInput) =>
+      post<AutoScheduleResult>(`/tournaments/${id}/auto-schedule`, input),
+    rescheduleFrozen: (id: string, input: AutoScheduleInput) =>
+      post<AutoScheduleResult & { moved: number }>(`/tournaments/${id}/reschedule-frozen`, input),
+    pending: (id: string) => request<PendingResults>(`/tournaments/${id}/pending-results`),
+    announcements: (id: string) => request<Announcement[]>(`/tournaments/${id}/announcements`),
+    announce: (id: string, input: { body: string; categoryId?: string }) =>
+      post<Announcement[]>(`/tournaments/${id}/announcements`, input),
+    public: (publicId: string) =>
+      request<PublicTournament>(`/public/tournaments/${publicId}`, { noRefresh: true }),
+  },
+  tournamentEntries: {
+    accept: (id: string) => post<EntrySummary>(`/tournament-entries/${id}/accept`),
+    decline: (id: string) => post<void>(`/tournament-entries/${id}/decline`),
+    withdraw: (id: string) => post<void>(`/tournament-entries/${id}/withdraw`),
+    update: (id: string, input: UpdateEntryInput) =>
+      patch<EntrySummary>(`/tournament-entries/${id}`, input),
+    manage: (id: string, input: ManageEntryInput) =>
+      patch<EntrySummary>(`/tournament-entries/${id}/manage`, input),
+  },
+  tournamentMatches: {
+    schedule: (id: string, input: ScheduleMatchInput) =>
+      post<void>(`/tournament-matches/${id}/schedule`, input),
+    unschedule: (id: string) =>
+      request<void>(`/tournament-matches/${id}/schedule`, { method: "DELETE" }),
+    report: (id: string, sets: SetScore[]) =>
+      post<void>(`/tournament-matches/${id}/result`, { sets }),
+    confirm: (id: string) => post<void>(`/tournament-matches/${id}/confirm`),
+    outcome: (id: string, input: TournamentOutcomeRequest) =>
+      post<void>(`/tournament-matches/${id}/outcome`, input),
+  },
+  circuits: {
+    list: () => request<CircuitSummary[]>("/circuits"),
+    get: (id: string) => request<CircuitDetail>(`/circuits/${id}`),
+    create: (input: CircuitInput) => post<CircuitDetail>("/circuits", input),
+    update: (id: string, input: UpdateCircuitInput) =>
+      patch<CircuitDetail>(`/circuits/${id}`, input),
+  },
+  titles: (playerId: string) => request<PlayerTitle[]>(`/players/${playerId}/titles`),
   gate: {
     scan: (token: string) => post<GateScanResponse>("/gate/scan", { token }),
     search: (document: string) => request<GatePassView[]>("/gate/passes", { query: { document } }),

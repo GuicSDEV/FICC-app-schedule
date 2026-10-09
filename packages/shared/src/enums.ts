@@ -128,5 +128,82 @@ export const NOTIFICATION_TYPES = [
   "COURT_FROZEN",
   "COURT_UNFROZEN",
   "GUEST_CHECKED_IN",
+  "TOURNAMENT_ENTRY_CONFIRMED",
+  "TOURNAMENT_PARTNER_INVITE",
+  "TOURNAMENT_DRAW_PUBLISHED",
+  "TOURNAMENT_MATCH_SCHEDULED",
+  "TOURNAMENT_MATCH_CHANGED",
+  "TOURNAMENT_RESULT_REPORTED",
+  "TOURNAMENT_ADVANCED",
+  "TOURNAMENT_ELIMINATED",
+  "TOURNAMENT_CHAMPION",
+  "TOURNAMENT_ANNOUNCEMENT",
+  "TOURNAMENT_RESULT_OVERDUE",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+// ── Tournaments (Phase 9.5) ──────────────────────────────────────────────────
+
+export const TOURNAMENT_STATUSES = [
+  "DRAFT",
+  "REGISTRATION_OPEN",
+  "REGISTRATION_CLOSED",
+  "DRAW_PUBLISHED",
+  "IN_PROGRESS",
+  "FINISHED",
+  "CANCELLED",
+] as const;
+export type TournamentStatus = (typeof TOURNAMENT_STATUSES)[number];
+export const tournamentStatusSchema = z.enum(TOURNAMENT_STATUSES);
+
+/** Status changes an organizer may make (the API also moves a tournament forward on its own). */
+export const TOURNAMENT_TRANSITIONS: Record<TournamentStatus, readonly TournamentStatus[]> = {
+  DRAFT: ["REGISTRATION_OPEN", "CANCELLED"],
+  REGISTRATION_OPEN: ["DRAFT", "REGISTRATION_CLOSED", "CANCELLED"],
+  REGISTRATION_CLOSED: ["REGISTRATION_OPEN", "DRAW_PUBLISHED", "IN_PROGRESS", "CANCELLED"],
+  DRAW_PUBLISHED: ["IN_PROGRESS", "CANCELLED"],
+  IN_PROGRESS: ["FINISHED", "CANCELLED"],
+  FINISHED: [],
+  CANCELLED: [],
+};
+
+/** Knockout only, or round-robin groups whose best entries go on to a knockout. */
+export const DRAW_FORMATS = ["SINGLE_ELIMINATION", "GROUPS_THEN_KNOCKOUT"] as const;
+export type DrawFormat = (typeof DRAW_FORMATS)[number];
+export const drawFormatSchema = z.enum(DRAW_FORMATS);
+
+/** How a tournament match is scored (validated by the sport's rules). */
+export const SCORE_FORMATS = ["BEST_OF_3_MATCH_TIEBREAK", "BEST_OF_3", "PRO_SET_8"] as const;
+export type ScoreFormat = (typeof SCORE_FORMATS)[number];
+export const scoreFormatSchema = z.enum(SCORE_FORMATS);
+
+/** Seeding by the Elo ladder or by points in a circuit. */
+export const SEEDING_METHODS = ["ELO", "CIRCUIT"] as const;
+export type SeedingMethod = (typeof SEEDING_METHODS)[number];
+export const seedingMethodSchema = z.enum(SEEDING_METHODS);
+
+export const ENTRY_STATUSES = [
+  "PENDING_PARTNER",
+  "PENDING_APPROVAL",
+  "CONFIRMED",
+  "WAITLISTED",
+  "WITHDRAWN",
+  "REJECTED",
+] as const;
+export type EntryStatus = (typeof ENTRY_STATUSES)[number];
+export const entryStatusSchema = z.enum(ENTRY_STATUSES);
+
+export const PAYMENT_STATUSES = ["UNPAID", "PAID", "EXEMPT"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
+
+export const TOURNAMENT_STAGES = ["GROUP", "KNOCKOUT"] as const;
+export type TournamentStage = (typeof TOURNAMENT_STAGES)[number];
+
+/** How a decided match ended. BYE: the entry had no opponent in the first round. */
+export const MATCH_OUTCOMES = ["PLAYED", "WALKOVER", "RETIRED", "DISQUALIFIED", "BYE"] as const;
+export type MatchOutcome = (typeof MATCH_OUTCOMES)[number];
+export const matchOutcomeSchema = z.enum(MATCH_OUTCOMES);
+
+export const RESULT_STATUSES = ["NONE", "REPORTED", "CONFIRMED"] as const;
+export type ResultStatus = (typeof RESULT_STATUSES)[number];

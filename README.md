@@ -64,6 +64,9 @@ today (club time), then prints a summary and integrity checks:
   with occurrences for the next 8 weeks.
 - **Fictional data:** 30 members across categories, 10 unused membership IDs for trying sign-up,
   and 40 confirmed matches over the last four months with consistent Elo history.
+- **Tournaments:** the "Circuito FICC" circuit with its stage "Aberto de Primavera FICC"
+  (registration open, Simples A with 11 entries — Rafael is left out so registering can be tried —
+  and Duplas in groups) and a draft "Torneio de Inverno". Public pages live at `/t/<publicId>`.
 
 Every seeded account uses the password `ficc1234` (or `SEED_PASSWORD`). Members log in with
 their matrícula (for example `104218`, Rafael Almeida); staff and coaches with their email:

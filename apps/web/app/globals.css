@@ -340,3 +340,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Printed draws and orders of play: black on white, no app chrome. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body,
+  [vaul-drawer-wrapper] {
+    background: #fff !important;
+    color: #111 !important;
+  }
+}

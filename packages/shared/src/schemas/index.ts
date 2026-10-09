@@ -6,3 +6,4 @@ export * from "./freeze";
 export * from "./guest";
 export * from "./lesson";
 export * from "./match";
+export * from "./tournament";

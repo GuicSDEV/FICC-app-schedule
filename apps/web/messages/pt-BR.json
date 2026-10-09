@@ -67,7 +67,8 @@
       "lessons": "Aulas",
       "disputes": "Disputas",
       "members": "Sócios",
-      "gate": "Portaria"
+      "gate": "Portaria",
+      "tournaments": "Torneios"
     }
   },
   "shell": {
@@ -86,7 +87,9 @@
       "report": "Lançar resultado",
       "reportDescription": "O adversário confirma e o Elo atualiza",
       "guest": "Convidado",
-      "guestDescription": "Passe de um dia com QR para a portaria"
+      "guestDescription": "Passe de um dia com QR para a portaria",
+      "tournaments": "Torneios",
+      "tournamentsDescription": "Inscrições, chaves e programação"
     },
     "freeze": {
       "title": "{reason} · {courts} {active, select, true {{count, plural, one {interditada} other {interditadas}}} other {{count, plural, one {será interditada} other {serão interditadas}}}}",
@@ -164,6 +167,52 @@
     "GUEST_CHECKED_IN": {
       "title": "Convidado chegou",
       "body": "{guest} entrou no clube."
+    },
+    "TOURNAMENT_ENTRY_CONFIRMED": {
+      "title": "Inscrição confirmada",
+      "titleWaitlist": "Você está na lista de espera",
+      "body": "{tournament} · {category}."
+    },
+    "TOURNAMENT_PARTNER_INVITE": {
+      "title": "Convite para dupla",
+      "body": "{invitedBy} quer jogar com você em {tournament} ({category}). Aceite ou recuse."
+    },
+    "TOURNAMENT_DRAW_PUBLISHED": {
+      "title": "Chave publicada",
+      "body": "Saiu a chave de {tournament} · {category}."
+    },
+    "TOURNAMENT_MATCH_SCHEDULED": {
+      "title": "Jogo marcado",
+      "body": "Contra {opponent}, {day} às {time} na {court}."
+    },
+    "TOURNAMENT_MATCH_CHANGED": {
+      "title": "Seu jogo mudou",
+      "body": "Contra {opponent}: agora {day} às {time} na {court}.",
+      "unscheduled": "O jogo contra {opponent} saiu da programação. Aguarde o novo horário."
+    },
+    "TOURNAMENT_RESULT_REPORTED": {
+      "title": "Resultado para confirmar",
+      "body": "{reportedBy} lançou {score} em {tournament}. Confirme ou fale com a organização."
+    },
+    "TOURNAMENT_ADVANCED": {
+      "title": "Você avançou!",
+      "body": "Próxima fase: {round} em {tournament}.",
+      "bodyNoRound": "Você segue em {tournament}."
+    },
+    "TOURNAMENT_ELIMINATED": {
+      "title": "Fim da campanha",
+      "body": "Sua participação em {tournament} · {category} terminou. Obrigado por jogar!"
+    },
+    "TOURNAMENT_CHAMPION": {
+      "title": "Você é campeão!",
+      "body": "{tournament} · {category}."
+    },
+    "TOURNAMENT_ANNOUNCEMENT": {
+      "title": "Comunicado · {tournament}"
+    },
+    "TOURNAMENT_RESULT_OVERDUE": {
+      "title": "Resultado atrasado",
+      "body": "{players} em {tournament} ainda não tem resultado."
     }
   },
   "states": {
@@ -201,7 +250,8 @@
     "booking": "{court}, reservada por {players}",
     "bookingPending": "{court}, reservada (aguardando confirmação) por {players}",
     "frozen": "{court}, interditada por {reason, select, RAIN {chuva} other {manutenção}}",
-    "freeLabel": "Livre"
+    "freeLabel": "Livre",
+    "tournament": "{court}, jogo do torneio {name}: {match}"
   },
   "picker": {
     "chosen": "Jogadores escolhidos",
@@ -284,7 +334,8 @@
       "lesson": "Aula",
       "booking": "Reservada",
       "frozen": "Interditada",
-      "mine": "Sua reserva"
+      "mine": "Sua reserva",
+      "tournament": "Torneio"
     }
   },
   "dashboard": {
@@ -944,6 +995,588 @@
       "imported": "{created, plural, one {1 nova} other {# novas}}, {updated, plural, one {1 atualizada} other {# atualizadas}}",
       "importFailed": "Não foi possível importar.",
       "lineError": "Linha {line}: {message}"
+    }
+  },
+  "tournaments": {
+    "title": "Torneios",
+    "subtitle": "Inscreva-se, acompanhe chaves e jogos",
+    "loadFailed": "Não foi possível carregar o torneio.",
+    "filterLabel": "Filtrar torneios",
+    "filters": {
+      "OPEN": "Abertos",
+      "UPCOMING": "Próximos",
+      "IN_PROGRESS": "Em jogo",
+      "FINISHED": "Encerrados"
+    },
+    "empty": {
+      "OPEN": "Nenhum torneio com inscrições abertas",
+      "UPCOMING": "Nenhum torneio prestes a começar",
+      "IN_PROGRESS": "Nenhum torneio em andamento",
+      "FINISHED": "Nenhum torneio encerrado ainda"
+    },
+    "emptyDescription": "Quando a diretoria abrir um torneio, ele aparece aqui.",
+    "categories": "Categorias",
+    "allCategories": "Todas",
+    "circuits": "Circuitos",
+    "circuitStages": "Temporada {season} · {count, plural, =0 {nenhuma etapa} one {# etapa} other {# etapas}}",
+    "share": "Compartilhar link público",
+    "linkCopied": "Link copiado",
+    "manage": "Gerenciar",
+    "tabsLabel": "Seções do torneio",
+    "tabs": {
+      "info": "Sobre",
+      "entries": "Inscritos",
+      "draw": "Chaves",
+      "schedule": "Programação",
+      "results": "Resultados"
+    },
+    "groupRound": "Grupo {group} · Rodada {round}",
+    "roundNumber": "Rodada {round}",
+    "notScheduled": "A programar",
+    "awaitingConfirmation": "Aguardando confirmação",
+    "overdue": "Sem resultado",
+    "frozen": "Interditada",
+    "draftSchedule": "Rascunho",
+    "mine": {
+      "title": "Minha participação",
+      "withPartner": "Com {name}",
+      "seed": "cabeça de chave {seed}",
+      "accept": "Aceitar parceria",
+      "decline": "Recusar",
+      "accepted": "Parceria confirmada!",
+      "declined": "Convite recusado",
+      "edit": "Disponibilidade",
+      "withdraw": "Desistir",
+      "withdrawTitle": "Desistir da inscrição?",
+      "withdrawDescription": "Sua vaga vai para o próximo da lista de espera. Depois do sorteio, seus jogos viram W.O.",
+      "withdrawConfirm": "Desistir",
+      "keep": "Manter inscrição",
+      "withdrawn": "Inscrição cancelada",
+      "reportScore": "Lançar placar",
+      "confirmScore": "Confirmar placar"
+    },
+    "register": {
+      "cta": "Inscrever-se",
+      "joinWaitlist": "Entrar na lista de espera",
+      "title": "Inscrição · {category}",
+      "submit": "Confirmar inscrição",
+      "fullNote": "As vagas estão preenchidas: você entra na lista de espera e é chamado se alguém desistir.",
+      "approvalNote": "A organização confirma cada inscrição.",
+      "feeNote": "Taxa de inscrição: {fee} (pague na secretaria).",
+      "partner": "Parceiro(a)",
+      "partnerKind": "Tipo de parceiro",
+      "member": "Sócio",
+      "guest": "Convidado",
+      "partnerLabel": "Quem joga com você",
+      "partnerHint": "Seu parceiro recebe um convite e precisa aceitar.",
+      "guestName": "Nome completo do convidado",
+      "guestPhone": "Telefone do convidado",
+      "availability": "Disponibilidade",
+      "note": "Observação para a organização",
+      "notePlaceholder": "Ex.: só posso jogar sábado de manhã",
+      "confirmed": "Inscrição confirmada!",
+      "waitlisted": "Você está na lista de espera",
+      "partnerInvited": "Convite enviado ao parceiro",
+      "pendingApproval": "Inscrição enviada para aprovação",
+      "editTitle": "Minha disponibilidade",
+      "save": "Salvar",
+      "updated": "Disponibilidade atualizada"
+    },
+    "restrictions": {
+      "weekday": "Dias de semana",
+      "weekend": "Fins de semana",
+      "any": "Qualquer horário",
+      "from": "A partir das {time}",
+      "unavailable": "Dias em que não posso jogar",
+      "unavailableHint": "A programação evita estes dias.",
+      "weekdaySummary": "Dias de semana: a partir das {time}",
+      "weekendSummary": "Fins de semana: a partir das {time}",
+      "datesSummary": "Não pode: {dates}"
+    },
+    "entryStatus": {
+      "PENDING_PARTNER": "Aguardando parceiro",
+      "PENDING_APPROVAL": "Aguardando aprovação",
+      "CONFIRMED": "Confirmada",
+      "WAITLISTED": "Lista de espera",
+      "WITHDRAWN": "Desistência",
+      "REJECTED": "Recusada"
+    },
+    "payment": {
+      "UNPAID": "Pagamento pendente",
+      "PAID": "Pago",
+      "EXEMPT": "Isento"
+    },
+    "outcome": {
+      "PLAYED": "Placar",
+      "WALKOVER": "W.O.",
+      "RETIRED": "Abandono",
+      "DISQUALIFIED": "Desclassificação",
+      "BYE": "Bye"
+    },
+    "outcomeShort": {
+      "PLAYED": "",
+      "WALKOVER": "W.O.",
+      "RETIRED": "ab.",
+      "DISQUALIFIED": "desc.",
+      "BYE": "bye"
+    },
+    "drawFormat": {
+      "SINGLE_ELIMINATION": "Mata-mata",
+      "GROUPS_THEN_KNOCKOUT": "Grupos + mata-mata"
+    },
+    "scoreFormat": {
+      "BEST_OF_3_MATCH_TIEBREAK": "2 sets + match tie-break",
+      "BEST_OF_3": "Melhor de 3 sets",
+      "PRO_SET_8": "Pro-set de 8 games"
+    },
+    "placement": {
+      "CHAMPION": "Campeão",
+      "FINALIST": "Vice",
+      "SEMIFINAL": "Semifinal",
+      "QUARTERFINAL": "Quartas de final",
+      "ROUND_OF_16": "Oitavas de final",
+      "ROUND_OF_32": "1ª rodada (32)",
+      "PARTICIPATION": "Participação"
+    },
+    "card": {
+      "entrants": "{count, plural, =0 {nenhum inscrito} one {# inscrito} other {# inscritos}}",
+      "closes": "Inscrições encerram {when}",
+      "open": "Inscrições abertas"
+    },
+    "info": {
+      "announcements": "Avisos da organização",
+      "categories": "Categorias",
+      "spots": "{taken}/{max} vagas",
+      "waitlist": "{count} na espera",
+      "countsForElo": "Vale Elo",
+      "circuitCategory": "Circuito: {name}",
+      "registration": "Inscrições",
+      "window": "De {from} até {to}",
+      "noWindow": "Enquanto o torneio estiver com inscrições abertas",
+      "requiresApproval": "Cada inscrição é aprovada pela organização.",
+      "fee": "Taxa",
+      "free": "Gratuito",
+      "guestsAllowed": "Convidados e jogadores de fora podem participar.",
+      "rules": "Regulamento",
+      "organizers": "Organização",
+      "sponsors": "Patrocinadores"
+    },
+    "entries": {
+      "emptyTitle": "Nenhum inscrito confirmado",
+      "emptyDescription": "Os inscritos aparecem aqui assim que forem confirmados.",
+      "seed": "Cabeça {seed}",
+      "waitlist": "Lista de espera"
+    },
+    "draw": {
+      "notPublishedTitle": "Chave ainda não publicada",
+      "notPublishedDescription": "Você recebe uma notificação assim que o sorteio sair.",
+      "groups": "Fase de grupos",
+      "knockout": "Mata-mata",
+      "knockoutAfterGroups": "O mata-mata é montado quando a fase de grupos terminar.",
+      "zoomHint": "Arraste para os lados e use dois dedos para aproximar."
+    },
+    "schedule": {
+      "emptyTitle": "Programação ainda não divulgada",
+      "emptyDescription": "Os jogos aparecem aqui quando a organização publicar o dia.",
+      "draft": "Rascunho",
+      "mineOnly": "Só meus jogos"
+    },
+    "results": {
+      "emptyTitle": "Nenhum resultado ainda",
+      "emptyDescription": "Os placares aparecem aqui conforme os jogos terminam."
+    },
+    "bracket": {
+      "label": "Chave do mata-mata",
+      "bye": "bye",
+      "tbd": "A definir",
+      "winnerOf": "Vencedor do jogo {number}",
+      "winner": "Vencedor",
+      "champion": "Campeão",
+      "awaitingConfirmation": "Aguardando confirmação",
+      "zoomIn": "Aproximar",
+      "zoomOut": "Afastar",
+      "zoomReset": "Tamanho original"
+    },
+    "groups": {
+      "viewLabel": "Ver grupos como",
+      "standings": "Classificação",
+      "fixtures": "Jogos",
+      "name": "Grupo {name}",
+      "finished": "Encerrado",
+      "entry": "Jogador",
+      "played": "J",
+      "playedLong": "Jogos",
+      "wins": "V",
+      "winsLong": "Vitórias",
+      "sets": "Sets",
+      "setsLong": "Sets ganhos-perdidos",
+      "games": "Games",
+      "gamesLong": "Games ganhos-perdidos",
+      "tiebreakers": "{count, plural, one {O 1º de cada grupo avança} other {Os # primeiros de cada grupo avançam}}. Desempate: vitórias, confronto direto, saldo de sets e de games."
+    },
+    "score": {
+      "title": "Placar",
+      "how": "Como terminou",
+      "winner": "Vencedor",
+      "score": "Placar",
+      "partialScore": "Placar até o abandono (opcional)",
+      "proSet": "Pro-set",
+      "hint": {
+        "WALKOVER": "O adversário não compareceu: conta como 6-0 6-0 nos grupos.",
+        "RETIRED": "Um jogador abandonou durante a partida.",
+        "DISQUALIFIED": "Decisão da organização."
+      },
+      "winsWith": "{name} vence por {score}",
+      "send": "Enviar placar",
+      "sent": "Placar enviado",
+      "sentDescription": "O adversário confirma e a chave avança.",
+      "saveFinal": "Salvar resultado final",
+      "savedFinal": "Resultado registrado",
+      "saveOutcome": "Registrar {outcome}",
+      "confirm": "Confirmar placar",
+      "confirmed": "Resultado confirmado!",
+      "correct": "Corrigir resultado",
+      "reportedBy": "{name} lançou {score} (vitória de {winner}).",
+      "waitingOpponent": "Aguardando a confirmação do adversário.",
+      "disagreeHint": "Não concorda? Fale com a organização.",
+      "final": "Resultado final: vitória de {winner}.",
+      "approvalNote": "O adversário confirma; sem resposta, o placar é confirmado automaticamente.",
+      "onlyPlayers": "Só os jogadores da partida e a organização lançam o placar."
+    },
+    "dashboard": {
+      "title": "Meus torneios",
+      "all": "Ver todos",
+      "vs": "contra {name}",
+      "toBeScheduled": "Horário a definir",
+      "champion": "Campeão",
+      "eliminated": "Eliminado",
+      "confirm": "Confirmar placar"
+    },
+    "championScreen": {
+      "title": "Campeão!",
+      "seeDraw": "Ver a chave",
+      "close": "Fechar"
+    },
+    "titles": {
+      "title": "Galeria de títulos",
+      "count": "{count, plural, one {# título} other {# títulos}}",
+      "champion": "Campeão",
+      "finalist": "Vice"
+    },
+    "circuit": {
+      "title": "Circuito",
+      "season": "Temporada {season}",
+      "loadFailed": "Não foi possível carregar o circuito.",
+      "ranking": "Ranking do circuito",
+      "emptyTitle": "Sem pontuação ainda",
+      "emptyDescription": "Os pontos entram quando uma etapa termina.",
+      "player": "Jogador",
+      "stageShort": "E{number}",
+      "total": "Total",
+      "stages": "Etapas",
+      "noStages": "Nenhuma etapa vinculada ainda.",
+      "points": "Tabela de pontos"
+    },
+    "public": {
+      "subtitle": "Torneios",
+      "login": "Entrar",
+      "print": "Imprimir / PDF",
+      "footer": "Página pública do {club}. Atualiza sozinha a cada minuto.",
+      "description": "Torneio do {club}: {categories}. Chaves, programação e resultados ao vivo."
+    },
+    "print": {
+      "hint": "Use \"Salvar como PDF\" na janela de impressão para gerar o arquivo.",
+      "print": "Imprimir",
+      "drawOf": "Chave · {name}",
+      "dayOf": "Programação · {day}",
+      "updated": "Atualizado em {when}",
+      "noDraw": "Nenhuma chave publicada.",
+      "noSchedule": "Nenhum jogo programado neste dia.",
+      "time": "Horário"
+    },
+    "manager": {
+      "title": "Gerenciar torneio",
+      "loadFailed": "Não foi possível carregar o torneio.",
+      "forbidden": "Você não organiza este torneio.",
+      "tabsLabel": "Ferramentas da organização",
+      "tabs": {
+        "settings": "Geral",
+        "entries": "Inscrições",
+        "draw": "Chaves",
+        "schedule": "Programação",
+        "results": "Pendências",
+        "announcements": "Avisos"
+      }
+    },
+    "settings": {
+      "edit": "Editar",
+      "free": "Gratuito",
+      "withApproval": "com aprovação",
+      "noApproval": "sem aprovação",
+      "rest": "descanso de {minutes} min",
+      "status": "Andamento",
+      "statusChanged": "Torneio agora: {status}",
+      "to": {
+        "DRAFT": "Voltar para rascunho",
+        "REGISTRATION_OPEN": "Abrir inscrições",
+        "REGISTRATION_CLOSED": "Encerrar inscrições",
+        "DRAW_PUBLISHED": "Marcar chave publicada",
+        "IN_PROGRESS": "Iniciar torneio",
+        "FINISHED": "Encerrar torneio",
+        "CANCELLED": "Cancelar torneio"
+      },
+      "confirm": {
+        "DRAFT": "O torneio sai da lista dos sócios até ser aberto de novo.",
+        "REGISTRATION_OPEN": "Os sócios passam a ver o torneio e podem se inscrever.",
+        "REGISTRATION_CLOSED": "Ninguém mais se inscreve; você já pode sortear as chaves.",
+        "DRAW_PUBLISHED": "Use depois de publicar as chaves de todas as categorias.",
+        "IN_PROGRESS": "O torneio aparece como em andamento.",
+        "FINISHED": "Os títulos e os pontos do circuito ficam registrados.",
+        "CANCELLED": "Os inscritos deixam de ver jogos e programação. Não dá para desfazer."
+      },
+      "categories": "Categorias",
+      "addCategory": "Categoria",
+      "noCategories": "Adicione ao menos uma categoria antes de abrir as inscrições.",
+      "spots": "{taken}/{max}",
+      "drawPublished": "Chave publicada",
+      "drawDraft": "Chave em rascunho",
+      "organizers": "Organizadores",
+      "organizersLabel": "Sócios que organizam",
+      "noOrganizers": "Só a diretoria.",
+      "changeOrganizers": "Alterar",
+      "saveOrganizers": "Salvar organizadores",
+      "organizersSaved": "Organizadores atualizados",
+      "sharing": "Divulgação",
+      "copyLink": "Copiar link público",
+      "linkCopied": "Link copiado",
+      "openPublic": "Abrir página pública",
+      "draftNotPublic": "A página pública fica disponível quando o torneio sair do rascunho.",
+      "printHint": "Versões para imprimir ou salvar em PDF:",
+      "printDraw": "Chave {name}",
+      "printDay": "Programação {day}",
+      "template": "Modelo",
+      "duplicate": "Duplicar torneio",
+      "duplicateHint": "Cria um rascunho com as mesmas categorias e regras, sem inscritos.",
+      "duplicated": "Cópia criada"
+    },
+    "form": {
+      "createTitle": "Novo torneio",
+      "editTitle": "Dados do torneio",
+      "name": "Nome",
+      "startDate": "Início",
+      "endDate": "Fim",
+      "location": "Local",
+      "courts": "Quadras do torneio",
+      "courtsHint": "Sem seleção, a programação pode usar todas.",
+      "registration": "Inscrições",
+      "opensAt": "Abrem em",
+      "closesAt": "Encerram em",
+      "options": "Opções",
+      "requiresApproval": "Aprovar cada inscrição",
+      "allowGuests": "Aceitar convidados",
+      "fee": "Taxa (R$)",
+      "feeHint": "Informativa; vazio = gratuito.",
+      "rest": "Descanso (min)",
+      "restHint": "Entre jogos do mesmo jogador.",
+      "circuit": "Circuito",
+      "noCircuit": "Nenhum",
+      "description": "Regulamento e informações",
+      "descriptionHint": "Aceita **negrito**, *itálico*, listas com \"- \" e links.",
+      "cover": "Imagem de capa (URL)",
+      "sponsors": "Logos de patrocinadores (URLs)",
+      "sponsorsHint": "Uma URL por linha.",
+      "create": "Criar torneio",
+      "save": "Salvar",
+      "created": "Torneio criado como rascunho",
+      "saved": "Dados atualizados"
+    },
+    "categoryForm": {
+      "addTitle": "Nova categoria",
+      "editTitle": "Editar categoria",
+      "lockedHint": "A chave já foi sorteada: formato e tamanho dos grupos não mudam mais.",
+      "name": "Nome",
+      "namePlaceholder": "Ex.: Simples A, Duplas mistas",
+      "entryType": "Modalidade",
+      "drawFormat": "Formato",
+      "maxEntries": "Vagas",
+      "groupSize": "Por grupo",
+      "advance": "Classificam",
+      "scoreFormat": "Placar",
+      "seeding": "Cabeças de chave",
+      "seedingElo": "Pelo Elo",
+      "seedingCircuit": "Pelo circuito",
+      "countsForElo": "Resultados valem para o Elo",
+      "circuitCategory": "Categoria no circuito",
+      "noCircuitCategory": "Não pontua",
+      "circuitCategoryHint": "Os pontos desta categoria entram no ranking do circuito.",
+      "add": "Adicionar categoria",
+      "save": "Salvar",
+      "remove": "Remover categoria",
+      "added": "Categoria adicionada",
+      "saved": "Categoria atualizada",
+      "removed": "Categoria removida"
+    },
+    "entriesManager": {
+      "add": "Inscrever jogador",
+      "csv": "Exportar CSV",
+      "pending": "{count, plural, one {# aguardando aprovação} other {# aguardando aprovação}}",
+      "filter": "Filtrar inscrições",
+      "filters": {
+        "ALL": "Todas",
+        "PENDING": "Pendentes",
+        "CONFIRMED": "Confirmadas",
+        "WAITLISTED": "Espera",
+        "OUT": "Desistências"
+      },
+      "summary": "{confirmed}/{max} confirmadas · {waitlisted} na espera",
+      "emptyTitle": "Nenhuma inscrição neste filtro",
+      "hasNote": "tem observação",
+      "noCategories": "Sem categorias",
+      "noCategoriesDescription": "Crie as categorias na aba Geral."
+    },
+    "manageEntry": {
+      "title": "Inscrição",
+      "guest": "convidado",
+      "notAccepted": "não aceitou",
+      "status": "Situação",
+      "action": {
+        "CONFIRMED": "Confirmar",
+        "WAITLISTED": "Lista de espera",
+        "REJECTED": "Recusar",
+        "WITHDRAWN": "Desistência"
+      },
+      "payment": "Pagamento",
+      "move": "Mover para a categoria",
+      "seed": "Cabeça de chave manual",
+      "seedPlaceholder": "Automático",
+      "saveSeed": "Salvar",
+      "seedHint": "Vazio = pelo Elo ou pelos pontos do circuito.",
+      "saved": "Inscrição atualizada"
+    },
+    "addEntry": {
+      "title": "Inscrever jogador",
+      "player": "Jogador {number}",
+      "kind": "Tipo de jogador",
+      "member": "Sócio",
+      "external": "De fora",
+      "memberLabel": "Sócio",
+      "name": "Nome completo",
+      "phone": "Telefone",
+      "payment": "Pagamento",
+      "availability": "Disponibilidade",
+      "note": "Observação",
+      "submit": "Inscrever",
+      "added": "Inscrição adicionada",
+      "playersMissing": "Escolha todos os jogadores."
+    },
+    "drawManager": {
+      "noCategories": "Crie uma categoria primeiro",
+      "entries": "{count, plural, =0 {nenhum confirmado} one {# confirmado} other {# confirmados}}",
+      "isPublished": "Publicada",
+      "isDraft": "Rascunho",
+      "generate": "Sortear chave",
+      "regenerate": "Sortear de novo",
+      "regenerateTitle": "Sortear a chave de novo?",
+      "regenerateDescription": "O rascunho atual, com as trocas feitas, é descartado.",
+      "swap": "Trocar posições",
+      "swapPickFirst": "Toque no primeiro jogador que vai trocar de lugar.",
+      "swapPickSecond": "Agora toque em quem fica no lugar dele.",
+      "publish": "Publicar chave",
+      "generated": "Chave sorteada (rascunho)",
+      "swapped": "Posições trocadas",
+      "published": "Chave publicada! Os jogadores foram avisados.",
+      "emptyTitle": "Chave ainda não sorteada",
+      "emptyDescription": "Os cabeças de chave saem do Elo ou do circuito; os byes vão para os melhores.",
+      "needEntries": "São necessárias ao menos 2 inscrições confirmadas.",
+      "groups": "Grupos",
+      "knockout": "Mata-mata"
+    },
+    "board": {
+      "days": "Dias do torneio",
+      "auto": "Programar automaticamente",
+      "publish": "Publicar o dia",
+      "republish": "Publicar alterações",
+      "isPublished": "Dia publicado",
+      "isDraft": "Rascunho",
+      "rescheduleFrozen": "{count, plural, one {Reprogramar # jogo interditado} other {Reprogramar # jogos interditados}}",
+      "unscheduled": "A programar ({count})",
+      "allScheduled": "Todos os jogos prontos estão programados.",
+      "dragHint": "Arraste um jogo até um horário livre, ou toque no jogo e depois no horário.",
+      "time": "Hora",
+      "placeHere": "Programar na {court} às {time}",
+      "cell": {
+        "booking": "Reserva",
+        "lesson": "Aula",
+        "frozen": "Interditada",
+        "tournament": "Torneio",
+        "free": "Livre"
+      },
+      "placeHint": "Toque em um horário livre para programar.",
+      "moveHint": "Toque em outro horário livre para mover.",
+      "unschedule": "Tirar",
+      "cancelSelection": "Cancelar seleção",
+      "autoTitle": "Programação automática",
+      "autoDescription": "Preenche os horários livres respeitando disponibilidade, descanso e reservas.",
+      "autoRun": "{count, plural, one {Programar # dia} other {Programar # dias}}",
+      "autoDone": "{count, plural, =0 {Nenhum jogo programado} one {# jogo programado} other {# jogos programados}}",
+      "autoLeft": "{count, plural, one {# jogo ficou sem horário} other {# jogos ficaram sem horário}}",
+      "publishedDay": "Programação de {day} publicada",
+      "frozenMoved": "{count, plural, =0 {Nenhum jogo movido} one {# jogo reprogramado} other {# jogos reprogramados}}",
+      "pastCell": "Horário passado"
+    },
+    "pending": {
+      "emptyTitle": "Nada pendente",
+      "emptyDescription": "Todos os jogos que já aconteceram têm resultado.",
+      "overdue": "Sem resultado há mais de 2 h ({count})",
+      "awaiting": "Aguardando confirmação ({count})",
+      "frozen": "Em quadra interditada ({count})",
+      "enterResult": "Lançar resultado",
+      "review": "Revisar",
+      "decide": "Decidir",
+      "frozenHint": "Use \"Reprogramar jogos interditados\" na aba Programação para mover todos de uma vez."
+    },
+    "announce": {
+      "body": "Aviso",
+      "placeholder": "Ex.: Jogos de sábado começam às 9h por causa da chuva.",
+      "audience": "Para quem",
+      "everyone": "Todos os inscritos",
+      "send": "Enviar aviso",
+      "sent": "Aviso enviado aos inscritos",
+      "emptyTitle": "Nenhum aviso enviado"
+    },
+    "admin": {
+      "title": "Torneios",
+      "subtitle": "Crie, configure e acompanhe os torneios do clube",
+      "circuits": "Circuitos",
+      "create": "Novo torneio",
+      "emptyTitle": "Nenhum torneio ainda",
+      "emptyDescription": "Crie o primeiro torneio; ele fica em rascunho até você abrir as inscrições.",
+      "manageSubtitle": "Inscrições, chaves, programação e resultados"
+    },
+    "circuitAdmin": {
+      "title": "Circuitos",
+      "subtitle": "Etapas que somam pontos num ranking da temporada",
+      "create": "Novo circuito",
+      "edit": "Editar circuito",
+      "emptyTitle": "Nenhum circuito",
+      "emptyDescription": "Crie um circuito e vincule os torneios como etapas.",
+      "summary": "Temporada {season} · {count, plural, =0 {nenhuma etapa} one {# etapa} other {# etapas}}"
+    },
+    "circuitForm": {
+      "createTitle": "Novo circuito",
+      "editTitle": "Editar circuito",
+      "name": "Nome",
+      "season": "Temporada",
+      "categories": "Categorias",
+      "addCategories": "Adicionar categorias",
+      "categoriesHint": "Uma por linha.",
+      "categoriesPlaceholder": "Simples A\nSimples B\nDuplas",
+      "existing": "Já existem: {names}",
+      "points": "Pontos por colocação",
+      "create": "Criar circuito",
+      "save": "Salvar",
+      "created": "Circuito criado",
+      "saved": "Circuito atualizado"
     }
   }
 }

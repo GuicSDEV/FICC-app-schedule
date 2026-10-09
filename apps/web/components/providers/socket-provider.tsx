@@ -6,6 +6,7 @@ import {
   type NotificationItem,
   SOCKET_EVENTS,
   type ScheduleUpdatedEvent,
+  type TournamentUpdatedEvent,
 } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
@@ -21,6 +22,7 @@ interface SocketEvents {
   [SOCKET_EVENTS.notificationCreated]: NotificationItem;
   [SOCKET_EVENTS.leaderboardUpdated]: LeaderboardUpdatedEvent;
   [SOCKET_EVENTS.freezeUpdated]: FreezeUpdatedEvent;
+  [SOCKET_EVENTS.tournamentUpdated]: TournamentUpdatedEvent;
 }
 
 type Listener<E extends keyof SocketEvents> = (payload: SocketEvents[E]) => void;
@@ -60,6 +62,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         void client.invalidateQueries({ queryKey: queryKeys.matchesMine });
         void client.invalidateQueries({ queryKey: queryKeys.me });
       }
+      if (notification.type.startsWith("TOURNAMENT")) {
+        void client.invalidateQueries({ queryKey: queryKeys.tournaments.root });
+      }
       if (notification.type === "GUEST_CHECKED_IN") {
         void client.invalidateQueries({ queryKey: queryKeys.guestPasses });
       }
@@ -68,6 +73,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       void client.invalidateQueries({ queryKey: queryKeys.leaderboard() });
       void client.invalidateQueries({ queryKey: ["players"] });
       void client.invalidateQueries({ queryKey: ["h2h"] });
+    });
+    connection.on(SOCKET_EVENTS.tournamentUpdated, (event: TournamentUpdatedEvent) => {
+      void client.invalidateQueries({ queryKey: queryKeys.tournaments.detail(event.tournamentId) });
+      void client.invalidateQueries({ queryKey: ["tournaments", "list"] });
+      void client.invalidateQueries({ queryKey: queryKeys.tournaments.mine });
+      if (event.kind === "result") void client.invalidateQueries({ queryKey: queryKeys.circuits });
     });
     connection.on(SOCKET_EVENTS.freezeUpdated, () => {
       void client.invalidateQueries({ queryKey: queryKeys.freezesActive });

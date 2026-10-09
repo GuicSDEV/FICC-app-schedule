@@ -8,6 +8,7 @@ import { FreezesModule } from "../freezes/freezes.module";
 import { GuestsModule } from "../guests/guests.module";
 import { LessonsModule } from "../lessons/lessons.module";
 import { MatchesModule } from "../matches/matches.module";
+import { TournamentsModule } from "../tournaments/tournaments.module";
 import { CLUB_JOBS_QUEUE } from "./club-jobs";
 import { ClubJobsProcessor } from "./club-jobs.processor";
 import { ClubJobsRunner } from "./club-jobs.runner";
@@ -29,6 +30,7 @@ import { ClubJobsScheduler } from "./club-jobs.scheduler";
     LessonsModule,
     FreezesModule,
     GuestsModule,
+    TournamentsModule,
   ],
   providers: [ClubJobsRunner, ClubJobsProcessor, ClubJobsScheduler],
   exports: [ClubJobsRunner],

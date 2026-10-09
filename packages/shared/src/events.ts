@@ -7,6 +7,7 @@ export const SOCKET_EVENTS = {
   notificationCreated: "notification.created",
   leaderboardUpdated: "leaderboard.updated",
   freezeUpdated: "freeze.updated",
+  tournamentUpdated: "tournament.updated",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
@@ -19,7 +20,9 @@ export type ScheduleChangeKind =
   | "lesson.cancelled"
   | "lesson.restored"
   | "lesson.moved"
-  | "freeze.changed";
+  | "freeze.changed"
+  | "tournament.scheduled"
+  | "tournament.unscheduled";
 
 export interface ScheduleCellRef {
   date: IsoDate;
@@ -45,4 +48,11 @@ export interface LeaderboardUpdatedEvent {
 export interface FreezeUpdatedEvent {
   freezeId: string;
   action: "created" | "lifted" | "expired";
+}
+
+export interface TournamentUpdatedEvent {
+  tournamentId: string;
+  categoryId: string | null;
+  /** What changed, so screens refetch only what they show. */
+  kind: "draw" | "schedule" | "result" | "entries" | "info";
 }

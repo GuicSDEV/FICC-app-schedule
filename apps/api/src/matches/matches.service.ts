@@ -405,11 +405,20 @@ export class MatchesService {
    * club's K-factor → PlayerRating + EloHistory rows. Then notifies each player with their
    * personal change and rank movement, and broadcasts leaderboard.updated.
    */
+  /**
+   * Confirms a tournament match whose category counts for Elo (created by the tournaments module
+   * once the result is final) and applies the ratings like any ranked match.
+   */
+  confirmTournamentMatch(matchId: string): Promise<MatchDetail> {
+    return this.confirm(matchId, MatchConfirmation.OPPONENT_APPROVED, {}, undefined, true);
+  }
+
   private async confirm(
     matchId: string,
     confirmation: MatchConfirmation,
     extra: Prisma.MatchUncheckedUpdateInput,
     viewerId?: string,
+    ratedOverride?: boolean,
   ): Promise<MatchDetail> {
     const now = this.clock.now();
     const outcome = await serializable(this.prisma, async (tx) => {
@@ -427,7 +436,7 @@ export class MatchesService {
       });
       const ratingOf = (userId: string) =>
         stored.find((rating) => rating.userId === userId)?.elo ?? eloInitialRating;
-      const rated = countsForRating(match);
+      const rated = ratedOverride ?? countsForRating(match);
       const sideA = match.players.filter((player) => player.side === TeamSide.A);
       const sideB = match.players.filter((player) => player.side === TeamSide.B);
       const { deltaA, deltaB } = rated

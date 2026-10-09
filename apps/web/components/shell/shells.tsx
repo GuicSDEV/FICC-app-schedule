@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { EloCelebration } from "@/components/matches/elo-celebration";
+import { ChampionCelebration } from "@/components/tournaments/champion-celebration";
 import { useLogout } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ export function MemberShell({ children }: { children: ReactNode }) {
         />
         <ActionSheet open={actionsOpen} onOpenChange={setActionsOpen} />
         <EloCelebration />
+        <ChampionCelebration />
       </div>
     </AreaGuard>
   );

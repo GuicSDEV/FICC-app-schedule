@@ -21,6 +21,7 @@ import { RankingModule } from "./ranking/ranking.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { ClubScheduleModule } from "./schedule/schedule.module";
 import { TenancyModule } from "./tenancy/tenancy.module";
+import { TournamentsModule } from "./tournaments/tournaments.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -49,6 +50,7 @@ import { UsersModule } from "./users/users.module";
     MatchesModule,
     RankingModule,
     GuestsModule,
+    TournamentsModule,
     // Workers and schedulers only where jobs are enabled (off in tests, which call the runner).
     ConditionalModule.registerWhen(
       JobsModule,

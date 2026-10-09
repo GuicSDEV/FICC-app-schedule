@@ -137,6 +137,7 @@ export function CourtCalendar({
                           cell.booking?.status === "CONFIRMED" ? "CONFIRMED" : "PENDING"
                         }
                         freezeReason={cell.freeze?.reason}
+                        tournament={cell.tournament}
                         highlightKey={highlights[key]}
                         celebrate={celebrate === key}
                         onPress={() => onCell(cell)}
@@ -191,6 +192,7 @@ export function CalendarLegend() {
     { key: "free", className: "border border-dashed border-hartru/70" },
     { key: "lesson", className: "bg-lesson-soft border border-lesson/40" },
     { key: "booking", className: "bg-hartru-soft border border-hartru/40" },
+    { key: "tournament", className: "bg-gold/15 border border-gold/50" },
     { key: "frozen", className: "striped border border-warning/40" },
   ] as const;
   return (

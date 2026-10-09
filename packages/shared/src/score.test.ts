@@ -3,10 +3,13 @@ import { ZodError } from "zod";
 
 import { translateIssue } from "./i18n";
 import {
+  bestOfThreeFullSetsSchema,
   formatScore,
   matchScoreSchema,
   matchTiebreakWinner,
   parseScore,
+  proSetSchema,
+  proSetWinner,
   regularSetWinner,
   scoreTextSchema,
   splitScoreText,
@@ -147,5 +150,60 @@ describe("splitScoreText and formatScore", () => {
 
   it("ignores empty tokens", () => {
     expect(splitScoreText("6-4,, 6-2,")).toEqual([set(6, 4), set(6, 2)]);
+  });
+});
+
+describe("tournament score formats", () => {
+  const issueKeys = (error: ZodError) => error.issues.map((issue) => issue.message);
+
+  it("best of 3 full sets: accepts a regular deciding set", () => {
+    const result = bestOfThreeFullSetsSchema.parse([set(6, 4), set(3, 6), set(7, 5)]);
+    expect(result.winner).toBe("A");
+    expect(result.setsWon).toEqual({ A: 2, B: 1 });
+  });
+
+  it("best of 3 full sets: refuses a match tie-break", () => {
+    const result = bestOfThreeFullSetsSchema.safeParse([set(6, 4), set(3, 6), set(10, 8, true)]);
+    expect(result.success).toBe(false);
+    expect(issueKeys(result.error!)).toEqual(["validation.score.noTiebreak"]);
+    expect(result.error!.issues[0]!.path).toEqual([2]);
+  });
+
+  it("best of 3 full sets: passes on the rules' issues with their params", () => {
+    const result = bestOfThreeFullSetsSchema.safeParse([set(6, 4), set(5, 5)]);
+    expect(result.success).toBe(false);
+    const issue = result.error!.issues[0]!;
+    expect(issue.message).toBe("validation.score.invalidSet");
+    expect(issue.path).toEqual([1]);
+    expect(translateIssue(issue)).toContain("5-5");
+    const tied = bestOfThreeFullSetsSchema.safeParse([set(6, 4), set(3, 6)]);
+    expect(issueKeys(tied.error!)).toEqual(["validation.score.tied"]);
+  });
+
+  it("pro-set winner: 8 games with a two-game lead, 9-7 or 9-8", () => {
+    expect(proSetWinner({ a: 8, b: 6 })).toBe("A");
+    expect(proSetWinner({ a: 7, b: 9 })).toBe("B");
+    expect(proSetWinner({ a: 9, b: 8 })).toBe("A");
+    expect(proSetWinner({ a: 8, b: 7 })).toBeNull();
+    expect(proSetWinner({ a: 6, b: 4 })).toBeNull();
+    expect(proSetWinner({ a: 10, b: 8 })).toBeNull();
+  });
+
+  it("pro-set: exactly one valid set", () => {
+    expect(proSetSchema.parse([set(8, 5)])).toEqual({
+      sets: [set(8, 5)],
+      winner: "A",
+      setsWon: { A: 1, B: 0 },
+    });
+    expect(proSetSchema.parse([set(4, 8)]).setsWon).toEqual({ A: 0, B: 1 });
+    expect(issueKeys(proSetSchema.safeParse([set(8, 5), set(8, 5)]).error!)).toEqual([
+      "validation.score.oneSet",
+    ]);
+    const invalid = proSetSchema.safeParse([set(8, 7)]);
+    expect(issueKeys(invalid.error!)).toEqual(["validation.score.invalidProSet"]);
+    expect(translateIssue(invalid.error!.issues[0]!)).toContain("8-7");
+    expect(issueKeys(proSetSchema.safeParse([set(10, 8, true)]).error!)).toEqual([
+      "validation.score.invalidProSet",
+    ]);
   });
 });

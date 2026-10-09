@@ -9,6 +9,7 @@ import {
 } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -42,6 +43,7 @@ const CELEBRATE_MS = 2400;
 
 export default function CourtsPage() {
   const t = useTranslations();
+  const router = useRouter();
   const format = useFormat();
   const club = useClub();
   const { user } = useSession();
@@ -124,6 +126,8 @@ export default function CourtsPage() {
         coach: cell.lesson.coach,
         favorite: cell.favorite,
       });
+    } else if (cell.state === "tournament" && cell.tournament) {
+      router.push(`/app/tournaments/${cell.tournament.tournamentId}?tab=schedule`);
     } else if (cell.state === "booking" && cell.booking) {
       setInfoTarget({
         date: cell.date,

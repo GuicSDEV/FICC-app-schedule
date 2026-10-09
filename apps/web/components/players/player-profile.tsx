@@ -12,6 +12,7 @@ import { EloChart } from "@/components/charts/elo-chart-lazy";
 import { MatchCard } from "@/components/matches/match-card";
 import { useClub } from "@/components/providers/club-provider";
 import { useSession } from "@/components/providers/session-provider";
+import { TitlesList } from "@/components/tournaments/titles-list";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -187,6 +188,8 @@ export function PlayerProfileView({ userId, extra }: { userId: string; extra?: R
           )}
         </Card>
       </section>
+
+      <TitlesList userId={userId} />
 
       <section className="space-y-3" aria-label={t("recent")}>
         <SectionLabel>{t("recent")}</SectionLabel>

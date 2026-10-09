@@ -155,6 +155,126 @@ export function useNotificationCopy() {
             href: "/app/courts",
             tone: "ball",
           };
+        case "TOURNAMENT_ENTRY_CONFIRMED":
+          return {
+            title: item.payload.waitlisted
+              ? t("TOURNAMENT_ENTRY_CONFIRMED.titleWaitlist")
+              : t("TOURNAMENT_ENTRY_CONFIRMED.title"),
+            body: t("TOURNAMENT_ENTRY_CONFIRMED.body", {
+              tournament: item.payload.tournamentName,
+              category: item.payload.categoryName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}`,
+            tone: item.payload.waitlisted ? "neutral" : "ball",
+          };
+        case "TOURNAMENT_PARTNER_INVITE":
+          return {
+            title: t("TOURNAMENT_PARTNER_INVITE.title"),
+            body: t("TOURNAMENT_PARTNER_INVITE.body", {
+              invitedBy: item.payload.invitedBy,
+              tournament: item.payload.tournamentName,
+              category: item.payload.categoryName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=entries`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_DRAW_PUBLISHED":
+          return {
+            title: t("TOURNAMENT_DRAW_PUBLISHED.title"),
+            body: t("TOURNAMENT_DRAW_PUBLISHED.body", {
+              tournament: item.payload.tournamentName,
+              category: item.payload.categoryName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=draw`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_MATCH_SCHEDULED":
+          return {
+            title: t("TOURNAMENT_MATCH_SCHEDULED.title"),
+            body: t("TOURNAMENT_MATCH_SCHEDULED.body", {
+              opponent: item.payload.opponent,
+              day: format.day(item.payload.date),
+              time: item.payload.startTime,
+              court: item.payload.courtName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=schedule`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_MATCH_CHANGED":
+          return {
+            title: t("TOURNAMENT_MATCH_CHANGED.title"),
+            body:
+              item.payload.date && item.payload.startTime && item.payload.courtName
+                ? t("TOURNAMENT_MATCH_CHANGED.body", {
+                    opponent: item.payload.opponent,
+                    day: format.day(item.payload.date),
+                    time: item.payload.startTime,
+                    court: item.payload.courtName,
+                  })
+                : t("TOURNAMENT_MATCH_CHANGED.unscheduled", { opponent: item.payload.opponent }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=schedule`,
+            tone: "warning",
+          };
+        case "TOURNAMENT_RESULT_REPORTED":
+          return {
+            title: t("TOURNAMENT_RESULT_REPORTED.title"),
+            body: t("TOURNAMENT_RESULT_REPORTED.body", {
+              reportedBy: item.payload.reportedBy,
+              score: item.payload.score,
+              tournament: item.payload.tournamentName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=results`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_ADVANCED":
+          return {
+            title: t("TOURNAMENT_ADVANCED.title"),
+            body: item.payload.nextRound
+              ? t("TOURNAMENT_ADVANCED.body", {
+                  round: labels(`round.${item.payload.nextRound}` as "round.FINAL"),
+                  tournament: item.payload.tournamentName,
+                })
+              : t("TOURNAMENT_ADVANCED.bodyNoRound", { tournament: item.payload.tournamentName }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=draw`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_ELIMINATED":
+          return {
+            title: t("TOURNAMENT_ELIMINATED.title"),
+            body: t("TOURNAMENT_ELIMINATED.body", {
+              tournament: item.payload.tournamentName,
+              category: item.payload.categoryName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=draw`,
+            tone: "neutral",
+          };
+        case "TOURNAMENT_CHAMPION":
+          return {
+            title: t("TOURNAMENT_CHAMPION.title"),
+            body: t("TOURNAMENT_CHAMPION.body", {
+              tournament: item.payload.tournamentName,
+              category: item.payload.categoryName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}?tab=draw`,
+            tone: "ball",
+          };
+        case "TOURNAMENT_ANNOUNCEMENT":
+          return {
+            title: t("TOURNAMENT_ANNOUNCEMENT.title", { tournament: item.payload.tournamentName }),
+            body: item.payload.body,
+            href: `/app/tournaments/${item.payload.tournamentId}`,
+            tone: "warning",
+          };
+        case "TOURNAMENT_RESULT_OVERDUE":
+          return {
+            title: t("TOURNAMENT_RESULT_OVERDUE.title"),
+            body: t("TOURNAMENT_RESULT_OVERDUE.body", {
+              players: item.payload.players,
+              tournament: item.payload.tournamentName,
+            }),
+            href: `/app/tournaments/${item.payload.tournamentId}/manage?tab=results`,
+            tone: "danger",
+          };
         case "GUEST_CHECKED_IN":
           return {
             title: t("GUEST_CHECKED_IN.title"),

@@ -22,6 +22,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { freezesOverlapping } from "./freezes";
 import { clubTimeZone } from "../tenancy/tenant-context";
+import { entryInclude, entryName, toTournamentPlayer } from "../tournaments/tournament.mappers";
 
 export interface ScheduleOptions {
   surface?: Surface;
@@ -33,7 +34,7 @@ export interface ScheduleOptions {
   lessonDetailsFor?: "all" | readonly string[];
 }
 
-/** Builds the courts × slots grid for one club date, merging lessons, bookings and freezes. */
+/** Builds the courts × slots grid for one club date: lessons, bookings, tournament matches, freezes. */
 @Injectable()
 export class ScheduleService {
   constructor(
@@ -51,26 +52,36 @@ export class ScheduleService {
     const dayStart = clubInstant(date, "00:00", clubTimeZone());
     const dayEnd = clubInstant(addDays(date, 1), "00:00", clubTimeZone());
 
-    const [courts, slots, lessons, bookings, freezes, favorites] = await Promise.all([
-      this.prisma.court.findMany({ where: courtWhere, orderBy: { sortOrder: "asc" } }),
-      this.prisma.timeSlot.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
-      this.prisma.lesson.findMany({
-        where: { date: dbDate, status: LessonStatus.SCHEDULED, court: courtWhere },
-        include: { coach: true },
-      }),
-      this.prisma.booking.findMany({
-        where: {
-          date: dbDate,
-          status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
-          court: courtWhere,
-        },
-        include: { players: { include: { user: { select: playerSelect() } } } },
-      }),
-      freezesOverlapping(this.prisma, dayStart, dayEnd),
-      options.viewerId
-        ? this.prisma.slotFavorite.findMany({ where: { userId: options.viewerId } })
-        : Promise.resolve([]),
-    ]);
+    const [courts, slots, lessons, bookings, tournamentMatches, freezes, favorites] =
+      await Promise.all([
+        this.prisma.court.findMany({ where: courtWhere, orderBy: { sortOrder: "asc" } }),
+        this.prisma.timeSlot.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+        this.prisma.lesson.findMany({
+          where: { date: dbDate, status: LessonStatus.SCHEDULED, court: courtWhere },
+          include: { coach: true },
+        }),
+        this.prisma.booking.findMany({
+          where: {
+            date: dbDate,
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            court: courtWhere,
+          },
+          include: { players: { include: { user: { select: playerSelect() } } } },
+        }),
+        this.prisma.tournamentMatch.findMany({
+          where: { scheduledDate: dbDate, court: courtWhere },
+          include: {
+            tournament: { select: { name: true } },
+            category: { select: { name: true } },
+            entryA: { include: entryInclude() },
+            entryB: { include: entryInclude() },
+          },
+        }),
+        freezesOverlapping(this.prisma, dayStart, dayEnd),
+        options.viewerId
+          ? this.prisma.slotFavorite.findMany({ where: { userId: options.viewerId } })
+          : Promise.resolve([]),
+      ]);
 
     const now = this.clock.now();
     const key = (courtId: string, slotId: string) => `${courtId}:${slotId}`;
@@ -79,6 +90,9 @@ export class ScheduleService {
     );
     const bookingByCell = new Map(
       bookings.map((booking) => [key(booking.courtId, booking.timeSlotId), booking]),
+    );
+    const tournamentByCell = new Map(
+      tournamentMatches.map((match) => [key(match.courtId!, match.timeSlotId!), match]),
     );
     const favoriteCells = new Set(
       favorites.map((favorite) => key(favorite.courtId, favorite.timeSlotId)),
@@ -91,6 +105,7 @@ export class ScheduleService {
       for (const court of courts) {
         const lesson = lessonByCell.get(key(court.id, slot.id));
         const booking = bookingByCell.get(key(court.id, slot.id));
+        const tournament = tournamentByCell.get(key(court.id, slot.id));
         const freeze = freezes.find(
           (candidate) =>
             candidate.courts.some((entry) => entry.courtId === court.id) &&
@@ -100,7 +115,15 @@ export class ScheduleService {
           date,
           courtId: court.id,
           timeSlotId: slot.id,
-          state: freeze ? "frozen" : lesson ? "lesson" : booking ? "booking" : "free",
+          state: freeze
+            ? "frozen"
+            : lesson
+              ? "lesson"
+              : booking
+                ? "booking"
+                : tournament
+                  ? "tournament"
+                  : "free",
           past: isSlotPast(date, slot, now, clubTimeZone()),
           favorite: favoriteCells.has(key(court.id, slot.id)),
           lesson: lesson
@@ -121,6 +144,18 @@ export class ScheduleService {
                   user: toPlayerSummary(player.user),
                   status: player.status,
                 })),
+              }
+            : null,
+          tournament: tournament
+            ? {
+                matchId: tournament.id,
+                tournamentId: tournament.tournamentId,
+                tournamentName: tournament.tournament.name,
+                categoryName: tournament.category.name,
+                label:
+                  tournament.entryA && tournament.entryB
+                    ? `${entryName(tournament.entryA.players.map(toTournamentPlayer))} x ${entryName(tournament.entryB.players.map(toTournamentPlayer))}`
+                    : tournament.category.name,
               }
             : null,
           freeze: freeze ? { id: freeze.id, reason: freeze.reason } : null,

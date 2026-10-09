@@ -6,6 +6,7 @@ import { GuestsService } from "../guests/guests.service";
 import { LessonsService } from "../lessons/lessons.service";
 import { MatchesService } from "../matches/matches.service";
 import { ClubsService } from "../tenancy/clubs.service";
+import { ResultsService } from "../tournaments/results.service";
 import { runWithTenant } from "../tenancy/tenant-context";
 import type { ClubJobName } from "./club-jobs";
 
@@ -21,6 +22,7 @@ export class ClubJobsRunner {
     private readonly lessons: LessonsService,
     private readonly freezes: FreezesService,
     private readonly guests: GuestsService,
+    private readonly tournamentResults: ResultsService,
   ) {}
 
   /** Returns a per-club summary; one club failing never stops the others. */
@@ -45,5 +47,9 @@ export class ClubJobsRunner {
     "freezes.announce-expired": () => this.freezes.announceExpired(),
     "guests.anonymize-expired": () => this.guests.anonymizeExpired(),
     "guests.encrypt-legacy": () => this.guests.encryptLegacyDocuments(),
+    "tournaments.results": async () => ({
+      autoConfirmed: await this.tournamentResults.autoConfirm(),
+      overdueAlerts: await this.tournamentResults.alertOverdue(),
+    }),
   };
 }

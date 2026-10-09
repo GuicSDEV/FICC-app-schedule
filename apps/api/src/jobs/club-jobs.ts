@@ -16,6 +16,8 @@ export const CLUB_JOBS = {
   "guests.anonymize-expired": { every: 24 * 60 * 60_000, runOnBoot: true },
   /** LGPD: encrypt guest documents stored before encryption existed. */
   "guests.encrypt-legacy": { every: 24 * 60 * 60_000, runOnBoot: true },
+  /** Tournaments: confirm unanswered reported results and alert organizers about overdue ones. */
+  "tournaments.results": { every: 5 * 60_000, runOnBoot: false },
 } as const satisfies Record<string, { every: number; runOnBoot: boolean }>;
 
 export type ClubJobName = keyof typeof CLUB_JOBS;

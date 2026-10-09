@@ -18,7 +18,7 @@ and what still needs a human to check.
 | 7.5   | Multi-club-ready foundation           | Done                                | `feat(phase-7.5)` |
 | 8     | Member: matches, ranking, H2H, guests | Done                                | `feat(phase-8)`   |
 | 9     | Coach, gate, admin screens            | Done                                | `feat(phase-9)`   |
-| 9.5   | Tournaments & circuits                | Not started                         |                   |
+| 9.5   | Tournaments & circuits                | Done                                | `feat(phase-9.5)` |
 | 9.8   | FICC operations adjustments           | Not started                         |                   |
 | 10    | PWA, polish, QA                       | Not started                         |                   |
 | 11    | SaaS extensibility & feature workflow | On hold — waiting for club approval |                   |
@@ -237,6 +237,63 @@ Phases 11 and 12.
 - **Dispute "correct the score"** takes the score as text ("6-4, 3-6, [10-8]", side A first),
   parsed with the sport's rules.
 
+### Phase 9.5 — Tournaments & circuits
+
+- **Status flow** is one shared table (`TOURNAMENT_TRANSITIONS`) used by the API and the organizer
+  screen; the API also moves a tournament forward on its own (draw published, first result, last
+  final). Drafts are visible only to admins and the tournament's organizers; the public link of a
+  draft answers 404.
+- **Who runs a tournament:** admins create tournaments, circuits, duplicates and choose organizers;
+  member organizers get the same manager at `/app/tournaments/:id/manage` (the API checks
+  `canManage` on every call).
+- **Seeding:** manual seeds win; otherwise average Elo (guests count as the initial rating) or
+  circuit points. Byes go to the top seeds (standard positions 1 v 8, 4 v 5…).
+- **Groups:** snake distribution by seed, round robin, standings by wins → head-to-head → sets ratio
+  → games ratio → seed. A walkover counts 6-0 6-0 in the table. The knockout is built from the
+  group places when the last group match is confirmed.
+- **Score formats** per category: 2 sets + match tie-break, best of 3 full sets, or a pro-set to 8
+  (8-6 / 9-7 / 9-8). Scores travel side A first; the sheet shows the viewer's side on the left.
+- **Results:** a player reports, the opponent (other side) confirms; without a reply it is
+  auto-confirmed after the club's `matchAutoApproveHours`. Organizers' scores and W.O. /
+  retirement / disqualification are final at once and can be corrected until the next round is
+  played or Elo has been applied. Matches still without a result 2 h after their slot ended are
+  "overdue" (organizer alert + pending panel).
+- **Elo:** only categories marked "vale Elo" create rated matches, and only between members;
+  guests and external players never touch the ladder.
+- **Order of play** blocks bookings, lessons and freezes and occupies the slot (calendar shows a
+  gold "Torneio" chip that opens the tournament's schedule). Auto-schedule respects availability
+  (weekday / weekend "not before" times and unavailable days), rest minutes and round order.
+  Players are notified only when a day is published, and again for each change after that.
+  Rain: "Reprogramar jogos interditados" moves every match on a frozen court to the next free
+  slots in one go.
+- **Circuit points** are awarded when a stage is finished (champion 100, vice 70, semifinal 45,
+  quarterfinal 25, R16 15, R32 10, participation 5 by default, editable per circuit); ties share
+  the position.
+- **Public page** `/t/:publicId` (unguessable id, outside the auth area) is read-only, refreshes
+  every minute and has a generated share image (`opengraph-image`) with name, dates, place and
+  champions. **PDF**: `/t/:publicId/print?view=draw|day` renders a black-on-white A4-landscape
+  page; "Imprimir" opens the browser print dialog ("Salvar como PDF"). No server-side PDF library.
+- **Rules text** supports a tiny safe Markdown subset (paragraphs, lists, bold, italic, links); no
+  HTML is ever injected.
+- **Bracket view:** one column per round with SVG elbows, horizontal and vertical scroll inside a
+  bounded box, pinch (two-finger) and ctrl/trackpad zoom from 45 % to 160 % plus buttons. A result
+  that arrives while the bracket is open lights its connector and sends a ball along it to the
+  next round; results already there are drawn lit without animation.
+- **Champion screen** (trophy + confetti) opens from the `TOURNAMENT_CHAMPION` notification; Elo
+  celebrations for the same matches queue after it.
+- **Hall of fame** on player profiles lists titles and finals ("Galeria de títulos").
+- **Fees are informative** (no payment gateway): organizers mark entries paid / unpaid / exempt and
+  export entries as CSV.
+- Verified in the browser (Playwright, 390 px and 1280 px, dark and light): member registration
+  (12th singles entry), admin closes registration, generates and swaps the draw, publishes both
+  categories, schedules by tap and by drag, auto-schedules three days and publishes them; a player
+  reports a pro-set score and the opponent confirms in the UI; the organizer drives the 12-player
+  singles knockout (with byes) to a champion while the member watches (champion screen, Elo,
+  title on the profile) and the 5-team doubles groups → knockout to a champion; circuit ranking
+  after finishing; public page without login, share image, printable draw and day order of play
+  exported to PDF. The API e2e suite covers 12-player singles and 8-team doubles groups → KO from
+  creation to champion, a two-stage circuit ranking, the public link and rain rescheduling.
+
 ## Known issues
 
 - None open.
@@ -257,5 +314,10 @@ Phases 11 and 12.
   generated and downloaded (headless Chromium has no share sheet).
 - QR card tilt from device orientation on a real phone (iOS needs a permission prompt, so there it
   tilts only with touch).
+- Tournament bracket pinch-zoom and drag-and-drop scheduling on real devices (verified with
+  Playwright: zoom buttons, ctrl+wheel, HTML5 drag on desktop and tap-to-assign on mobile).
+- Share preview of the public tournament link in WhatsApp (needs a public URL; verified here that
+  the page sets Open Graph tags and the image renders as PNG).
+- Printing the draw / order of play on the club's printer (verified PDF export in Chromium only).
 - Gate camera scanning on real phones (iOS Safari and Android Chrome) and in the gate's lighting;
   verified here with Chromium's fake camera playing a QR video (accepted, then "already used").

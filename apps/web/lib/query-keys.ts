@@ -42,4 +42,18 @@ export const queryKeys = {
     members: (q: string) => ["admin", "members", q] as const,
   },
   gateScans: ["gate", "scans"] as const,
+  tournaments: {
+    root: ["tournaments"] as const,
+    list: (filter: string) => ["tournaments", "list", filter] as const,
+    mine: ["tournaments", "mine"] as const,
+    detail: (id: string) => ["tournaments", id] as const,
+    draw: (id: string, categoryId: string) => ["tournaments", id, "draw", categoryId] as const,
+    orderOfPlay: (id: string) => ["tournaments", id, "order-of-play"] as const,
+    entries: (id: string) => ["tournaments", id, "entries"] as const,
+    board: (id: string, date: string) => ["tournaments", id, "board", date] as const,
+    pending: (id: string) => ["tournaments", id, "pending"] as const,
+  },
+  circuits: ["circuits"] as const,
+  circuit: (id: string) => ["circuits", id] as const,
+  titles: (playerId: string) => ["players", playerId, "titles"] as const,
 };

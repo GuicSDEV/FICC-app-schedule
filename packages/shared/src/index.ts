@@ -11,3 +11,4 @@ export * from "./score";
 export * from "./slots";
 export * from "./sports";
 export * from "./types";
+export * from "./tournaments";

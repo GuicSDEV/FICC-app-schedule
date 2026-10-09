@@ -1,7 +1,7 @@
 "use client";
 
 import type { Surface } from "@ficc/shared";
-import { CloudRain, Lock, Plus, Star, Wrench } from "lucide-react";
+import { CloudRain, Lock, Plus, Star, Trophy, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "./avatar";
 import { AvatarStack } from "./avatar-stack";
 
-export type SlotChipState = "free" | "lesson" | "booking" | "frozen";
+export type SlotChipState = "free" | "lesson" | "booking" | "tournament" | "frozen";
 
 export interface SlotChipProps {
   courtName: string;
@@ -25,6 +25,8 @@ export interface SlotChipProps {
   players?: { id: string; name: string; photoUrl: string | null; pending?: boolean }[];
   bookingStatus?: "PENDING" | "CONFIRMED";
   freezeReason?: "RAIN" | "MAINTENANCE";
+  /** Tournament match holding the slot. */
+  tournament?: { tournamentName: string; label: string } | null;
   /** Bumped when the cell changed live, to flash it. */
   highlightKey?: number;
   /** Plays the "booking confirmed" fill in the court's surface color. */
@@ -68,6 +70,12 @@ function describe(props: SlotChipProps, t: Translate): string {
         ? t("bookingPending", { court, players })
         : t("booking", { court, players });
     }
+    case "tournament":
+      return t("tournament", {
+        court,
+        name: props.tournament?.tournamentName ?? "",
+        match: props.tournament?.label ?? "",
+      });
     case "frozen":
       return t("frozen", { court, reason: props.freezeReason ?? "MAINTENANCE" });
   }
@@ -114,6 +122,7 @@ export function SlotChip(props: SlotChipProps) {
           (bookingStatus === "PENDING"
             ? "border-dashed border-border-strong bg-surface-2 text-foreground"
             : cn(styles.booked, "text-foreground")),
+        state === "tournament" && "border-gold/50 bg-gold/15 text-foreground",
         state === "frozen" && "border-warning/40 bg-surface striped text-warning-ink",
         mine && state === "booking" && "ring-2 ring-ball ring-offset-2 ring-offset-background",
         past && "opacity-40",
@@ -207,6 +216,20 @@ export function SlotChip(props: SlotChipProps) {
               <span className="hidden min-w-0 items-center gap-2 @[7.5rem]:flex">
                 <AvatarStack people={players} max={4} size="xs" />
                 <span className="num text-muted-foreground">{courtName}</span>
+              </span>
+            </>
+          ) : null}
+
+          {state === "tournament" ? (
+            <>
+              <span className="flex flex-col items-center gap-1 @[5.5rem]:flex-row @[5.5rem]:gap-1.5">
+                <Trophy aria-hidden className="size-4 shrink-0 text-gold" />
+                <span className="num text-[0.625rem] leading-none @[5.5rem]:text-caption @[7.5rem]:hidden">
+                  {courtName}
+                </span>
+              </span>
+              <span className="hidden min-w-0 truncate font-medium @[7.5rem]:inline">
+                {props.tournament?.label}
               </span>
             </>
           ) : null}

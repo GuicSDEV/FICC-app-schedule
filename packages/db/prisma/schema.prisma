@@ -185,6 +185,77 @@ enum NotificationType {
   COURT_FROZEN
   COURT_UNFROZEN
   GUEST_CHECKED_IN
+  TOURNAMENT_ENTRY_CONFIRMED
+  TOURNAMENT_PARTNER_INVITE
+  TOURNAMENT_DRAW_PUBLISHED
+  TOURNAMENT_MATCH_SCHEDULED
+  TOURNAMENT_MATCH_CHANGED
+  TOURNAMENT_RESULT_REPORTED
+  TOURNAMENT_ADVANCED
+  TOURNAMENT_ELIMINATED
+  TOURNAMENT_CHAMPION
+  TOURNAMENT_ANNOUNCEMENT
+  TOURNAMENT_RESULT_OVERDUE
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  DRAW_PUBLISHED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum DrawFormat {
+  SINGLE_ELIMINATION
+  GROUPS_THEN_KNOCKOUT
+}
+
+enum ScoreFormat {
+  BEST_OF_3_MATCH_TIEBREAK
+  BEST_OF_3
+  PRO_SET_8
+}
+
+enum SeedingMethod {
+  ELO
+  CIRCUIT
+}
+
+enum EntryStatus {
+  PENDING_PARTNER
+  PENDING_APPROVAL
+  CONFIRMED
+  WAITLISTED
+  WITHDRAWN
+  REJECTED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  EXEMPT
+}
+
+enum TournamentStage {
+  GROUP
+  KNOCKOUT
+}
+
+enum MatchOutcome {
+  PLAYED
+  WALKOVER
+  RETIRED
+  DISQUALIFIED
+  BYE
+}
+
+enum ResultStatus {
+  NONE
+  REPORTED
+  CONFIRMED
 }
 
 // ─── Clubs ──────────────────────────────────────────────────────────────────
@@ -206,28 +277,36 @@ model Club {
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
-  settings           ClubSettings?
-  categories         Category[]
-  users              User[]
-  validMembershipIds ValidMembershipId[]
-  refreshTokens      RefreshToken[]
-  coaches            Coach[]
-  courts             Court[]
-  timeSlots          TimeSlot[]
-  occupancies        SlotOccupancy[]
-  lessonSeries       LessonSeries[]
-  lessons            Lesson[]
-  lessonAuditLogs    LessonAuditLog[]
-  bookings           Booking[]
-  slotFavorites      SlotFavorite[]
-  freezes            CourtFreeze[]
-  matches            Match[]
-  ratings            PlayerRating[]
-  eloHistory         EloHistory[]
-  guestPasses        GuestPass[]
-  guestBlocks        GuestBlock[]
-  gateScans          GateScanLog[]
-  notifications      Notification[]
+  settings             ClubSettings?
+  categories           Category[]
+  users                User[]
+  validMembershipIds   ValidMembershipId[]
+  refreshTokens        RefreshToken[]
+  coaches              Coach[]
+  courts               Court[]
+  timeSlots            TimeSlot[]
+  occupancies          SlotOccupancy[]
+  lessonSeries         LessonSeries[]
+  lessons              Lesson[]
+  lessonAuditLogs      LessonAuditLog[]
+  bookings             Booking[]
+  slotFavorites        SlotFavorite[]
+  freezes              CourtFreeze[]
+  matches              Match[]
+  ratings              PlayerRating[]
+  eloHistory           EloHistory[]
+  guestPasses          GuestPass[]
+  guestBlocks          GuestBlock[]
+  gateScans            GateScanLog[]
+  notifications        Notification[]
+  tournaments          Tournament[]
+  tournamentCategories TournamentCategory[]
+  tournamentEntries    TournamentEntry[]
+  tournamentGroups     TournamentGroup[]
+  tournamentMatches    TournamentMatch[]
+  announcements        TournamentAnnouncement[]
+  circuits             Circuit[]
+  circuitCategories    CircuitCategory[]
 }
 
 /// The club's configurable rules. `values` holds the fields of clubSettingsSchema
@@ -279,28 +358,34 @@ model User {
   createdAt                  DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime  @updatedAt @db.Timestamptz(3)
 
-  club               Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  membership         ValidMembershipId? @relation(fields: [clubId, membershipId], references: [clubId, membershipId], onDelete: Restrict, onUpdate: Cascade)
-  categories         UserCategory[]
-  ratings            PlayerRating[]
-  coach              Coach?
-  refreshTokens      RefreshToken[]
-  bookingsCreated    Booking[]          @relation("BookingCreatedBy")
-  bookingPlayers     BookingPlayer[]
-  slotFavorites      SlotFavorite[]
-  matchPlayers       MatchPlayer[]
-  matchesReported    Match[]            @relation("MatchReportedBy")
-  matchesResponded   Match[]            @relation("MatchRespondedBy")
-  matchesResolved    Match[]            @relation("MatchResolvedBy")
-  eloHistory         EloHistory[]
-  guestPasses        GuestPass[]
-  guestBlocksCreated GuestBlock[]       @relation("GuestBlockBlockedBy")
-  guestBlocksLifted  GuestBlock[]       @relation("GuestBlockLiftedBy")
-  gateScans          GateScanLog[]
-  freezesCreated     CourtFreeze[]      @relation("FreezeCreatedBy")
-  freezesLifted      CourtFreeze[]      @relation("FreezeLiftedBy")
-  lessonAuditLogs    LessonAuditLog[]
-  notifications      Notification[]
+  club                       Club                     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  membership                 ValidMembershipId?       @relation(fields: [clubId, membershipId], references: [clubId, membershipId], onDelete: Restrict, onUpdate: Cascade)
+  categories                 UserCategory[]
+  ratings                    PlayerRating[]
+  coach                      Coach?
+  refreshTokens              RefreshToken[]
+  bookingsCreated            Booking[]                @relation("BookingCreatedBy")
+  bookingPlayers             BookingPlayer[]
+  slotFavorites              SlotFavorite[]
+  matchPlayers               MatchPlayer[]
+  matchesReported            Match[]                  @relation("MatchReportedBy")
+  matchesResponded           Match[]                  @relation("MatchRespondedBy")
+  matchesResolved            Match[]                  @relation("MatchResolvedBy")
+  eloHistory                 EloHistory[]
+  guestPasses                GuestPass[]
+  guestBlocksCreated         GuestBlock[]             @relation("GuestBlockBlockedBy")
+  guestBlocksLifted          GuestBlock[]             @relation("GuestBlockLiftedBy")
+  gateScans                  GateScanLog[]
+  freezesCreated             CourtFreeze[]            @relation("FreezeCreatedBy")
+  freezesLifted              CourtFreeze[]            @relation("FreezeLiftedBy")
+  lessonAuditLogs            LessonAuditLog[]
+  notifications              Notification[]
+  tournamentsCreated         Tournament[]             @relation("TournamentCreatedBy")
+  organizing                 TournamentOrganizer[]
+  tournamentEntries          TournamentEntryPlayer[]
+  announcements              TournamentAnnouncement[]
+  reportedTournamentResults  TournamentMatch[]        @relation("TournamentResultReportedBy")
+  confirmedTournamentResults TournamentMatch[]        @relation("TournamentResultConfirmedBy")
 
   @@unique([clubId, membershipId])
   @@unique([clubId, email])
@@ -402,15 +487,16 @@ model Court {
   createdAt DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt DateTime    @updatedAt @db.Timestamptz(3)
 
-  club         Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  coachCourts  CoachCourt[]
-  lessonSeries LessonSeries[]
-  lessons      Lesson[]
-  bookings     Booking[]
-  occupancies  SlotOccupancy[]
-  favorites    SlotFavorite[]
-  freezes      CourtFreezeCourt[]
-  matches      Match[]
+  club              Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  coachCourts       CoachCourt[]
+  lessonSeries      LessonSeries[]
+  lessons           Lesson[]
+  bookings          Booking[]
+  occupancies       SlotOccupancy[]
+  favorites         SlotFavorite[]
+  freezes           CourtFreezeCourt[]
+  matches           Match[]
+  tournamentMatches TournamentMatch[]
 
   @@unique([clubId, name])
 }
@@ -429,12 +515,13 @@ model TimeSlot {
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
-  club         Club            @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  lessonSeries LessonSeries[]
-  lessons      Lesson[]
-  bookings     Booking[]
-  occupancies  SlotOccupancy[]
-  favorites    SlotFavorite[]
+  club              Club              @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  lessonSeries      LessonSeries[]
+  lessons           Lesson[]
+  bookings          Booking[]
+  occupancies       SlotOccupancy[]
+  favorites         SlotFavorite[]
+  tournamentMatches TournamentMatch[]
 
   @@unique([clubId, startTime])
 }
@@ -452,19 +539,22 @@ model TimeSlot {
 // CHECK: exactly one of bookingId / lessonId is set.
 
 model SlotOccupancy {
-  clubId     String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
-  courtId    String
-  date       DateTime @db.Date
-  timeSlotId String
-  bookingId  String?  @unique
-  lessonId   String?  @unique
-  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  clubId            String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  courtId           String
+  date              DateTime @db.Date
+  timeSlotId        String
+  bookingId         String?  @unique
+  lessonId          String?  @unique
+  /// A scheduled tournament match claims its slot like a booking or a lesson.
+  tournamentMatchId String?  @unique
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
 
-  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  court    Court    @relation(fields: [courtId], references: [id], onDelete: Restrict)
-  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
-  booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  lesson   Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  club            Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  court           Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot        TimeSlot         @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  booking         Booking?         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  lesson          Lesson?          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  tournamentMatch TournamentMatch? @relation(fields: [tournamentMatchId], references: [id], onDelete: Cascade)
 
   @@id([courtId, date, timeSlotId])
   @@index([date])
@@ -678,7 +768,7 @@ model Match {
   format           MatchFormat
   type             MatchType
   sport            Sport
-  /// Tournament draw this match belongs to (TOURNAMENT matches; relation added in Phase 9.5).
+  /// Tournament this match belongs to (TOURNAMENT matches that count for Elo).
   tournamentId     String?
   status           MatchStatus        @default(PENDING)
   /// Club-local date the match was played.
@@ -703,15 +793,17 @@ model Match {
   createdAt        DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
 
-  club        Club          @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  court       Court?        @relation(fields: [courtId], references: [id], onDelete: SetNull)
-  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  reportedBy  User          @relation("MatchReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
-  respondedBy User?         @relation("MatchRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
-  resolvedBy  User?         @relation("MatchResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
-  players     MatchPlayer[]
-  sets        MatchSet[]
-  eloHistory  EloHistory[]
+  club            Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  court           Court?           @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  booking         Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  reportedBy      User             @relation("MatchReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
+  respondedBy     User?            @relation("MatchRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+  resolvedBy      User?            @relation("MatchResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  tournament      Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  tournamentMatch TournamentMatch?
+  players         MatchPlayer[]
+  sets            MatchSet[]
+  eloHistory      EloHistory[]
 
   @@index([clubId, status, approvalDeadline])
   @@index([clubId, playedOn])
@@ -888,4 +980,279 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+// ── Tournaments & circuits (Phase 9.5) ──────────────────────────────────────
+
+/// A season ranking made of tournaments (stages), per category; separate from the Elo ladder.
+model Circuit {
+  id          String   @id @default(cuid())
+  clubId      String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  name        String
+  season      String
+  /// Points per placement: { CHAMPION, FINALIST, SEMIFINAL, QUARTERFINAL, ROUND_OF_16, ROUND_OF_32, PARTICIPATION }.
+  pointsTable Json
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  club        Club              @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  categories  CircuitCategory[]
+  tournaments Tournament[]
+
+  @@index([clubId, season])
+}
+
+model CircuitCategory {
+  id        String @id @default(cuid())
+  clubId    String @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  circuitId String
+  name      String
+  sortOrder Int    @default(0)
+
+  club                 Club                 @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  circuit              Circuit              @relation(fields: [circuitId], references: [id], onDelete: Cascade)
+  tournamentCategories TournamentCategory[]
+
+  @@unique([circuitId, name])
+}
+
+model Tournament {
+  id                   String           @id @default(cuid())
+  clubId               String           @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  /// Unguessable id of the public read-only page (/t/<publicId>).
+  publicId             String           @unique
+  name                 String
+  description          String           @default("")
+  coverImageUrl        String?
+  sponsorLogos         String[]         @default([])
+  startDate            DateTime         @db.Date
+  endDate              DateTime         @db.Date
+  location             String           @default("")
+  /// Courts the order of play may use; empty = every active court.
+  courtIds             String[]         @default([])
+  status               TournamentStatus @default(DRAFT)
+  registrationOpensAt  DateTime?        @db.Timestamptz(3)
+  registrationClosesAt DateTime?        @db.Timestamptz(3)
+  allowGuests          Boolean          @default(false)
+  feeAmountCents       Int?
+  requiresApproval     Boolean          @default(false)
+  restMinutes          Int              @default(60)
+  circuitId            String?
+  createdById          String
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
+
+  club          Club                     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  circuit       Circuit?                 @relation(fields: [circuitId], references: [id], onDelete: SetNull)
+  createdBy     User                     @relation("TournamentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  organizers    TournamentOrganizer[]
+  categories    TournamentCategory[]
+  matches       TournamentMatch[]
+  announcements TournamentAnnouncement[]
+  ratedMatches  Match[]
+  /// Days whose order of play was published (club-local dates).
+  publishedDays TournamentScheduleDay[]
+
+  @@index([clubId, status, startDate])
+}
+
+/// Members allowed to run one tournament (besides admins).
+model TournamentOrganizer {
+  tournamentId String
+  userId       String
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tournamentId, userId])
+  @@index([userId])
+}
+
+model TournamentScheduleDay {
+  tournamentId String
+  date         DateTime @db.Date
+  publishedAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@id([tournamentId, date])
+}
+
+model TournamentCategory {
+  id                String        @id @default(cuid())
+  clubId            String        @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  tournamentId      String
+  name              String
+  entryType         MatchFormat
+  drawFormat        DrawFormat
+  groupSize         Int           @default(4)
+  advancePerGroup   Int           @default(2)
+  maxEntries        Int
+  scoreFormat       ScoreFormat   @default(BEST_OF_3_MATCH_TIEBREAK)
+  countsForElo      Boolean       @default(false)
+  seeding           SeedingMethod @default(ELO)
+  circuitCategoryId String?
+  sortOrder         Int           @default(0)
+  drawGeneratedAt   DateTime?     @db.Timestamptz(3)
+  drawPublishedAt   DateTime?     @db.Timestamptz(3)
+  championEntryId   String?       @unique
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+
+  club            Club                     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  tournament      Tournament               @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  circuitCategory CircuitCategory?         @relation(fields: [circuitCategoryId], references: [id], onDelete: SetNull)
+  champion        TournamentEntry?         @relation("CategoryChampion", fields: [championEntryId], references: [id], onDelete: SetNull)
+  entries         TournamentEntry[]
+  groups          TournamentGroup[]
+  matches         TournamentMatch[]
+  announcements   TournamentAnnouncement[]
+
+  @@index([tournamentId])
+}
+
+model TournamentEntry {
+  id            String        @id @default(cuid())
+  clubId        String        @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  categoryId    String
+  status        EntryStatus
+  paymentStatus PaymentStatus @default(UNPAID)
+  /// Manual seed set by the organizer (1 = top), overrides the rating order.
+  seed          Int?
+  note          String?
+  /// { weekdayNotBefore, weekendNotBefore, unavailableDates }
+  restrictions  Json
+  createdById   String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(3)
+
+  club       Club                    @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  category   TournamentCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  players    TournamentEntryPlayer[]
+  groupSlots TournamentGroupMember[]
+  championOf TournamentCategory?     @relation("CategoryChampion")
+  matchesAsA TournamentMatch[]       @relation("EntryA")
+  matchesAsB TournamentMatch[]       @relation("EntryB")
+  wins       TournamentMatch[]       @relation("EntryWinner")
+
+  @@index([categoryId, status])
+}
+
+/// A member (userId) or a guest / external player (name + phone).
+model TournamentEntryPlayer {
+  id         String    @id @default(cuid())
+  entryId    String
+  position   Int
+  userId     String?
+  guestName  String?
+  guestPhone String?
+  /// Doubles partner invitations stay null until accepted.
+  acceptedAt DateTime? @db.Timestamptz(3)
+
+  entry TournamentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([entryId, position])
+  @@index([userId])
+}
+
+model TournamentGroup {
+  id         String @id @default(cuid())
+  clubId     String @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  categoryId String
+  /// "A", "B"…
+  name       String
+  sortOrder  Int
+
+  club     Club                    @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  category TournamentCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  members  TournamentGroupMember[]
+  matches  TournamentMatch[]
+
+  @@unique([categoryId, name])
+}
+
+model TournamentGroupMember {
+  groupId  String
+  entryId  String
+  position Int
+
+  group TournamentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entry TournamentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, entryId])
+}
+
+/// One match of a draw (group fixture or knockout node). The result lives here; a Match row is
+/// added only when the category counts for Elo and every player is a member.
+model TournamentMatch {
+  id                 String          @id @default(cuid())
+  clubId             String          @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  tournamentId       String
+  categoryId         String
+  stage              TournamentStage
+  groupId            String?
+  /// 1 = first round (knockout) or matchday (groups).
+  round              Int
+  position           Int
+  entryAId           String?
+  entryBId           String?
+  /// Knockout: the match the winner moves on to, and which side it takes.
+  nextMatchId        String?
+  nextSide           TeamSide?
+  winnerEntryId      String?
+  outcome            MatchOutcome?
+  resultStatus       ResultStatus    @default(NONE)
+  /// [{ a, b, tiebreak }], side A (entry A) first.
+  sets               Json            @default("[]")
+  reportedById       String?
+  reportedAt         DateTime?       @db.Timestamptz(3)
+  approvalDeadline   DateTime?       @db.Timestamptz(3)
+  confirmedById      String?
+  confirmedAt        DateTime?       @db.Timestamptz(3)
+  scheduledDate      DateTime?       @db.Date
+  courtId            String?
+  timeSlotId         String?
+  /// When the organizer last notified the players of this match's slot.
+  scheduleNotifiedAt DateTime?       @db.Timestamptz(3)
+  overdueAlertedAt   DateTime?       @db.Timestamptz(3)
+  ratedMatchId       String?         @unique
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @db.Timestamptz(3)
+
+  club        Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  tournament  Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  category    TournamentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  group       TournamentGroup?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entryA      TournamentEntry?   @relation("EntryA", fields: [entryAId], references: [id], onDelete: SetNull)
+  entryB      TournamentEntry?   @relation("EntryB", fields: [entryBId], references: [id], onDelete: SetNull)
+  winner      TournamentEntry?   @relation("EntryWinner", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+  nextMatch   TournamentMatch?   @relation("Advance", fields: [nextMatchId], references: [id], onDelete: SetNull)
+  feeders     TournamentMatch[]  @relation("Advance")
+  reportedBy  User?              @relation("TournamentResultReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  confirmedBy User?              @relation("TournamentResultConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  court       Court?             @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  timeSlot    TimeSlot?          @relation(fields: [timeSlotId], references: [id], onDelete: SetNull)
+  ratedMatch  Match?             @relation(fields: [ratedMatchId], references: [id], onDelete: SetNull)
+  occupancy   SlotOccupancy?
+
+  @@unique([categoryId, stage, groupId, round, position])
+  @@index([tournamentId, scheduledDate])
+  @@index([clubId, resultStatus, scheduledDate])
+}
+
+model TournamentAnnouncement {
+  id           String   @id @default(cuid())
+  clubId       String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  tournamentId String
+  categoryId   String?
+  authorId     String
+  body         String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  club       Club                @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  tournament Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  category   TournamentCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author     User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([tournamentId, createdAt])
 }

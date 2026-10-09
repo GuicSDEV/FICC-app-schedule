@@ -13,6 +13,7 @@ import { EloHero } from "@/components/dashboard/elo-hero";
 import { InviteList } from "@/components/dashboard/invite-list";
 import { ResultApprovals } from "@/components/dashboard/result-approvals";
 import { useClub } from "@/components/providers/club-provider";
+import { MyTournamentsCard } from "@/components/tournaments/my-tournaments-card";
 import { useSession } from "@/components/providers/session-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
 import { PageHeader } from "@/components/shell/page-header";
@@ -80,6 +81,7 @@ export default function MemberDashboard() {
       client.invalidateQueries({ queryKey: queryKeys.matchesMine }),
       client.invalidateQueries({ queryKey: ["players"] }),
       client.invalidateQueries({ queryKey: queryKeys.me }),
+      client.invalidateQueries({ queryKey: queryKeys.tournaments.mine }),
     ]);
   }
 
@@ -122,6 +124,7 @@ export default function MemberDashboard() {
                 <ResultApprovals matches={approvals} />
               </Section>
             ) : null}
+            <MyTournamentsCard />
           </div>
 
           <div className="space-y-6">

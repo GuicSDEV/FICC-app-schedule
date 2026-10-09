@@ -39,6 +39,7 @@ import {
 import { addDays, clubToday, type IsoDate, toDbDate, weekdayOf } from "./seed/dates";
 import { planMatches, rateMatches } from "./seed/matches";
 import { createRandom } from "./seed/random";
+import { seedTournaments } from "./seed/tournaments";
 import { printTable } from "./seed/report";
 
 const RANDOM_SEED = 0xf1cc;
@@ -282,6 +283,23 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  // ── A circuit and tournaments (one open for registration, one draft) ──────
+  // Rafael (the first member) stays out of the singles so the registration can be tried.
+  const others = MEMBERS.slice(1).map((member) => memberId(member.membershipId));
+  await seedTournaments(prisma, {
+    today,
+    adminId: admin.id,
+    season: today.slice(0, 4),
+    singles: others.slice(0, 11),
+    doubles: [
+      [memberId(MEMBERS[0]!.membershipId), others[11]!],
+      [others[12]!, others[13]!],
+      [others[14]!, others[15]!],
+      [others[16]!, others[17]!],
+      [others[18]!, others[19]!],
+    ],
+  });
 
   const checks = await runIntegrityChecks(prisma, members[0]!.id);
   await printSummary({ today, windowEnd, password, checks });

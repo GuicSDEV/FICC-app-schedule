@@ -4,6 +4,7 @@ import {
   CalendarDays,
   GraduationCap,
   Home,
+  Medal,
   type LucideIcon,
   Scale,
   ScanLine,
@@ -28,7 +29,8 @@ export type NavLabel =
   | "lessons"
   | "disputes"
   | "members"
-  | "gate";
+  | "gate"
+  | "tournaments";
 
 export interface NavItem {
   href: string;
@@ -53,6 +55,7 @@ export const MEMBER_TABS: { left: NavItem[]; right: NavItem[] } = {
 export const MEMBER_SIDEBAR: NavItem[] = [
   ...MEMBER_TABS.left,
   ...MEMBER_TABS.right,
+  { href: "/app/tournaments", label: "tournaments", icon: Medal },
   { href: "/app/guests", label: "guests", icon: UserCheck },
   { href: "/app/profile", label: "profile", icon: User },
 ];
@@ -67,6 +70,7 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "freezes", icon: Ban, exact: true },
   { href: "/admin/coaches", label: "coaches", icon: GraduationCap },
   { href: "/admin/lessons", label: "lessons", icon: CalendarClock },
+  { href: "/admin/tournaments", label: "tournaments", icon: Medal },
   { href: "/admin/disputes", label: "disputes", icon: Scale },
   { href: "/admin/guests", label: "guests", icon: UserCheck },
   { href: "/admin/members", label: "members", icon: Users },
