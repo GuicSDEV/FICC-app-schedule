@@ -18,6 +18,8 @@ function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group
   return (
     <Link
       href={item.href}
+      // Screens render without server data, so loading them ahead is cheap.
+      prefetch
       aria-current={active ? "page" : undefined}
       className="relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >

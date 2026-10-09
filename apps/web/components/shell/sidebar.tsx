@@ -81,6 +81,8 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              // Screens render without server data, so loading them ahead is cheap.
+              prefetch
               aria-current={active ? "page" : undefined}
               title={collapsed ? t(`items.${item.label}`) : undefined}
               className={cn(

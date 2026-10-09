@@ -1,6 +1,6 @@
 import type { AuthUser } from "@ficc/shared";
 import { dehydrate, HydrationBoundary, QueryClient, type QueryKey } from "@tanstack/react-query";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { API_PREFIX, API_URL } from "@/lib/api";
@@ -29,8 +29,9 @@ async function serverGet(path: string, query?: ServerQuery["query"]): Promise<un
 
 /**
  * Loads a page's first queries on the server and hands them to React Query, so the HTML already
- * shows the data (no wait for the scripts and a request chain). Anything that fails (expired
- * access cookie, API down) is simply left for the browser to fetch as before.
+ * shows the data (no wait for the scripts and a request chain). Only on a full page load: client
+ * navigations skip it and render at once. Anything that fails (expired access cookie, API down)
+ * is simply left for the browser to fetch as before.
  */
 export async function Prefetched({
   queries,
@@ -40,6 +41,9 @@ export async function Prefetched({
   queries: (me: AuthUser) => ServerQuery[];
   children: ReactNode;
 }) {
+  // Moving between screens (an RSC request, not a full page load): the browser already has or
+  // fetches the data itself, so do not hold the screen change on API round trips here.
+  if ((await headers()).has("rsc")) return children;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const me = await client
     .fetchQuery({
