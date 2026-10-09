@@ -11,11 +11,16 @@ import {
 import {
   addDays,
   type BookingDetail,
+  bookingAvailability,
+  clubInstant,
+  clubTimeOfDay,
   clubToday,
   type CreateBookingInput,
   fromDbDate,
   isSlotPast,
   type MyBookingsResponse,
+  overlapsSlot,
+  type SlotAlternative,
   slotEndsAt,
   slotStartsAt,
   toDbDate,
@@ -27,7 +32,9 @@ import { playerSelect, toCourtSummary, toPlayerSummary, toSlotSummary } from "..
 import { isUniqueViolation, serializable, type Tx } from "../common/transactions";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { isCourtFrozen } from "../schedule/freezes";
+import { NoShowsService } from "./no-shows.service";
+import { DayPlanService } from "../schedule/day-plan.service";
+import { freezesOverlapping, isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
 import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
@@ -83,6 +90,8 @@ export class BookingsService {
     private readonly clock: Clock,
     private readonly notifications: NotificationsService,
     private readonly slotEvents: SlotEventsService,
+    private readonly plans: DayPlanService,
+    private readonly noShows: NoShowsService,
   ) {}
 
   /**
@@ -91,6 +100,22 @@ export class BookingsService {
    */
   async create(creatorId: string, input: CreateBookingInput): Promise<BookingDetail> {
     const now = this.clock.now();
+    // Cheap check before the transaction: in an opening rush most requests end here.
+    const held = await this.prisma.slotOccupancy.findUnique({
+      where: {
+        courtId_date_timeSlotId: {
+          courtId: input.courtId,
+          date: toDbDate(input.date),
+          timeSlotId: input.timeSlotId,
+        },
+      },
+    });
+    if (held && held.lessonId === null) {
+      throw this.slotTaken(
+        false,
+        await this.alternatives(input.date, input.timeSlotId, input.courtId),
+      );
+    }
     const booking = await serializable(this.prisma, async (tx) => {
       const [court, slot] = await Promise.all([
         tx.court.findUnique({ where: { id: input.courtId } }),
@@ -103,12 +128,27 @@ export class BookingsService {
       if (isSlotPast(input.date, slot, now, clubTimeZone())) {
         throw unprocessable("SLOT_IN_PAST", "api.slotInPast");
       }
-      const { bookingWindowDays } = clubSettings();
-      if (input.date > addDays(clubToday(now, clubTimeZone()), bookingWindowDays - 1)) {
+      const settings = clubSettings();
+      const plan = await this.plans.plan(input.date, tx);
+      this.plans.assertSlotInPlan(plan, slot, court);
+      if (plan.mode === "FREE_PLAY") throw conflict("FREE_PLAY_DAY", "api.freePlayDay");
+      // The server's clock decides when a day opens; the phone's clock is never trusted.
+      const availability = bookingAvailability(input.date, now, settings, clubTimeZone());
+      if (!availability.inWindow) {
         throw unprocessable("BEYOND_BOOKING_WINDOW", {
           key: "api.beyondBookingWindow",
-          params: { days: bookingWindowDays },
+          params: { days: settings.bookingWindowDays },
         });
+      }
+      if (!availability.open && availability.opensAt) {
+        const opensAt = availability.opensAt;
+        const day = clubToday(opensAt, clubTimeZone());
+        const when = `${day === clubToday(now, clubTimeZone()) ? "hoje" : `em ${day.slice(8, 10)}/${day.slice(5, 7)}`} às ${clubTimeOfDay(opensAt, clubTimeZone())}`;
+        throw unprocessable(
+          "BOOKING_NOT_OPEN_YET",
+          { key: "api.bookingNotOpenYet", params: { when } },
+          { opensAt: opensAt.toISOString(), serverNow: now.toISOString() },
+        );
       }
 
       const startsAt = slotStartsAt(input.date, slot, clubTimeZone());
@@ -130,8 +170,10 @@ export class BookingsService {
       }
       const nameOf = (id: string) => players.find((player) => player.id === id)?.name ?? id;
 
+      await this.assertNotSuspended(tx, creatorId, playerIds, now, nameOf);
       await this.assertPlayersFree(tx, playerIds, input.date, input.timeSlotId, nameOf);
       await this.assertBookingLimit(tx, playerIds, now, nameOf);
+      await this.assertDailyLimit(tx, playerIds, input.date, nameOf);
 
       const occupied = await tx.slotOccupancy.findUnique({
         where: {
@@ -142,7 +184,10 @@ export class BookingsService {
           },
         },
       });
-      if (occupied) throw this.slotTaken(occupied.lessonId !== null);
+      if (occupied) {
+        if (occupied.lessonId !== null) throw this.slotTaken(true);
+        throw this.slotTaken(false);
+      }
 
       const created = await tx.booking.create({
         data: {
@@ -173,9 +218,18 @@ export class BookingsService {
         data: { courtId: court.id, date: created.date, timeSlotId: slot.id, bookingId: created.id },
       });
       return created;
-    }).catch((error: unknown) => {
-      if (isUniqueViolation(error)) throw this.slotTaken(false);
-      throw error;
+    }).catch(async (error: unknown) => {
+      const taken =
+        isUniqueViolation(error) ||
+        (error instanceof Error &&
+          "code" in error &&
+          (error as { code?: string }).code === "SLOT_TAKEN");
+      if (!taken) throw error;
+      // Someone got there first: answer with the next free options right away.
+      throw this.slotTaken(
+        false,
+        await this.alternatives(input.date, input.timeSlotId, input.courtId),
+      );
     });
 
     const creator = booking.players.find((player) => player.userId === creatorId)?.user.name ?? "";
@@ -249,7 +303,10 @@ export class BookingsService {
     if (isSlotPast(fromDbDate(booking.date), booking.timeSlot, this.clock.now(), clubTimeZone())) {
       throw unprocessable("SLOT_IN_PAST", "api.slotStartedCancel");
     }
-    return this.cancel(bookingId, BookingCancelReason.CANCELLED_BY_PLAYER, userId);
+    const detail = await this.cancel(bookingId, BookingCancelReason.CANCELLED_BY_PLAYER, userId);
+    // Inside the club's window this counts as a late cancellation (after the slot is freed).
+    await this.noShows.recordLateCancellation(booking, userId);
+    return detail;
   }
 
   /**
@@ -442,11 +499,124 @@ export class BookingsService {
     }
   }
 
-  private slotTaken(byLesson: boolean) {
+  private slotTaken(byLesson: boolean, alternatives?: SlotAlternative[]) {
     return conflict(
       byLesson ? "SLOT_HAS_LESSON" : "SLOT_TAKEN",
       byLesson ? "api.slotLessonTaken" : "api.slotJustTaken",
+      alternatives ? { alternatives } : undefined,
     );
+  }
+
+  /**
+   * Up to four free options after a slot was just taken: the same time on other courts first,
+   * then later times of the day on any court.
+   */
+  async alternatives(
+    date: string,
+    timeSlotId: string,
+    courtId: string,
+  ): Promise<SlotAlternative[]> {
+    const now = this.clock.now();
+    const { plan, slots } = await this.plans.slots(date);
+    if (plan.closed || plan.mode !== "BOOKING") return [];
+    const [courts, occupied, freezes] = await Promise.all([
+      this.prisma.court.findMany({
+        where: { status: CourtStatus.ACTIVE },
+        orderBy: { sortOrder: "asc" },
+      }),
+      this.prisma.slotOccupancy.findMany({ where: { date: toDbDate(date) } }),
+      freezesOverlapping(
+        this.prisma,
+        clubInstant(date, "00:00", clubTimeZone()),
+        clubInstant(addDays(date, 1), "00:00", clubTimeZone()),
+      ),
+    ]);
+    const taken = new Set(occupied.map((row) => `${row.courtId}:${row.timeSlotId}`));
+    const wanted = slots.find((slot) => slot.id === timeSlotId);
+    const ordered = [
+      ...(wanted ? [wanted] : []),
+      ...slots.filter(
+        (slot) => slot.id !== timeSlotId && (!wanted || slot.sortOrder > wanted.sortOrder),
+      ),
+    ];
+    const options: SlotAlternative[] = [];
+    for (const slot of ordered) {
+      if (isSlotPast(date, slot, now, clubTimeZone())) continue;
+      for (const court of courts) {
+        if (court.id === courtId && slot.id === timeSlotId) continue;
+        if (plan.closedCourtIds.includes(court.id) || taken.has(`${court.id}:${slot.id}`)) continue;
+        const frozen = freezes.some(
+          (freeze) =>
+            freeze.courts.some((entry) => entry.courtId === court.id) &&
+            overlapsSlot(freeze, date, slot, clubTimeZone()),
+        );
+        if (frozen) continue;
+        options.push({
+          courtId: court.id,
+          courtName: court.name,
+          timeSlotId: slot.id,
+          startTime: slot.startTime,
+        });
+        if (options.length >= 4) return options;
+      }
+    }
+    return options;
+  }
+
+  /** Members suspended by the no-show penalty cannot book (nor be booked). */
+  private async assertNotSuspended(
+    tx: Tx,
+    creatorId: string,
+    playerIds: string[],
+    now: Date,
+    nameOf: (id: string) => string,
+  ): Promise<void> {
+    const suspended = await tx.user.findMany({
+      where: { id: { in: playerIds }, bookingSuspendedUntil: { gt: now } },
+      select: { id: true, bookingSuspendedUntil: true },
+    });
+    const own = suspended.find((user) => user.id === creatorId);
+    if (own) {
+      const until = own.bookingSuspendedUntil!;
+      throw forbidden("BOOKING_SUSPENDED", {
+        key: "api.bookingSuspended",
+        params: {
+          until: `${clubToday(until, clubTimeZone()).split("-").reverse().slice(0, 2).join("/")} ${clubTimeOfDay(until, clubTimeZone())}`,
+        },
+      });
+    }
+    if (suspended[0]) {
+      throw forbidden("BOOKING_SUSPENDED", {
+        key: "api.bookingSuspendedPlayer",
+        params: { name: nameOf(suspended[0].id) },
+      });
+    }
+  }
+
+  /** At most the club's maxBookingsPerDay active bookings per player on one date. */
+  private async assertDailyLimit(
+    tx: Tx,
+    playerIds: string[],
+    date: string,
+    nameOf: (id: string) => string,
+  ): Promise<void> {
+    const max = clubSettings().maxBookingsPerDay;
+    const rows = await tx.bookingPlayer.groupBy({
+      by: ["userId"],
+      where: {
+        userId: { in: playerIds },
+        status: { not: BookingPlayerStatus.DECLINED },
+        booking: { date: toDbDate(date), status: { in: ACTIVE_STATUSES } },
+      },
+      _count: { _all: true },
+    });
+    const over = rows.find((row) => row._count._all >= max);
+    if (over) {
+      throw unprocessable("MAX_BOOKINGS_PER_DAY", {
+        key: "api.maxBookingsPerDay",
+        params: { name: nameOf(over.userId), max },
+      });
+    }
   }
 
   private slotRef(booking: BookingWithRelations) {

@@ -25,7 +25,7 @@ import {
   toDbDate,
 } from "@ficc/shared";
 
-import type { RequestUser } from "../common/auth.decorators";
+import { can, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { conflict, forbidden, notFound, unprocessable } from "../common/domain.exception";
 import { playerSelect, toCourtSummary, toPlayerSummary } from "../common/mappers";
@@ -286,7 +286,7 @@ export class MatchesService {
     const disputedBy = disputed.respondedBy?.name ?? "";
     const payload = { matchId, disputedBy, comment: comment ?? null };
     await this.notifications.notify(reporterTeam, "MATCH_DISPUTED", payload);
-    await this.notifications.notifyAdmins("MATCH_DISPUTED", payload);
+    await this.notifications.notifyStaff("RANKING_MANAGE", "MATCH_DISPUTED", payload);
     return toMatchDetail(disputed, userId);
   }
 
@@ -376,7 +376,7 @@ export class MatchesService {
     });
     if (!match) throw notFound("MATCH_NOT_FOUND", "api.matchNotFound");
     const isPlayer = match.players.some((player) => player.userId === viewer.id);
-    if (!isPlayer && viewer.role !== Role.ADMIN && match.status !== MatchStatus.CONFIRMED) {
+    if (!isPlayer && !can(viewer, "RANKING_MANAGE") && match.status !== MatchStatus.CONFIRMED) {
       throw forbidden("NOT_A_PLAYER", "api.notMatchPlayer");
     }
     return toMatchDetail(match, viewer.id);

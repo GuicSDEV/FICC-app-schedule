@@ -13,6 +13,7 @@ import { EloHero } from "@/components/dashboard/elo-hero";
 import { InviteList } from "@/components/dashboard/invite-list";
 import { ResultApprovals } from "@/components/dashboard/result-approvals";
 import { useClub } from "@/components/providers/club-provider";
+import { LatestNews } from "@/components/news/latest-news";
 import { MyTournamentsCard } from "@/components/tournaments/my-tournaments-card";
 import { useSession } from "@/components/providers/session-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
@@ -82,6 +83,7 @@ export default function MemberDashboard() {
       client.invalidateQueries({ queryKey: ["players"] }),
       client.invalidateQueries({ queryKey: queryKeys.me }),
       client.invalidateQueries({ queryKey: queryKeys.tournaments.mine }),
+      client.invalidateQueries({ queryKey: queryKeys.news }),
     ]);
   }
 
@@ -125,6 +127,7 @@ export default function MemberDashboard() {
               </Section>
             ) : null}
             <MyTournamentsCard />
+            <LatestNews />
           </div>
 
           <div className="space-y-6">

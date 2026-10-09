@@ -11,7 +11,12 @@ import {
   resolveDisputeSchema,
 } from "@ficc/shared";
 
-import { CurrentUser, type RequestUser, Roles } from "../common/auth.decorators";
+import {
+  CurrentUser,
+  type RequestUser,
+  Roles,
+  RequirePermissions,
+} from "../common/auth.decorators";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { MatchesService } from "./matches.service";
 
@@ -60,6 +65,7 @@ export class MatchesController {
 
 @Controller("admin/disputes")
 @Roles(Role.ADMIN)
+@RequirePermissions("RANKING_MANAGE")
 export class AdminDisputesController {
   constructor(private readonly matches: MatchesService) {}
 

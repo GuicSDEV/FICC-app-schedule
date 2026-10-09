@@ -8,6 +8,8 @@ export const SOCKET_EVENTS = {
   leaderboardUpdated: "leaderboard.updated",
   freezeUpdated: "freeze.updated",
   tournamentUpdated: "tournament.updated",
+  courtsNowUpdated: "courts-now.updated",
+  newsUpdated: "news.updated",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
@@ -22,7 +24,8 @@ export type ScheduleChangeKind =
   | "lesson.moved"
   | "freeze.changed"
   | "tournament.scheduled"
-  | "tournament.unscheduled";
+  | "tournament.unscheduled"
+  | "plan.changed";
 
 export interface ScheduleCellRef {
   date: IsoDate;
@@ -55,4 +58,14 @@ export interface TournamentUpdatedEvent {
   categoryId: string | null;
   /** What changed, so screens refetch only what they show. */
   kind: "draw" | "schedule" | "result" | "entries" | "info";
+}
+
+/** Free play changed (check-in, check-out, queue): "Quadras agora" refetches. */
+export interface CourtsNowUpdatedEvent {
+  date: IsoDate;
+}
+
+/** A Mural post was published, edited or removed. */
+export interface NewsUpdatedEvent {
+  postId: string;
 }

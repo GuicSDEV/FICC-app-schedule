@@ -1,4 +1,5 @@
 import { Role } from "@ficc/db";
+import { DEFAULT_CLUB_SETTINGS } from "@ficc/shared";
 
 import { createTestApp, type TestContext } from "./support/app";
 import {
@@ -29,6 +30,12 @@ describe("Auth", () => {
 
   describe("member registration", () => {
     it("registers a listed matrícula, sets the auth cookies and logs the member in", async () => {
+      // Clubs that do not require approval let new members in right away.
+      await ctx.prisma.clubSettings.update({
+        where: { clubId: ctx.currentClubId() },
+        data: { values: { ...DEFAULT_CLUB_SETTINGS, signupRequiresApproval: false } },
+      });
+      ctx.invalidateClubs();
       await ctx.prisma.validMembershipId.create({
         data: { membershipId: "777123", holderName: "Ana Lima" },
       });

@@ -9,17 +9,20 @@ import { CoachesModule } from "./coaches/coaches.module";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { CommonModule } from "./common/common.module";
 import { validateEnv } from "./config/env";
+import { FreePlayModule } from "./free-play/free-play.module";
 import { FreezesModule } from "./freezes/freezes.module";
 import { GuestsModule } from "./guests/guests.module";
 import { HealthModule } from "./health/health.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { LessonsModule } from "./lessons/lessons.module";
 import { MatchesModule } from "./matches/matches.module";
+import { NewsModule } from "./news/news.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RankingModule } from "./ranking/ranking.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { ClubScheduleModule } from "./schedule/schedule.module";
+import { StaffModule } from "./staff/staff.module";
 import { TenancyModule } from "./tenancy/tenancy.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 import { UsersModule } from "./users/users.module";
@@ -51,6 +54,9 @@ import { UsersModule } from "./users/users.module";
     RankingModule,
     GuestsModule,
     TournamentsModule,
+    StaffModule,
+    NewsModule,
+    FreePlayModule,
     // Workers and schedulers only where jobs are enabled (off in tests, which call the runner).
     ConditionalModule.registerWhen(
       JobsModule,

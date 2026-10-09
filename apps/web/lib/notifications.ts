@@ -282,6 +282,38 @@ export function useNotificationCopy() {
             href: "/app/guests",
             tone: "neutral",
           };
+        case "MEMBER_APPROVED":
+          return {
+            title: t("MEMBER_APPROVED.title"),
+            body: t("MEMBER_APPROVED.body", { club: item.payload.clubName }),
+            href: "/app",
+            tone: "ball",
+          };
+        case "COURT_AVAILABLE":
+          return {
+            title: t("COURT_AVAILABLE.title", { court: item.payload.courtName }),
+            body: t("COURT_AVAILABLE.body", { time: format.time(item.payload.expiresAt) }),
+            href: "/app/courts-now",
+            tone: "ball",
+          };
+        case "NEWS_POSTED":
+          return {
+            title: t("NEWS_POSTED.title"),
+            body: item.payload.title,
+            href: `/app/news?post=${item.payload.postId}`,
+            tone: "neutral",
+          };
+        case "BOOKING_SUSPENDED":
+          return {
+            title: t("BOOKING_SUSPENDED.title"),
+            body: t("BOOKING_SUSPENDED.body", {
+              count: item.payload.count,
+              days: item.payload.windowDays,
+              until: format.dateTime(item.payload.until),
+            }),
+            href: "/app/courts",
+            tone: "danger",
+          };
       }
     },
     [t, labels, format, club],

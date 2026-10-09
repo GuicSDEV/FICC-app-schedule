@@ -1,7 +1,7 @@
 "use client";
 
 import type { Surface } from "@ficc/shared";
-import { CloudRain, Lock, Plus, Star, Trophy, Wrench } from "lucide-react";
+import { Ban, CloudRain, Lock, Plus, Star, Trophy, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "./avatar";
 import { AvatarStack } from "./avatar-stack";
 
-export type SlotChipState = "free" | "lesson" | "booking" | "tournament" | "frozen";
+export type SlotChipState = "free" | "lesson" | "booking" | "tournament" | "frozen" | "closed";
 
 export interface SlotChipProps {
   courtName: string;
@@ -21,6 +21,8 @@ export interface SlotChipProps {
   favorite?: boolean;
   /** The viewer is one of the booking's players. */
   mine?: boolean;
+  /** Staff: past bookings open their sheet (no-shows). */
+  pastBookingsOpen?: boolean;
   coach?: { displayName: string; photoUrl: string | null; color: string } | null;
   players?: { id: string; name: string; photoUrl: string | null; pending?: boolean }[];
   bookingStatus?: "PENDING" | "CONFIRMED";
@@ -78,6 +80,8 @@ function describe(props: SlotChipProps, t: Translate): string {
       });
     case "frozen":
       return t("frozen", { court, reason: props.freezeReason ?? "MAINTENANCE" });
+    case "closed":
+      return t("closed", { court });
   }
 }
 
@@ -104,7 +108,12 @@ export function SlotChip(props: SlotChipProps) {
     className,
   } = props;
   const styles = SURFACE_STYLES[surface];
-  const interactive = Boolean(onPress) && !past && state !== "frozen";
+  // Past bookings stay tappable for their players (and staff), to report a no-show.
+  const interactive =
+    Boolean(onPress) &&
+    state !== "frozen" &&
+    state !== "closed" &&
+    (!past || (state === "booking" && Boolean(props.pastBookingsOpen || mine)));
 
   return (
     <motion.button
@@ -124,6 +133,7 @@ export function SlotChip(props: SlotChipProps) {
             : cn(styles.booked, "text-foreground")),
         state === "tournament" && "border-gold/50 bg-gold/15 text-foreground",
         state === "frozen" && "border-warning/40 bg-surface striped text-warning-ink",
+        state === "closed" && "border-border bg-surface-2 striped text-muted-foreground",
         mine && state === "booking" && "ring-2 ring-ball ring-offset-2 ring-offset-background",
         past && "opacity-40",
         !interactive && "cursor-default",
@@ -255,10 +265,17 @@ export function SlotChip(props: SlotChipProps) {
               <span className="hidden num @[5.5rem]:inline">{courtName}</span>
             </>
           ) : null}
+
+          {state === "closed" ? (
+            <>
+              <Ban aria-hidden className="size-4" />
+              <span className="hidden num @[5.5rem]:inline">{courtName}</span>
+            </>
+          ) : null}
         </motion.span>
       </AnimatePresence>
 
-      {favorite && state !== "frozen" ? (
+      {favorite && state !== "frozen" && state !== "closed" ? (
         <Star aria-hidden className="absolute top-1 right-1 size-2.5 fill-current text-warning" />
       ) : null}
     </motion.button>

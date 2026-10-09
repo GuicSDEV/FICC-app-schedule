@@ -20,6 +20,7 @@ import {
   slotEndTime,
   toDbDate,
   weekdayOf,
+  slotsOfDay,
 } from "@ficc/shared";
 
 import type { RequestUser } from "../common/auth.decorators";
@@ -31,6 +32,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import { freezesOverlapping, isCourtFrozen } from "../schedule/freezes";
+import { DayPlanService } from "../schedule/day-plan.service";
 import { SlotEventsService } from "../schedule/slot-events.service";
 import { clubTimeZone } from "../tenancy/tenant-context";
 import { TournamentContextService } from "./tournament-context.service";
@@ -55,6 +57,7 @@ export class OrderOfPlayService {
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
     private readonly slotEvents: SlotEventsService,
+    private readonly plans: DayPlanService,
   ) {}
 
   private async courtsOf(client: Tx, tournamentId: string) {
@@ -73,9 +76,9 @@ export class OrderOfPlayService {
     await this.access.assertCanManage(viewer, tournamentId);
     const dbDate = toDbDate(date);
     const zone = clubTimeZone();
-    const [courts, slots, occupancies, freezes, published] = await Promise.all([
+    const [courts, { plan, slots }, occupancies, freezes, published] = await Promise.all([
       this.courtsOf(this.prisma, tournamentId),
-      this.prisma.timeSlot.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+      this.plans.slots(date),
       this.prisma.slotOccupancy.findMany({ where: { date: dbDate } }),
       freezesOverlapping(
         this.prisma,
@@ -98,15 +101,17 @@ export class OrderOfPlayService {
             freeze.courts.some((entry) => entry.courtId === court.id) &&
             overlapsSlot(freeze, date, slot, zone),
         );
-        const state: BoardCellState = frozen
-          ? "frozen"
-          : occupancy?.lessonId
-            ? "lesson"
-            : occupancy?.bookingId
-              ? "booking"
-              : occupancy?.tournamentMatchId
-                ? "tournament"
-                : "free";
+        const state: BoardCellState = plan.closedCourtIds.includes(court.id)
+          ? "closed"
+          : frozen
+            ? "frozen"
+            : occupancy?.lessonId
+              ? "lesson"
+              : occupancy?.bookingId
+                ? "booking"
+                : occupancy?.tournamentMatchId
+                  ? "tournament"
+                  : "free";
         cells.push({
           courtId: court.id,
           timeSlotId: slot.id,
@@ -174,6 +179,8 @@ export class OrderOfPlayService {
       throw unprocessable("COURT_NOT_ALLOWED", "api.tournamentCourtNotAllowed");
     const slot = await tx.timeSlot.findUnique({ where: { id: input.timeSlotId } });
     if (!slot) throw unprocessable("COURT_NOT_ALLOWED", "api.tournamentSlotTaken");
+    const court = courts.find((entry) => entry.id === input.courtId)!;
+    this.plans.assertSlotInPlan(await this.plans.plan(input.date, tx), slot, court);
     if (isSlotPast(input.date, slot, this.clock.now(), clubTimeZone())) {
       throw unprocessable("SLOT_PAST", "api.tournamentSlotPast");
     }
@@ -370,10 +377,11 @@ export class OrderOfPlayService {
     const zone = clubTimeZone();
     const now = this.clock.now();
     const dates = [...new Set(input.dates)].sort();
-    const [courts, slots, occupancies] = await Promise.all([
+    const [courts, allSlots, occupancies, plans] = await Promise.all([
       this.courtsOf(this.prisma, tournamentId),
       this.prisma.timeSlot.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
       this.prisma.slotOccupancy.findMany({ where: { date: { in: dates.map(toDbDate) } } }),
+      this.plans.plans(dates),
     ]);
     const freezes = await freezesOverlapping(
       this.prisma,
@@ -383,9 +391,11 @@ export class OrderOfPlayService {
     const open: OpenSlot[] = [];
     for (const date of dates) {
       const weekday = weekdayOf(date);
-      for (const slot of slots) {
+      const plan = plans.get(date)!;
+      for (const slot of slotsOfDay(allSlots, plan)) {
         if (isSlotPast(date, slot, now, zone)) continue;
         for (const court of courts) {
+          if (plan.closedCourtIds.includes(court.id)) continue;
           const taken = occupancies.some(
             (entry) =>
               fromDbDate(entry.date) === date &&

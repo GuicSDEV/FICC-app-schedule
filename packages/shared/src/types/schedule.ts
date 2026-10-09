@@ -8,8 +8,9 @@ import type {
   Surface,
 } from "../enums";
 import type { CoachSummary, CourtSummary, IsoDateTime, PlayerSummary, SlotSummary } from "./common";
+import type { DayPlanInfo } from "./operations";
 
-export type ScheduleCellState = "free" | "lesson" | "booking" | "tournament" | "frozen";
+export type ScheduleCellState = "free" | "lesson" | "booking" | "tournament" | "frozen" | "closed";
 
 export interface ScheduleLessonInfo {
   id: string;
@@ -56,7 +57,7 @@ export interface ScheduleCell {
   date: IsoDate;
   courtId: string;
   timeSlotId: string;
-  /** Frozen wins over everything; then lesson, booking, tournament match, free. */
+  /** Closed (date exception) and frozen win over everything; then lesson, booking, match, free. */
   state: ScheduleCellState;
   /** The slot has already started. */
   past: boolean;
@@ -70,6 +71,8 @@ export interface ScheduleCell {
 
 export interface ScheduleDay {
   date: IsoDate;
+  /** Mode, closures and booking opening of the day. */
+  plan: DayPlanInfo;
   courts: CourtSummary[];
   slots: SlotSummary[];
   /** One cell per court × slot, ordered by slot then court. */

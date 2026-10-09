@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { type BookingInfoTarget, BookingInfoSheet } from "@/components/booking/booking-info-sheet";
 import { type BookingTarget, BookingSheet } from "@/components/booking/booking-sheet";
@@ -23,12 +24,14 @@ import {
   type SurfaceFilter,
 } from "@/components/calendar/court-calendar";
 import { DayStrip } from "@/components/calendar/day-strip";
+import { DayPlanBanner } from "@/components/operations/day-plan-banner";
 import { useClub } from "@/components/providers/club-provider";
 import { useSession } from "@/components/providers/session-provider";
 import { useSocketEvent } from "@/components/providers/socket-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
 import { PageHeader } from "@/components/shell/page-header";
 import { UserAvatarLink } from "@/components/shell/user-avatar-link";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
@@ -116,6 +119,10 @@ export default function CourtsPage() {
     const court = day?.courts.find((entry) => entry.id === cell.courtId);
     const slot = day?.slots.find((entry) => entry.id === cell.timeSlotId);
     if (!court || !slot) return;
+    if (cell.state === "free" && day && !day.plan.bookingOpen) {
+      toast(day.plan.mode === "FREE_PLAY" ? t("dayPlan.freePlayTitle") : t("dayPlan.notOpenToast"));
+      return;
+    }
     if (cell.state === "free")
       setBookingTarget({ date: cell.date, court, slot, favorite: cell.favorite });
     else if (cell.state === "lesson" && cell.lesson) {
@@ -139,6 +146,11 @@ export default function CourtsPage() {
       });
     }
   }
+
+  const suspendedUntil =
+    user?.bookingSuspendedUntil && Date.parse(user.bookingSuspendedUntil) > now.getTime()
+      ? user.bookingSuspendedUntil
+      : null;
 
   const skeletonCourts =
     (courts.data?.courts ?? []).filter((court) => filter === "ALL" || court.surface === filter)
@@ -175,6 +187,16 @@ export default function CourtsPage() {
         aria-busy={schedule.isLoading}
         className="mt-4 space-y-5"
       >
+        <AlertBanner
+          show={suspendedUntil !== null}
+          tone="danger"
+          title={
+            suspendedUntil ? t("dayPlan.suspended", { until: format.dateTime(suspendedUntil) }) : ""
+          }
+        />
+        {schedule.data && schedule.data.date === date ? (
+          <DayPlanBanner date={date} plan={schedule.data.plan} isToday={date === today} />
+        ) : null}
         <AnimatePresence mode="wait" initial={false}>
           {schedule.isError ? (
             <motion.div

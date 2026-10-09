@@ -9,7 +9,12 @@ import {
   type FreezeDetail,
 } from "@ficc/shared";
 
-import { CurrentUser, type RequestUser, Roles } from "../common/auth.decorators";
+import {
+  CurrentUser,
+  type RequestUser,
+  Roles,
+  RequirePermissions,
+} from "../common/auth.decorators";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { FreezesService } from "./freezes.service";
 
@@ -26,6 +31,7 @@ export class FreezesController {
 
 @Controller("admin/freezes")
 @Roles(Role.ADMIN)
+@RequirePermissions("COURTS_MANAGE")
 export class AdminFreezesController {
   constructor(private readonly freezes: FreezesService) {}
 

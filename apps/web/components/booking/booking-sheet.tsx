@@ -4,9 +4,11 @@ import {
   type BookingDetail,
   type BookingType,
   type CourtSummary,
+  type CourtsResponse,
   createBookingSchema,
   OTHER_PLAYERS_BY_TYPE,
   type PlayerSummary,
+  type SlotAlternative,
   type SlotSummary,
 } from "@ficc/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,8 +23,8 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
-import { api } from "@/lib/api";
-import { fadeVariants, haptic } from "@/lib/motion";
+import { api, ApiError } from "@/lib/api";
+import { fadeVariants, haptic, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { patchScheduleCells } from "@/lib/schedule-cache";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -69,8 +71,12 @@ export function BookingSheet({
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<BookingDetail | null>(null);
+  const [alternatives, setAlternatives] = useState<SlotAlternative[]>([]);
+  /** The member picked one of the free options offered after "just taken". */
+  const [moved, setMoved] = useState<BookingTarget | null>(null);
   const open = requested !== null;
-  const target = useLastDefined(requested);
+  const lastRequested = useLastDefined(requested);
+  const target = moved ?? lastRequested;
 
   // Fresh form every time the sheet opens on a slot.
   useEffect(() => {
@@ -79,8 +85,21 @@ export function BookingSheet({
       setPlayers([]);
       setError(null);
       setBooked(null);
+      setAlternatives([]);
+      setMoved(null);
     }
   }, [requested]);
+
+  function pickAlternative(option: SlotAlternative) {
+    const layout = client.getQueryData<CourtsResponse>(queryKeys.courts);
+    const court = layout?.courts.find((entry) => entry.id === option.courtId);
+    const slot = layout?.slots.find((entry) => entry.id === option.timeSlotId);
+    if (!court || !slot || !target) return;
+    haptic(10);
+    setMoved({ date: target.date, court, slot, favorite: false });
+    setAlternatives([]);
+    setError(null);
+  }
 
   const mutation = useMutation({
     mutationFn: (input: { type: BookingType; players: PlayerSummary[] }) =>
@@ -120,6 +139,15 @@ export function BookingSheet({
       const message = errorMessage(failure, t("booking.failed"));
       setError(message);
       toast.error(message);
+      const details =
+        failure instanceof ApiError
+          ? (failure.details as { alternatives?: SlotAlternative[] } | undefined)
+          : undefined;
+      setAlternatives(
+        failure instanceof ApiError && failure.code === "SLOT_TAKEN"
+          ? (details?.alternatives ?? [])
+          : [],
+      );
     },
     onSuccess: (booking) => {
       haptic([12, 40, 12]);
@@ -251,6 +279,31 @@ export function BookingSheet({
               <p className="-mt-3 text-small text-muted-foreground">{t("booking.doublesHint")}</p>
             ) : null}
             <FieldError>{error}</FieldError>
+            {alternatives.length > 0 ? (
+              <section className="space-y-2" aria-label={t("booking.alternatives")}>
+                <p className="text-small font-medium">{t("booking.alternatives")}</p>
+                <ul className="grid grid-cols-2 gap-2">
+                  {alternatives.map((option, index) => (
+                    <motion.li
+                      key={`${option.courtId}-${option.timeSlotId}`}
+                      custom={index}
+                      variants={listItemVariants}
+                      initial="hidden"
+                      animate="show"
+                    >
+                      <motion.button
+                        type="button"
+                        whileTap={tap}
+                        onClick={() => pickAlternative(option)}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-primary/50 bg-ball-soft text-small font-semibold text-ball-ink"
+                      >
+                        {option.courtName} · <span className="num">{option.startTime}</span>
+                      </motion.button>
+                    </motion.li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </motion.div>
         ) : null}
       </AnimatePresence>

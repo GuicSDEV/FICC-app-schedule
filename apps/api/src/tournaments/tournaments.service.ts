@@ -21,7 +21,7 @@ import {
   type UpdateTournamentInput,
 } from "@ficc/shared";
 
-import type { RequestUser } from "../common/auth.decorators";
+import { can, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { conflict, forbidden, localize, notFound, unprocessable } from "../common/domain.exception";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -85,12 +85,11 @@ export class TournamentsService {
   // ── reading ────────────────────────────────────────────────────────────────
 
   async list(viewer: RequestUser, query: TournamentListQuery): Promise<TournamentSummary[]> {
-    const organizing =
-      viewer.role === Role.ADMIN
-        ? null
-        : (await this.prisma.tournamentOrganizer.findMany({ where: { userId: viewer.id } })).map(
-            (row) => row.tournamentId,
-          );
+    const organizing = can(viewer, "TOURNAMENTS_MANAGE")
+      ? null
+      : (await this.prisma.tournamentOrganizer.findMany({ where: { userId: viewer.id } })).map(
+          (row) => row.tournamentId,
+        );
     const statusFilter: Prisma.TournamentWhereInput = (() => {
       switch (query.status) {
         case "OPEN":
@@ -261,7 +260,7 @@ export class TournamentsService {
   // ── organizer: tournament ─────────────────────────────────────────────────
 
   async create(user: RequestUser, input: CreateTournamentInput): Promise<TournamentDetail> {
-    if (user.role !== Role.ADMIN) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (!can(user, "TOURNAMENTS_MANAGE")) throw forbidden("FORBIDDEN", "api.forbidden");
     await this.assertCircuit(input.circuitId);
     const created = await this.prisma.tournament.create({
       data: {
@@ -366,7 +365,7 @@ export class TournamentsService {
   }
 
   async setOrganizers(user: RequestUser, id: string, userIds: string[]): Promise<TournamentDetail> {
-    if (user.role !== Role.ADMIN) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (!can(user, "TOURNAMENTS_MANAGE")) throw forbidden("FORBIDDEN", "api.forbidden");
     const members = await this.prisma.user.findMany({
       where: { id: { in: userIds }, role: Role.MEMBER, isActive: true },
       select: { id: true },
@@ -382,7 +381,7 @@ export class TournamentsService {
 
   /** A new DRAFT with the same settings and categories (no entries, no draw). */
   async duplicate(user: RequestUser, id: string): Promise<TournamentDetail> {
-    if (user.role !== Role.ADMIN) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (!can(user, "TOURNAMENTS_MANAGE")) throw forbidden("FORBIDDEN", "api.forbidden");
     const source = await this.prisma.tournament.findUnique({
       where: { id },
       include: { categories: true },

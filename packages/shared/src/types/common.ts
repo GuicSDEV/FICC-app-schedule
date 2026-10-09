@@ -1,5 +1,5 @@
 import type { IsoDate } from "../dates";
-import type { CategoryKey, Role, Sport, Surface } from "../enums";
+import type { CategoryKey, Permission, Role, Sport, Surface } from "../enums";
 
 /** Instants travel as ISO-8601 strings in JSON. */
 export type IsoDateTime = string;
@@ -62,6 +62,10 @@ export interface AuthUser {
   elo: number;
   guestPassesSuspended: boolean;
   coach: (CoachSummary & { courtIds: string[] }) | null;
+  /** Staff permissions from the person's roles (empty for members). */
+  permissions: Permission[];
+  /** Booking suspended by the no-show penalty until this instant. */
+  bookingSuspendedUntil: IsoDateTime | null;
 }
 
 export interface CourtsResponse {

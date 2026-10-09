@@ -21,9 +21,10 @@ import {
   toDbDate,
   type UpdateLessonInput,
   weekdayOf,
+  isSlotInPlan,
 } from "@ficc/shared";
 
-import type { RequestUser } from "../common/auth.decorators";
+import { can, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import {
   conflict,
@@ -36,6 +37,7 @@ import { toCoachSummary, toCourtSummary, toSlotSummary } from "../common/mappers
 import { serializable, type Tx } from "../common/transactions";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { DayPlanService } from "../schedule/day-plan.service";
 import { isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
 import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
@@ -94,6 +96,7 @@ export class LessonsService {
     private readonly clock: Clock,
     private readonly notifications: NotificationsService,
     private readonly slotEvents: SlotEventsService,
+    private readonly plans: DayPlanService,
   ) {}
 
   /** One-off lesson, or a weekly series with its occurrences for the rolling window. */
@@ -243,7 +246,7 @@ export class LessonsService {
     });
 
     await this.slotEvents.released("lesson.cancelled", cancelled);
-    if (actor.role === Role.ADMIN) {
+    if (can(actor, "LESSONS_MANAGE")) {
       await this.notifications.notify(lesson.coach.userId, "LESSON_CANCELLED", {
         lessonId: lesson.id,
         byName: actor.name,
@@ -321,7 +324,7 @@ export class LessonsService {
     const now = this.clock.now();
     const lesson = await this.loadLesson(lessonId);
     this.assertCanManage(actor, lesson);
-    if (input.coachId && actor.role !== Role.ADMIN) {
+    if (input.coachId && !can(actor, "LESSONS_MANAGE")) {
       throw forbidden("FORBIDDEN", "api.onlyAdminChangesCoach");
     }
     if (lesson.status !== LessonStatus.SCHEDULED) {
@@ -623,7 +626,7 @@ export class LessonsService {
   }
 
   private assertCanManage(actor: RequestUser, lesson: { coachId: string }) {
-    if (actor.role === Role.ADMIN) return;
+    if (can(actor, "LESSONS_MANAGE")) return;
     if (actor.role !== Role.COACH || actor.coachId !== lesson.coachId) {
       throw forbidden("NOT_YOUR_LESSON", "api.notYourLessonEdit");
     }
@@ -655,6 +658,26 @@ export class LessonsService {
         code: "SLOT_IN_PAST",
         message: "api.slotInPast",
         reason: "SLOT_PAST",
+      };
+    }
+    const plan = await this.plans.plan(target.date, tx);
+    if (
+      plan.closed ||
+      plan.closedCourtIds.includes(target.courtId) ||
+      !isSlotInPlan(plan, target.slot.startTime)
+    ) {
+      return {
+        code: plan.closed
+          ? "DAY_CLOSED"
+          : plan.closedCourtIds.includes(target.courtId)
+            ? "COURT_CLOSED_TODAY"
+            : "SLOT_NOT_IN_GRID",
+        message: plan.closed
+          ? "api.dayClosed"
+          : plan.closedCourtIds.includes(target.courtId)
+            ? { key: "api.courtClosedToday", params: { court: target.courtName } }
+            : "api.slotNotInGrid",
+        reason: "NOT_IN_PLAN",
       };
     }
     if (await isCourtFrozen(tx, target.courtId, target.date, target.slot)) {

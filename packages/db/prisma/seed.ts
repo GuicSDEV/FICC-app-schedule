@@ -4,7 +4,7 @@
 // extension the API uses, so every row gets FICC's clubId.
 // Run with `pnpm db:seed`. Deterministic: the same data every run, dated relative to today.
 
-import { timeToMinutes, slotEndTime } from "@ficc/shared";
+import { DEFAULT_STAFF_ROLES, timeToMinutes, slotEndTime } from "@ficc/shared";
 import { hash } from "argon2";
 
 import {
@@ -19,6 +19,7 @@ import {
   Sport,
   TeamSide,
   tenantExtension,
+  UserStatus,
 } from "../src";
 import {
   COACHES,
@@ -29,10 +30,14 @@ import {
   FICC_CLUB,
   FICC_SETTINGS,
   FICC_SLOT_GRID,
+  FICC_WEEKDAY_TIMES,
+  FICC_WEEKEND_TIMES,
   LESSON_TEMPLATE,
   LESSON_WEEKDAYS,
   LESSON_WINDOW_DAYS,
   MEMBERS,
+  NEWS_POSTS,
+  PENDING_SIGNUP,
   STAFF,
   UNCLAIMED_MEMBERSHIPS,
 } from "./seed/data";
@@ -101,10 +106,27 @@ async function main(): Promise<void> {
   });
   const slotIds = new Map(slots.map((slot) => [slot.startTime, slot.id]));
 
-  // ── Staff and coaches ─────────────────────────────────────────────────────
+  // ── Staff roles, staff and coaches ────────────────────────────────────────
+  const staffRoles = await prisma.staffRole.createManyAndReturn({
+    data: DEFAULT_STAFF_ROLES.map((role) => ({
+      key: role.key,
+      name: role.name,
+      description: role.description,
+      permissions: [...role.permissions],
+    })),
+  });
+  const roleIds = new Map(staffRoles.map((role) => [role.key!, role.id]));
   const staff = [];
-  for (const account of STAFF) {
-    staff.push(await prisma.user.create({ data: { ...account, passwordHash } }));
+  for (const { roles, ...account } of STAFF) {
+    staff.push(
+      await prisma.user.create({
+        data: {
+          ...account,
+          passwordHash,
+          staffRoles: { create: roles.map((key) => ({ roleId: lookup(roleIds, key) })) },
+        },
+      }),
+    );
   }
   const admin = staff.find((user) => user.role === Role.ADMIN);
   if (!admin) throw new Error("The seed needs an admin account");
@@ -117,6 +139,7 @@ async function main(): Promise<void> {
         email: coach.email,
         name: coach.displayName,
         passwordHash,
+        staffRoles: { create: [{ roleId: lookup(roleIds, "PROFESSOR") }] },
         coach: {
           create: {
             displayName: coach.displayName,
@@ -301,6 +324,46 @@ async function main(): Promise<void> {
     ],
   });
 
+  // ── A self sign-up waiting for approval ───────────────────────────────────
+  await prisma.user.create({
+    data: {
+      role: Role.MEMBER,
+      membershipId: PENDING_SIGNUP.membershipId,
+      name: PENDING_SIGNUP.name,
+      passwordHash,
+      status: UserStatus.PENDING,
+      createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+      ratings: { create: { sport: Sport.TENNIS, elo: FICC_SETTINGS.eloInitialRating } },
+    },
+  });
+
+  // ── A maintenance day: the clay courts close (date exception) ────────────
+  await prisma.scheduleException.create({
+    data: {
+      date: toDbDate(addDays(today, 5)),
+      closedCourtIds: [lookup(courtIds, "Q5"), lookup(courtIds, "Q6")],
+      note: "Manutenção do saibro (Q5 e Q6)",
+      createdById: admin.id,
+    },
+  });
+
+  // ── Mural ─────────────────────────────────────────────────────────────────
+  for (const post of NEWS_POSTS) {
+    await prisma.newsPost.create({
+      data: {
+        title: post.title,
+        body: post.body,
+        pinned: post.pinned,
+        eventDate: post.eventInDays === null ? null : toDbDate(addDays(today, post.eventInDays)),
+        authorId: lookup(
+          new Map(staff.map((user) => [user.email!, user.id])),
+          "secretaria@ficc.test",
+        ),
+        publishedAt: new Date(now.getTime() - post.daysAgo * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
   const checks = await runIntegrityChecks(prisma, members[0]!.id);
   await printSummary({ today, windowEnd, password, checks });
 
@@ -321,22 +384,33 @@ async function runIntegrityChecks(
 ): Promise<IntegrityCheck[]> {
   const checks: IntegrityCheck[] = [];
 
-  // FICC's grid: 8 slots in order, never overlapping, a lunch gap and the last ending at 22:15.
-  const grid = await prisma.timeSlot.findMany({ orderBy: { sortOrder: "asc" } });
-  const overlapping = grid.filter(
-    (slot, index) =>
-      index > 0 && timeToMinutes(slotEndTime(grid[index - 1]!)) > timeToMinutes(slot.startTime),
-  );
+  // FICC's grids: weekdays use the 8 slots of the spec (lunch gap, last ending at 22:15), weekends
+  // their own earlier grid; neither overlaps itself and the two differ.
+  const allSlots = await prisma.timeSlot.findMany({ orderBy: { sortOrder: "asc" } });
+  const gridOf = (times: readonly string[]) =>
+    allSlots.filter((slot) => times.includes(slot.startTime));
+  const overlaps = (grid: typeof allSlots) =>
+    grid.filter(
+      (slot, index) =>
+        index > 0 && timeToMinutes(slotEndTime(grid[index - 1]!)) > timeToMinutes(slot.startTime),
+    ).length;
+  const weekday = gridOf(FICC_WEEKDAY_TIMES);
+  const weekend = gridOf(FICC_WEEKEND_TIMES);
+  const settingsRow = await prisma.clubSettings.findFirstOrThrow();
+  const stored = settingsRow.values as { scheduleGrids?: Record<string, string[]> };
   const gridOk =
-    grid.length === 8 &&
-    overlapping.length === 0 &&
-    slotEndTime(grid[1]!) === "11:15" &&
-    grid[2]!.startTime === "14:45" &&
-    slotEndTime(grid.at(-1)!) === "22:15";
+    weekday.length === 8 &&
+    overlaps(weekday) === 0 &&
+    slotEndTime(weekday[1]!) === "11:15" &&
+    weekday[2]!.startTime === "14:45" &&
+    slotEndTime(weekday.at(-1)!) === "22:15" &&
+    weekend.length === FICC_WEEKEND_TIMES.length &&
+    overlaps(weekend) === 0 &&
+    JSON.stringify(stored.scheduleGrids?.MON) !== JSON.stringify(stored.scheduleGrids?.SAT);
   checks.push({
-    name: "Slot grid: 8 slots of 75 min, no overlap, ends 22:15",
+    name: "Slot grids: weekdays 8 × 75 min to 22:15, weekends differ, no overlap",
     passed: gridOk,
-    detail: grid.map((slot) => slot.startTime).join(" "),
+    detail: `seg–sex ${weekday.map((slot) => slot.startTime).join(" ")} · sáb/dom ${weekend.map((slot) => slot.startTime).join(" ")}`,
   });
 
   const [scheduledLessons, lessonOccupancies] = await Promise.all([

@@ -7,14 +7,13 @@ import {
   type CourtName,
   FICC_CLUB,
   FICC_SETTINGS,
-  FICC_SLOT_START_TIMES,
+  FICC_WEEKEND_TIMES,
   LESSON_TEMPLATE,
   MATCH_COUNTS,
   MATCH_SPACING_DAYS,
   MEMBERS,
   RIVALRIES,
   type SeedMember,
-  type SlotStartTime,
 } from "./data";
 import { addDays, clubInstant, type IsoDate, weekdayOf } from "./dates";
 import type { Random } from "./random";
@@ -182,13 +181,13 @@ function generateSets(winner: TeamSide, random: Random): PlannedSet[] {
 }
 
 const ALL_COURTS = COURTS.map((court) => court.name);
-const EVENING_SLOTS: readonly SlotStartTime[] = ["17:15", "18:30", "19:45", "21:00"];
+const EVENING_SLOTS = ["17:15", "18:30", "19:45", "21:00"] as const;
 
 /** Weekday matches use evening slots on courts the lesson template leaves free; weekends use any. */
 function pickCourtAndSlot(date: IsoDate, random: Random) {
   const weekday = weekdayOf(date);
   if (weekday === Weekday.SAT || weekday === Weekday.SUN) {
-    return { startTime: random.pick(FICC_SLOT_START_TIMES), court: random.pick(ALL_COURTS) };
+    return { startTime: random.pick(FICC_WEEKEND_TIMES), court: random.pick(ALL_COURTS) };
   }
   const startTime = random.pick(EVENING_SLOTS);
   const lessonCourts = LESSON_TEMPLATE[startTime];

@@ -1,9 +1,15 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { Role } from "@ficc/db";
+import { type Role, UserStatus } from "@ficc/db";
+import { type Permission, permissionsOf } from "@ficc/shared";
 import type { Request } from "express";
 
-import { IS_PUBLIC_KEY, ROLES_KEY, type RequestUser } from "../common/auth.decorators";
+import {
+  IS_PUBLIC_KEY,
+  PERMISSIONS_KEY,
+  ROLES_KEY,
+  type RequestUser,
+} from "../common/auth.decorators";
 import { forbidden, unauthorized } from "../common/domain.exception";
 import { PrismaService } from "../prisma/prisma.service";
 import { tenant } from "../tenancy/tenant-context";
@@ -47,33 +53,50 @@ export class JwtAuthGuard implements CanActivate {
 
     const user = await this.prisma.user.findFirst({
       where: { id: payload.sub },
-      select: { id: true, role: true, name: true, isActive: true, coach: { select: { id: true } } },
+      select: {
+        id: true,
+        role: true,
+        name: true,
+        isActive: true,
+        status: true,
+        coach: { select: { id: true } },
+        staffRoles: { select: { role: { select: { permissions: true } } } },
+      },
     });
-    if (!user?.isActive) throw unauthorized("UNAUTHENTICATED", "api.loginRequired");
+    if (!user?.isActive || user.status !== UserStatus.ACTIVE) {
+      throw unauthorized("UNAUTHENTICATED", "api.loginRequired");
+    }
 
     request.user = {
       id: user.id,
       role: user.role,
       name: user.name,
       coachId: user.coach?.id ?? null,
+      permissions: permissionsOf(user.staffRoles.map((entry) => entry.role)),
     };
     return true;
   }
 }
 
-/** Enforces @Roles(...) after authentication. */
+/** Enforces @Roles(...) and @RequirePermissions(...) after authentication. */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!roles || roles.length === 0) return true;
+    const targets = [context.getHandler(), context.getClass()];
+    const roles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, targets);
+    const permissions = this.reflector.getAllAndOverride<Permission[] | undefined>(
+      PERMISSIONS_KEY,
+      targets,
+    );
+    if (!roles?.length && !permissions?.length) return true;
     const user = context.switchToHttp().getRequest<{ user?: RequestUser }>().user;
-    if (!user || !roles.includes(user.role)) {
+    if (!user) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (roles?.length && !roles.includes(user.role)) {
+      throw forbidden("FORBIDDEN", "api.forbidden");
+    }
+    if (permissions?.some((permission) => !user.permissions.includes(permission))) {
       throw forbidden("FORBIDDEN", "api.forbidden");
     }
     return true;

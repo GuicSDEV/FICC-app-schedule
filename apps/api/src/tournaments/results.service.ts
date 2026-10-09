@@ -1,13 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import {
-  MatchStatus,
-  MatchType,
-  type MatchOutcome,
-  Prisma,
-  Role,
-  Surface,
-  TeamSide,
-} from "@ficc/db";
+import { MatchStatus, MatchType, type MatchOutcome, Prisma, Surface, TeamSide } from "@ficc/db";
 import {
   addDays,
   clubToday,
@@ -462,7 +454,10 @@ export class ResultsService {
     const zone = clubTimeZone();
     const admins = (
       await this.prisma.user.findMany({
-        where: { role: Role.ADMIN, isActive: true },
+        where: {
+          isActive: true,
+          staffRoles: { some: { role: { permissions: { has: "TOURNAMENTS_MANAGE" } } } },
+        },
         select: { id: true },
       })
     ).map((admin) => admin.id);

@@ -1,9 +1,24 @@
-import { Injectable } from "@nestjs/common";
-import { Prisma, Role } from "@ficc/db";
-import type { AuthUser, LoginInput, RegisterInput } from "@ficc/shared";
+import { HttpStatus, Injectable } from "@nestjs/common";
+import { Prisma, Role, UserStatus } from "@ficc/db";
+import {
+  type AuthUser,
+  holderMembershipId,
+  isDependentMembershipId,
+  type LoginInput,
+  permissionsOf,
+  type RegisterInput,
+  type SignupStatusResponse,
+} from "@ficc/shared";
 import { hash, verify } from "argon2";
 
-import { conflict, notFound, unauthorized } from "../common/domain.exception";
+import {
+  conflict,
+  DomainException,
+  forbidden,
+  notFound,
+  unauthorized,
+  unprocessable,
+} from "../common/domain.exception";
 import { playerSelect, toCoachSummary, toPlayerSummary } from "../common/mappers";
 import { PrismaService } from "../prisma/prisma.service";
 import { clubSettings } from "../tenancy/tenant-context";
@@ -14,6 +29,7 @@ function authUserInclude() {
     coach: { include: { allowedCourts: { select: { courtId: true } } } },
     ratings: playerSelect().ratings,
     categories: playerSelect().categories,
+    staffRoles: { select: { role: { select: { permissions: true } } } },
   } satisfies Prisma.UserInclude;
 }
 
@@ -32,8 +48,38 @@ export class AuthService {
     private readonly tokens: TokensService,
   ) {}
 
-  /** Member sign-up: the matrícula must be listed, active and not registered yet. */
-  async register(input: RegisterInput, userAgent?: string): Promise<Session> {
+  /**
+   * Member sign-up: the matrícula must be listed, active and not registered yet. A dependent
+   * ("1234-01", when the club enables dependents) needs a registered holder instead. When the club
+   * requires approval the account waits as PENDING and no session is opened.
+   */
+  async register(
+    input: RegisterInput,
+    userAgent?: string,
+  ): Promise<Session | SignupStatusResponse> {
+    const settings = clubSettings();
+    const dependent = isDependentMembershipId(input.membershipId);
+    if (dependent) {
+      if (!settings.dependentsEnabled) {
+        throw unprocessable("DEPENDENTS_DISABLED", "api.dependentsDisabled");
+      }
+      const holderId = holderMembershipId(input.membershipId);
+      const holder = await this.prisma.user.findFirst({
+        where: { membershipId: holderId, role: Role.MEMBER, status: UserStatus.ACTIVE },
+      });
+      if (!holder) {
+        throw notFound("HOLDER_NOT_REGISTERED", {
+          key: "api.holderNotRegistered",
+          params: { holder: holderId },
+        });
+      }
+      // Dependents are not on the club's list: their matrícula is derived from the holder's.
+      await this.prisma.validMembershipId.upsert({
+        where: { clubId_membershipId: { clubId: holder.clubId, membershipId: input.membershipId } },
+        create: { membershipId: input.membershipId, holderName: input.name },
+        update: {},
+      });
+    }
     const membership = await this.prisma.validMembershipId.findFirst({
       where: { membershipId: input.membershipId },
       include: { user: { select: { id: true } } },
@@ -44,6 +90,7 @@ export class AuthService {
     if (membership.user) {
       throw conflict("MEMBERSHIP_TAKEN", "api.membershipTaken");
     }
+    const pending = settings.signupRequiresApproval;
     const user = await this.prisma.user
       .create({
         data: {
@@ -51,9 +98,10 @@ export class AuthService {
           membershipId: input.membershipId,
           name: input.name,
           passwordHash: await hash(input.password),
+          status: pending ? UserStatus.PENDING : UserStatus.ACTIVE,
           // Every member starts at the club's initial rating in its primary sport.
           ratings: {
-            create: { sport: clubSettings().primarySport, elo: clubSettings().eloInitialRating },
+            create: { sport: settings.primarySport, elo: settings.eloInitialRating },
           },
         },
         include: authUserInclude(),
@@ -64,6 +112,7 @@ export class AuthService {
         }
         throw error;
       });
+    if (pending) return { status: "PENDING", rejectionReason: null };
     return this.startSession(user, userAgent);
   }
 
@@ -81,6 +130,14 @@ export class AuthService {
         input.kind === "member" ? "api.invalidCredentialsMember" : "api.invalidCredentialsStaff",
       );
     }
+    // Only after the password matched, so the status never leaks to someone guessing.
+    if (user.status === UserStatus.PENDING) throw forbidden("SIGNUP_PENDING", "api.signupPending");
+    if (user.status === UserStatus.REJECTED) {
+      throw new DomainException(HttpStatus.FORBIDDEN, "SIGNUP_REJECTED", {
+        key: "api.signupRejected",
+        params: { reason: user.rejectionReason ?? "" },
+      });
+    }
     return this.startSession(user, userAgent);
   }
 
@@ -90,7 +147,7 @@ export class AuthService {
       where: { id: rotated.userId },
       include: authUserInclude(),
     });
-    if (!user?.isActive) {
+    if (!user?.isActive || user.status !== UserStatus.ACTIVE) {
       throw unauthorized("ACCOUNT_DISABLED", "api.accountDisabled");
     }
     return {
@@ -140,5 +197,7 @@ export function toAuthUser(user: UserWithCoach): AuthUser {
           courtIds: user.coach.allowedCourts.map((entry) => entry.courtId),
         }
       : null,
+    permissions: permissionsOf(user.staffRoles.map((entry) => entry.role)),
+    bookingSuspendedUntil: user.bookingSuspendedUntil?.toISOString() ?? null,
   };
 }

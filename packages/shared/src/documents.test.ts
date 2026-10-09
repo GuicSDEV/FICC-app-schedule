@@ -9,6 +9,8 @@ import {
 } from "./documents";
 import {
   formatMembershipId,
+  holderMembershipId,
+  isDependentMembershipId,
   initialsOf,
   isValidMembershipId,
   normalizeMembershipId,
@@ -50,6 +52,20 @@ describe("membership ids", () => {
     expect(formatMembershipId("104218")).toBe("104.218");
     expect(formatMembershipId("1042")).toBe("1.042");
     expect(formatMembershipId("10")).toBe("10");
+  });
+
+  it("handles dependents' matrículas (holder + dependents mode)", () => {
+    expect(normalizeMembershipId("1.234-1")).toBe("1234-01");
+    expect(normalizeMembershipId("104-218")).toBe("104218");
+    expect(isValidMembershipId("1234-01")).toBe(false);
+    expect(isValidMembershipId("1234-01", true)).toBe(true);
+    expect(isValidMembershipId("1234-00", true)).toBe(false);
+    expect(holderMembershipId("1234-02")).toBe("1234");
+    expect(holderMembershipId("1234")).toBe("1234");
+    expect(isDependentMembershipId("1234-02")).toBe(true);
+    expect(isDependentMembershipId("1234")).toBe(false);
+    expect(formatMembershipId("104218-01")).toBe("104.218-01");
+    expect(formatMembershipId("104218-")).toBe("104.218-");
   });
 
   it("builds initials", () => {

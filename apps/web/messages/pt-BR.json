@@ -45,7 +45,9 @@
       "submit": "Criar conta",
       "failed": "Não foi possível criar a conta.",
       "haveAccount": "Já tem conta?",
-      "signIn": "Entrar"
+      "signIn": "Entrar",
+      "pendingTitle": "Cadastro enviado!",
+      "pendingBody": "Pronto, {name}. A secretaria confere sua matrícula e aprova o cadastro; você recebe o aviso ao entrar pela primeira vez."
     }
   },
   "nav": {
@@ -68,7 +70,12 @@
       "disputes": "Disputas",
       "members": "Sócios",
       "gate": "Portaria",
-      "tournaments": "Torneios"
+      "tournaments": "Torneios",
+      "news": "Mural",
+      "courtsNow": "Quadras agora",
+      "bookings": "Reservas",
+      "settings": "Regras do clube",
+      "staff": "Equipe"
     }
   },
   "shell": {
@@ -213,6 +220,21 @@
     "TOURNAMENT_RESULT_OVERDUE": {
       "title": "Resultado atrasado",
       "body": "{players} em {tournament} ainda não tem resultado."
+    },
+    "MEMBER_APPROVED": {
+      "title": "Cadastro aprovado!",
+      "body": "Bem-vindo(a) ao {club}. Já dá para reservar quadras."
+    },
+    "COURT_AVAILABLE": {
+      "title": "{court} liberou para você",
+      "body": "Faça check-in até {time} ou a quadra vai para o próximo da fila."
+    },
+    "NEWS_POSTED": {
+      "title": "Novo no Mural"
+    },
+    "BOOKING_SUSPENDED": {
+      "title": "Reservas suspensas",
+      "body": "{count} faltas em {days} dias: novas reservas liberadas em {until}."
     }
   },
   "states": {
@@ -251,7 +273,8 @@
     "bookingPending": "{court}, reservada (aguardando confirmação) por {players}",
     "frozen": "{court}, interditada por {reason, select, RAIN {chuva} other {manutenção}}",
     "freeLabel": "Livre",
-    "tournament": "{court}, jogo do torneio {name}: {match}"
+    "tournament": "{court}, jogo do torneio {name}: {match}",
+    "closed": "{court}, fechada neste dia"
   },
   "picker": {
     "chosen": "Jogadores escolhidos",
@@ -274,7 +297,8 @@
     "checkPlayers": "Confira os jogadores.",
     "confirmedTitle": "Quadra reservada!",
     "confirmedWaiting": "{count, plural, one {Enviamos o convite. O outro jogador tem até {deadline} para confirmar.} other {Enviamos o convite. Os # jogadores têm até {deadline} para confirmar.}}",
-    "confirmedAll": "Todos confirmados. Bom jogo!"
+    "confirmedAll": "Todos confirmados. Bom jogo!",
+    "alternatives": "Ainda livres agora:"
   },
   "bookingInfo": {
     "mine": "Sua reserva",
@@ -291,7 +315,12 @@
       "CONFIRMED": "Confirmado",
       "PENDING": "Aguardando",
       "DECLINED": "Recusou"
-    }
+    },
+    "markNoShow": "Faltou",
+    "noShow": "Falta registrada",
+    "noShowMarked": "Falta registrada",
+    "staffCancel": "Cancelar reserva (equipe)",
+    "staffCancelConfirm": "Confirmar cancelamento — os jogadores serão avisados"
   },
   "coachSheet": {
     "title": "Aula do clube",
@@ -335,7 +364,8 @@
       "booking": "Reservada",
       "frozen": "Interditada",
       "mine": "Sua reserva",
-      "tournament": "Torneio"
+      "tournament": "Torneio",
+      "closed": "Fechada"
     }
   },
   "dashboard": {
@@ -979,7 +1009,7 @@
     },
     "members": {
       "title": "Sócios",
-      "subtitle": "Busque sócios e importe a lista de matrículas válidas",
+      "subtitle": "Sócios, aprovações de cadastro, faltas e lista de matrículas",
       "listTitle": "Sócios",
       "search": "Buscar por nome ou matrícula",
       "empty": "Nenhum sócio encontrado",
@@ -994,7 +1024,46 @@
       "import": "Importar",
       "imported": "{created, plural, one {1 nova} other {# novas}}, {updated, plural, one {1 atualizada} other {# atualizadas}}",
       "importFailed": "Não foi possível importar.",
-      "lineError": "Linha {line}: {message}"
+      "lineError": "Linha {line}: {message}",
+      "statusFilter": "Filtrar por situação",
+      "allStatuses": "Todos",
+      "bookingSuspended": "Reservas suspensas",
+      "suspendedUntil": "Reservas suspensas até {date}",
+      "noShowsBadge": "{count, plural, one {1 falta} other {# faltas}}",
+      "dependents": "Dependentes",
+      "dependentsCount": "{count, plural, one {1 dependente} other {# dependentes}}",
+      "tabs": {
+        "members": "Sócios",
+        "approvals": "Aprovações",
+        "approvalsCount": "Aprovações ({count})"
+      },
+      "noShows": {
+        "title": "Faltas e cancelamentos tardios",
+        "empty": "Nenhuma falta registrada.",
+        "recent": "{count, plural, =0 {Nenhuma no período da penalidade.} one {1 no período da penalidade.} other {# no período da penalidade.}}",
+        "markedBy": "Marcada por {name}",
+        "automatic": "Registrado automaticamente"
+      },
+      "approvals": {
+        "title": "Aprovações",
+        "subtitle": "Cadastros aguardando aprovação",
+        "hint": "Confira a matrícula e o nome antes de aprovar. Quem for recusado vê o motivo ao tentar entrar.",
+        "empty": "Nenhum cadastro aguardando",
+        "emptyHint": "Novos cadastros aparecem aqui e a equipe recebe um aviso.",
+        "signedUp": "cadastro {when}",
+        "listedName": "Na lista do clube: {name}",
+        "listedNameDiffers": "Atenção: na lista do clube a matrícula é de {name}",
+        "notListed": "Matrícula sem nome na lista do clube",
+        "dependentOf": "Dependente do titular {holder}",
+        "approve": "Aprovar",
+        "reject": "Recusar",
+        "approved": "{name} aprovado. Já pode entrar no app.",
+        "rejected": "Cadastro de {name} recusado",
+        "rejectTitle": "Recusar {name}",
+        "rejectHint": "A pessoa lê este motivo ao tentar entrar.",
+        "reason": "Motivo",
+        "reasonPlaceholder": "Ex.: matrícula de outro sócio. Procure a secretaria."
+      }
     }
   },
   "tournaments": {
@@ -1509,7 +1578,8 @@
         "lesson": "Aula",
         "frozen": "Interditada",
         "tournament": "Torneio",
-        "free": "Livre"
+        "free": "Livre",
+        "closed": "Fechada"
       },
       "placeHint": "Toque em um horário livre para programar.",
       "moveHint": "Toque em outro horário livre para mover.",
@@ -1577,6 +1647,325 @@
       "save": "Salvar",
       "created": "Circuito criado",
       "saved": "Circuito atualizado"
+    }
+  },
+  "dayPlan": {
+    "closedTitle": "Clube fechado neste dia",
+    "closedBody": "Não há horários disponíveis.",
+    "freePlayTitle": "Uso livre: sem reservas",
+    "freePlayBody": "Chegue, veja as quadras livres e faça check-in. Se todas estiverem ocupadas, entre na fila.",
+    "courtsNow": "Quadras agora",
+    "opensTitle": "Reservas abrem {when}",
+    "opensSr": "As reservas deste dia abrem {when}.",
+    "serverTime": "Horário oficial do clube — o relógio do celular não conta.",
+    "noteTitle": "Aviso para este dia",
+    "someCourtsClosed": "Algumas quadras estão fechadas neste dia.",
+    "notOpenToast": "As reservas deste dia ainda não abriram.",
+    "suspended": "Suas reservas estão suspensas até {until} por faltas."
+  },
+  "courtsNow": {
+    "title": "Quadras agora",
+    "subtitle": "Uso livre: check-in na hora",
+    "state": {
+      "free": "Livre",
+      "in_use": "Em uso",
+      "offered": "Reservada para a fila",
+      "blocked": "Ocupada",
+      "closed": "Fechada"
+    },
+    "blocked": {
+      "lesson": "Aula em andamento",
+      "tournament": "Jogo de torneio",
+      "frozen": "Interditada"
+    },
+    "until": "Até {time}",
+    "freeHint": "Chegou? Faça check-in e jogue.",
+    "heldUntil": "Guardada para o próximo da fila até {time}",
+    "yoursUntil": "Sua até {time}",
+    "checkIn": "Fazer check-in",
+    "checkInTitle": "Check-in na {court}",
+    "checkInDescription": "Quem joga com você? (opcional)",
+    "checkInConfirm": "Entrar na quadra",
+    "partners": "Parceiros",
+    "checkedIn": "Bom jogo na {court}!",
+    "onCourt": "Você está na {court}",
+    "autoCheckout": "Check-out automático em",
+    "checkOut": "Sair da quadra",
+    "checkedOut": "Check-out feito",
+    "offerTitle": "A {court} liberou para você!",
+    "offerHint": "Ocupe a quadra antes do tempo acabar; depois ela vai para o próximo da fila.",
+    "claim": "Ocupar agora",
+    "inLine": "Você é o {position}º da fila",
+    "inLineHint": "Avisamos no celular quando uma quadra liberar.",
+    "leave": "Sair da fila",
+    "left": "Você saiu da fila",
+    "allBusy": "Todas as quadras estão ocupadas",
+    "waitingCount": "{count, plural, =0 {Ninguém na fila} one {# pessoa na fila} other {# pessoas na fila}}",
+    "join": "Entrar na fila",
+    "joined": "Você entrou na fila",
+    "courts": "Quadras às {time}",
+    "bookingDayTitle": "Hoje é dia de reservas",
+    "bookingDayDescription": "O uso livre vale nos dias definidos pelo clube. Hoje, reserve pelo calendário.",
+    "toCalendar": "Ir para o calendário",
+    "end": "Encerrar uso",
+    "ended": "Uso encerrado",
+    "staffHint": "{count, plural, =0 {Ninguém na fila} one {# pessoa na fila} other {# pessoas na fila}}. A equipe pode encerrar o uso de qualquer quadra."
+  },
+  "news": {
+    "title": "Mural",
+    "subtitle": "Avisos e eventos do clube",
+    "pinned": "Fixado",
+    "like": "Curtir",
+    "reads": "{count, plural, =0 {ninguém leu ainda} one {# leitura} other {# leituras}}",
+    "edit": "Editar",
+    "remove": "Remover",
+    "all": "Ver mural",
+    "emptyTitle": "Nada no mural por enquanto",
+    "emptyDescription": "Os avisos da secretaria e da diretoria aparecem aqui."
+  },
+  "adminBookings": {
+    "title": "Reservas",
+    "subtitle": "Toque numa reserva para cancelar ou marcar falta"
+  },
+  "adminNews": {
+    "title": "Mural",
+    "subtitle": "Avisos, eventos e fotos para os sócios",
+    "new": "Nova publicação",
+    "newTitle": "Nova publicação",
+    "editTitle": "Editar publicação",
+    "postTitle": "Título",
+    "body": "Texto",
+    "bodyHint": "Aceita **negrito**, *itálico*, listas com \"- \" e links.",
+    "eventDate": "Data do evento (opcional)",
+    "photos": "Fotos (URLs)",
+    "photosHint": "Uma URL por linha, até 6.",
+    "options": "Opções",
+    "pin": "Fixar no topo",
+    "notify": "Avisar os sócios no celular",
+    "publish": "Publicar",
+    "save": "Salvar",
+    "published": "Publicado no mural",
+    "publishedNotified": "Publicado e enviado aos sócios",
+    "saved": "Publicação atualizada",
+    "removeTitle": "Remover publicação?",
+    "removeConfirm": "Remover",
+    "removed": "Publicação removida",
+    "emptyTitle": "Nenhuma publicação ainda"
+  },
+  "adminSettings": {
+    "title": "Regras do clube",
+    "subtitle": "Horários, abertura das reservas, uso livre, cadastros e faltas",
+    "tabs": {
+      "rules": "Regras",
+      "exceptions": "Exceções de data"
+    },
+    "gridTitle": "Grade de horários por dia",
+    "gridHint": "Escolha os horários e o modo de cada dia da semana. Em dias de uso livre as quadras não são reservadas: os sócios fazem check-in na hora.",
+    "closedDay": "Fechado",
+    "modeOf": "Modo de {day}",
+    "timesOf": "Horários de {day}",
+    "bookingTitle": "Reservas",
+    "bookingHint": "Quando as reservas abrem e quantas cada sócio pode fazer.",
+    "openingRule": "Abrir em horário fixo",
+    "openingDays": "Dias antes",
+    "openingTime": "Horário de abertura",
+    "openingSummary": "{days, plural, =0 {As reservas de cada dia abrem no próprio dia, às {time}.} one {As reservas de cada dia abrem 1 dia antes, às {time}.} other {As reservas de cada dia abrem # dias antes, às {time}.}}",
+    "openingOff": "Sem horário fixo: cada dia abre assim que entra na janela de reservas.",
+    "freePlayTitle": "Uso livre",
+    "freePlayHint": "Check-in nas quadras e fila digital dos dias de uso livre.",
+    "queueEnabled": "Fila digital",
+    "membersTitle": "Cadastros",
+    "membersHint": "Como novos sócios entram no app.",
+    "signupRequiresApproval": "Aprovar cadastros",
+    "dependentsEnabled": "Titular e dependentes",
+    "dependentsHint": "Com dependentes, cada um usa a matrícula do titular com um sufixo (1234-01) e tem login e ranking próprios.",
+    "noShowsTitle": "Faltas e cancelamentos tardios",
+    "noShowsHint": "A suspensão automática fica desligada até você ativá-la. O histórico é registrado sempre.",
+    "penaltyEnabled": "Suspender após faltas",
+    "otherTitle": "Outras regras",
+    "unsaved": "Alterações não salvas",
+    "fixErrors": "Corrija os campos destacados",
+    "discard": "Descartar",
+    "save": "Salvar",
+    "saved": "Regras salvas",
+    "fields": {
+      "bookingWindowDays": {
+        "label": "Janela de reservas (dias)",
+        "hint": "Hoje e os próximos dias que podem ser reservados."
+      },
+      "maxActiveBookings": {
+        "label": "Reservas ativas por sócio",
+        "hint": "Reservas futuras que um sócio pode ter ao mesmo tempo."
+      },
+      "maxBookingsPerDay": {
+        "label": "Reservas por sócio no mesmo dia",
+        "hint": "Limite para o mesmo dia."
+      },
+      "bookingConfirmationMinutes": {
+        "label": "Prazo para confirmar (min)",
+        "hint": "Tempo dos outros jogadores para confirmar a reserva."
+      },
+      "lateCancellationMinutes": {
+        "label": "Cancelamento tardio (min)",
+        "hint": "Cancelar com menos antecedência conta como cancelamento tardio."
+      },
+      "freePlay_claimMinutes": {
+        "label": "Tempo para assumir a quadra (min)",
+        "hint": "Quando uma quadra libera, o primeiro da fila tem este tempo."
+      },
+      "freePlay_sessionMinutes": {
+        "label": "Duração do check-in (min)",
+        "hint": "O check-out acontece sozinho depois deste tempo."
+      },
+      "noShowPenalty_count": {
+        "label": "Faltas para suspender",
+        "hint": "Faltas e cancelamentos tardios dentro do período."
+      },
+      "noShowPenalty_windowDays": {
+        "label": "Período (dias)",
+        "hint": "Janela em que as faltas são contadas."
+      },
+      "noShowPenalty_suspensionDays": {
+        "label": "Suspensão (dias)",
+        "hint": "Dias sem poder reservar."
+      },
+      "matchAutoApproveHours": {
+        "label": "Aprovação automática de resultados (h)",
+        "hint": "Resultados sem resposta são aprovados depois deste tempo."
+      },
+      "matchReportMaxDaysAgo": {
+        "label": "Prazo para lançar resultado (dias)",
+        "hint": "Até quantos dias depois do jogo."
+      },
+      "eloKFactor": {
+        "label": "Fator K do Elo",
+        "hint": "Quanto cada partida move o rating."
+      },
+      "eloInitialRating": {
+        "label": "Rating inicial",
+        "hint": "Elo de quem ainda não jogou."
+      },
+      "rankingTrendDays": {
+        "label": "Tendência do ranking (dias)",
+        "hint": "Período da variação mostrada no ranking."
+      },
+      "lessonWindowDays": {
+        "label": "Aulas geradas à frente (dias)",
+        "hint": "Séries semanais ficam criadas até esta distância."
+      },
+      "slotOpenedNotifyDays": {
+        "label": "Aviso de horário liberado (dias)",
+        "hint": "Quem segue o horário é avisado para datas até esta distância."
+      },
+      "defaultSlotDurationMinutes": {
+        "label": "Duração dos horários (min)",
+        "hint": "Usada ao criar novos horários."
+      },
+      "guestPassMaxDaysAhead": {
+        "label": "Convite com antecedência (dias)",
+        "hint": "Até quantos dias à frente um convite pode ser criado."
+      },
+      "guestDataRetentionDays": {
+        "label": "Retenção dos dados de convidados (dias)",
+        "hint": "Depois disso nome e documento são anonimizados (LGPD)."
+      }
+    },
+    "exceptions": {
+      "title": "Exceções de data",
+      "hint": "Feriados, eventos e dias com quadras fechadas, outra grade ou outro modo.",
+      "add": "Nova exceção",
+      "empty": "Nenhuma exceção marcada",
+      "emptyHint": "Os próximos dias seguem a grade de cada dia da semana.",
+      "newTitle": "Nova exceção de data",
+      "editTitle": "Editar exceção",
+      "sheetHint": "Vale só para a data escolhida e substitui a regra do dia da semana.",
+      "date": "Data",
+      "closed": "Clube fechado o dia todo",
+      "mode": "Modo das quadras",
+      "modeDefault": "Do dia",
+      "closedCourts": "Quadras fechadas",
+      "times": "Horários",
+      "weekdayGrid": "Grade do dia da semana",
+      "note": "Observação (opcional)",
+      "noteHint": "Aparece para os sócios na agenda. Ex.: Feriado, Torneio interclubes.",
+      "save": "Salvar exceção",
+      "saved": "Exceção salva",
+      "remove": "Remover exceção",
+      "removed": "Exceção removida",
+      "closedBadge": "Fechado",
+      "courtsClosedBadge": "Fechadas: {courts}",
+      "noTimes": "Sem horários"
+    }
+  },
+  "adminStaff": {
+    "title": "Equipe",
+    "subtitle": "Contas da equipe, papéis e permissões, registro de ações",
+    "tabs": {
+      "people": "Pessoas",
+      "roles": "Papéis",
+      "audit": "Registro"
+    },
+    "peopleHint": "Cada pessoa pode ter vários papéis; as permissões somam. Professores usam o portal do professor e ganham acesso extra pelos papéis.",
+    "add": "Nova pessoa",
+    "empty": "Nenhuma conta da equipe",
+    "inactive": "Inativa",
+    "noRoles": "Sem papel",
+    "noPermissions": "Nenhuma permissão na área administrativa.",
+    "roles": "Papéis",
+    "grantHint": "Só dá para conceder papéis com permissões que você também tem.",
+    "resultingPermissions": "Permissões resultantes",
+    "saveRoles": "Salvar papéis",
+    "rolesSaved": "Papéis atualizados",
+    "deactivate": "Desativar conta",
+    "reactivate": "Reativar conta",
+    "deactivated": "Conta desativada",
+    "reactivated": "Conta reativada",
+    "newTitle": "Nova pessoa da equipe",
+    "newHint": "Entra na área administrativa com e-mail e senha.",
+    "name": "Nome",
+    "email": "E-mail",
+    "password": "Senha inicial",
+    "passwordHint": "Pelo menos 8 caracteres. Combine a troca no primeiro acesso.",
+    "create": "Criar conta",
+    "created": "Conta de {name} criada",
+    "accountType": {
+      "ADMIN": "Administração",
+      "COACH": "Professor",
+      "GATE": "Portaria",
+      "MEMBER": "Sócio"
+    },
+    "rolesHint": "Edite o que cada papel pode fazer. As mudanças valem na hora para todos que têm o papel.",
+    "rolesReadOnly": "Só quem gerencia a plataforma edita os papéis.",
+    "rolesEmpty": "Nenhum papel criado",
+    "memberCount": "{count, plural, =0 {ninguém} one {1 pessoa} other {# pessoas}}",
+    "rolesEditor": {
+      "add": "Novo papel",
+      "newTitle": "Novo papel",
+      "editTitle": "Editar papel",
+      "name": "Nome",
+      "description": "Descrição",
+      "permissions": "Permissões",
+      "save": "Salvar papel",
+      "saved": "Papel salvo",
+      "created": "Papel criado",
+      "remove": "Excluir papel",
+      "confirmRemove": "{count, plural, =0 {Confirmar exclusão} one {Excluir (1 pessoa perde o papel)} other {Excluir (# pessoas perdem o papel)}}",
+      "removed": "Papel excluído"
+    },
+    "audit": {
+      "title": "Registro de ações",
+      "hint": "Tudo o que a equipe cria, altera ou remove fica registrado aqui. Senhas e códigos nunca aparecem.",
+      "filter": "Filtrar por pessoa",
+      "everyone": "Todos",
+      "empty": "Nenhuma ação registrada",
+      "unknownActor": "Conta removida",
+      "more": "Carregar mais",
+      "method": {
+        "POST": "Criou",
+        "PUT": "Definiu",
+        "PATCH": "Alterou",
+        "DELETE": "Removeu"
+      }
     }
   }
 }

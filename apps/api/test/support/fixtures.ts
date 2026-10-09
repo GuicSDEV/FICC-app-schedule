@@ -1,5 +1,5 @@
 import { type Court, Role, Sport, type Surface, type TimeSlot } from "@ficc/db";
-import { DEFAULT_CLUB_SETTINGS } from "@ficc/shared";
+import { DEFAULT_CLUB_SETTINGS, DEFAULT_STAFF_ROLES } from "@ficc/shared";
 import { hash } from "argon2";
 
 import type { TestContext } from "./app";
@@ -77,6 +77,14 @@ export async function seedClub(
       sortOrder: index + 1,
     })),
   });
+  await prisma.staffRole.createMany({
+    data: DEFAULT_STAFF_ROLES.map((role) => ({
+      key: role.key,
+      name: role.name,
+      description: role.description,
+      permissions: [...role.permissions],
+    })),
+  });
   const slots = await prisma.timeSlot.createManyAndReturn({
     data: SLOT_START_TIMES.map((startTime, index) => ({
       startTime,
@@ -137,13 +145,27 @@ export async function setRating(prisma: ScopedClient, userId: string, elo: numbe
   await prisma.playerRating.updateMany({ where: { userId, sport: Sport.TENNIS }, data: { elo } });
 }
 
+/**
+ * A staff account. Admins get the Super admin role unless `roles` names other default roles
+ * (SECRETARIA, DIRETORIA…); gate accounts get none.
+ */
 export async function createStaff(
   prisma: ScopedClient,
   role: Role,
   email: string,
   name = "Equipe",
+  roles: string[] = role === Role.ADMIN ? ["SUPER_ADMIN"] : [],
 ) {
-  return prisma.user.create({ data: { role, email, name, passwordHash: await getPasswordHash() } });
+  const roleRows = await prisma.staffRole.findMany({ where: { key: { in: roles } } });
+  return prisma.user.create({
+    data: {
+      role,
+      email,
+      name,
+      passwordHash: await getPasswordHash(),
+      staffRoles: { create: roleRows.map((row) => ({ roleId: row.id })) },
+    },
+  });
 }
 
 export async function createCoach(
@@ -156,6 +178,11 @@ export async function createCoach(
       email: options.email,
       name: options.name,
       passwordHash: await getPasswordHash(),
+      staffRoles: {
+        create: (await prisma.staffRole.findMany({ where: { key: "PROFESSOR" } })).map((row) => ({
+          roleId: row.id,
+        })),
+      },
       coach: {
         create: {
           displayName: options.name,

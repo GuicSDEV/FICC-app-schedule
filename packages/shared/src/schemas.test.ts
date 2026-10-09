@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { translateIssue } from "./i18n";
 import {
   cancelAffectedSchema,
+  checkInSchema,
+  createStaffSchema,
+  newsPostSchema,
+  scheduleExceptionSchema,
+  signupDecisionSchema,
+  staffRoleSchema,
   copyWeekSchema,
   createBookingSchema,
   createCoachSchema,
@@ -203,5 +209,46 @@ describe("freeze and admin schemas", () => {
       { membershipId: "200300" },
     ]);
     expect(result.errors).toEqual([{ line: 4, value: "abc" }]);
+  });
+});
+
+describe("club operations schemas", () => {
+  it("date exceptions default to the weekday rules", () => {
+    expect(scheduleExceptionSchema.parse({ date: "2026-12-25", closed: true })).toEqual({
+      date: "2026-12-25",
+      closed: true,
+      slotTimes: null,
+      mode: null,
+      closedCourtIds: [],
+      note: null,
+    });
+    expect(
+      scheduleExceptionSchema.safeParse({ date: "2026-12-25", slotTimes: ["25:00"] }).success,
+    ).toBe(false);
+  });
+
+  it("a sign-up rejection needs a reason", () => {
+    expect(signupDecisionSchema.parse({ decision: "APPROVE" })).toEqual({ decision: "APPROVE" });
+    const missing = signupDecisionSchema.safeParse({ decision: "REJECT", reason: " " });
+    expect(missing.error?.issues[0]?.message).toBe("validation.reasonRequired");
+  });
+
+  it("news posts, staff accounts and check-ins", () => {
+    expect(newsPostSchema.parse({ title: "Torneio", body: "Inscrições abertas" })).toMatchObject({
+      photoUrls: [],
+      eventDate: null,
+      pinned: false,
+      notify: true,
+    });
+    expect(newsPostSchema.safeParse({ title: "Oi", body: "x" }).success).toBe(false);
+    const staff = createStaffSchema.safeParse({
+      name: "Ana Secretaria",
+      email: "ANA@ficc.test",
+      password: "12345678",
+      roleIds: [],
+    });
+    expect(staff.error?.issues[0]?.message).toBe("validation.pickRole");
+    expect(checkInSchema.parse({ courtId: "c1" })).toEqual({ courtId: "c1", partnerIds: [] });
+    expect(staffRoleSchema.safeParse({ name: "Caixa", permissions: ["NOPE"] }).success).toBe(false);
   });
 });

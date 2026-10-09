@@ -20,6 +20,7 @@ import {
   toSlotSummary,
 } from "../common/mappers";
 import { PrismaService } from "../prisma/prisma.service";
+import { DayPlanService } from "./day-plan.service";
 import { freezesOverlapping } from "./freezes";
 import { clubTimeZone } from "../tenancy/tenant-context";
 import { entryInclude, entryName, toTournamentPlayer } from "../tournaments/tournament.mappers";
@@ -40,6 +41,7 @@ export class ScheduleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
+    private readonly plans: DayPlanService,
   ) {}
 
   async getDay(date: IsoDate, options: ScheduleOptions = {}): Promise<ScheduleDay> {
@@ -52,10 +54,10 @@ export class ScheduleService {
     const dayStart = clubInstant(date, "00:00", clubTimeZone());
     const dayEnd = clubInstant(addDays(date, 1), "00:00", clubTimeZone());
 
-    const [courts, slots, lessons, bookings, tournamentMatches, freezes, favorites] =
+    const [courts, { plan, slots }, lessons, bookings, tournamentMatches, freezes, favorites] =
       await Promise.all([
         this.prisma.court.findMany({ where: courtWhere, orderBy: { sortOrder: "asc" } }),
-        this.prisma.timeSlot.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+        this.plans.slots(date),
         this.prisma.lesson.findMany({
           where: { date: dbDate, status: LessonStatus.SCHEDULED, court: courtWhere },
           include: { coach: true },
@@ -115,15 +117,17 @@ export class ScheduleService {
           date,
           courtId: court.id,
           timeSlotId: slot.id,
-          state: freeze
-            ? "frozen"
-            : lesson
-              ? "lesson"
-              : booking
-                ? "booking"
-                : tournament
-                  ? "tournament"
-                  : "free",
+          state: plan.closedCourtIds.includes(court.id)
+            ? "closed"
+            : freeze
+              ? "frozen"
+              : lesson
+                ? "lesson"
+                : booking
+                  ? "booking"
+                  : tournament
+                    ? "tournament"
+                    : "free",
           past: isSlotPast(date, slot, now, clubTimeZone()),
           favorite: favoriteCells.has(key(court.id, slot.id)),
           lesson: lesson
@@ -163,6 +167,12 @@ export class ScheduleService {
       }
     }
 
-    return { date, courts: courts.map(toCourtSummary), slots: slots.map(toSlotSummary), cells };
+    return {
+      date,
+      plan: this.plans.info(plan),
+      courts: courts.map(toCourtSummary),
+      slots: slots.map(toSlotSummary),
+      cells,
+    };
   }
 }

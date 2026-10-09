@@ -7,6 +7,8 @@ import {
   SOCKET_EVENTS,
   type ScheduleUpdatedEvent,
   type TournamentUpdatedEvent,
+  type CourtsNowUpdatedEvent,
+  type NewsUpdatedEvent,
 } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
@@ -23,6 +25,8 @@ interface SocketEvents {
   [SOCKET_EVENTS.leaderboardUpdated]: LeaderboardUpdatedEvent;
   [SOCKET_EVENTS.freezeUpdated]: FreezeUpdatedEvent;
   [SOCKET_EVENTS.tournamentUpdated]: TournamentUpdatedEvent;
+  [SOCKET_EVENTS.courtsNowUpdated]: CourtsNowUpdatedEvent;
+  [SOCKET_EVENTS.newsUpdated]: NewsUpdatedEvent;
 }
 
 type Listener<E extends keyof SocketEvents> = (payload: SocketEvents[E]) => void;
@@ -65,6 +69,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       if (notification.type.startsWith("TOURNAMENT")) {
         void client.invalidateQueries({ queryKey: queryKeys.tournaments.root });
       }
+      if (notification.type === "COURT_AVAILABLE") {
+        void client.invalidateQueries({ queryKey: queryKeys.freePlay });
+      }
+      if (notification.type === "BOOKING_SUSPENDED" || notification.type === "MEMBER_APPROVED") {
+        void client.invalidateQueries({ queryKey: queryKeys.me });
+      }
       if (notification.type === "GUEST_CHECKED_IN") {
         void client.invalidateQueries({ queryKey: queryKeys.guestPasses });
       }
@@ -79,6 +89,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       void client.invalidateQueries({ queryKey: ["tournaments", "list"] });
       void client.invalidateQueries({ queryKey: queryKeys.tournaments.mine });
       if (event.kind === "result") void client.invalidateQueries({ queryKey: queryKeys.circuits });
+    });
+    connection.on(SOCKET_EVENTS.courtsNowUpdated, () => {
+      void client.invalidateQueries({ queryKey: queryKeys.freePlay });
+    });
+    connection.on(SOCKET_EVENTS.newsUpdated, () => {
+      void client.invalidateQueries({ queryKey: queryKeys.news });
     });
     connection.on(SOCKET_EVENTS.freezeUpdated, () => {
       void client.invalidateQueries({ queryKey: queryKeys.freezesActive });

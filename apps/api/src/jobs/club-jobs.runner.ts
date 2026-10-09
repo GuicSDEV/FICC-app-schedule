@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { BookingsService } from "../bookings/bookings.service";
+import { FreePlayService } from "../free-play/free-play.service";
 import { FreezesService } from "../freezes/freezes.service";
 import { GuestsService } from "../guests/guests.service";
 import { LessonsService } from "../lessons/lessons.service";
@@ -23,6 +24,7 @@ export class ClubJobsRunner {
     private readonly freezes: FreezesService,
     private readonly guests: GuestsService,
     private readonly tournamentResults: ResultsService,
+    private readonly freePlay: FreePlayService,
   ) {}
 
   /** Returns a per-club summary; one club failing never stops the others. */
@@ -51,5 +53,6 @@ export class ClubJobsRunner {
       autoConfirmed: await this.tournamentResults.autoConfirm(),
       overdueAlerts: await this.tournamentResults.alertOverdue(),
     }),
+    "free-play.tick": () => this.freePlay.tick(),
   };
 }

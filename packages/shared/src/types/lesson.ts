@@ -28,7 +28,8 @@ export interface CancelLessonResult {
 }
 
 /** Why a slot could not take a lesson (labels in the catalogue under labels.slotBlockReason). */
-export type SlotBlockReason = "SLOT_PAST" | "COURT_FROZEN" | "LESSON" | "BOOKING" | "COACH_BUSY";
+export type SlotBlockReason =
+  "SLOT_PAST" | "COURT_FROZEN" | "LESSON" | "BOOKING" | "COACH_BUSY" | "NOT_IN_PLAN";
 
 export interface CopyWeekResult {
   created: LessonDetail[];

@@ -1,7 +1,7 @@
 import { Controller, Get, HttpCode, Param, Post } from "@nestjs/common";
 import type { NotificationsResponse } from "@ficc/shared";
 
-import { CurrentUser, type RequestUser } from "../common/auth.decorators";
+import { CurrentUser, type RequestUser, SkipAudit } from "../common/auth.decorators";
 import { NotificationsService } from "./notifications.service";
 
 @Controller("notifications")
@@ -14,12 +14,14 @@ export class NotificationsController {
   }
 
   @Post("read-all")
+  @SkipAudit()
   @HttpCode(204)
   readAll(@CurrentUser() user: RequestUser): Promise<void> {
     return this.notifications.markAllRead(user.id);
   }
 
   @Post(":id/read")
+  @SkipAudit()
   @HttpCode(204)
   read(@CurrentUser() user: RequestUser, @Param("id") id: string): Promise<void> {
     return this.notifications.markRead(user.id, id);

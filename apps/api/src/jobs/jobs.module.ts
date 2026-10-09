@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 
 import { BookingsModule } from "../bookings/bookings.module";
 import type { Env } from "../config/env";
+import { FreePlayModule } from "../free-play/free-play.module";
 import { FreezesModule } from "../freezes/freezes.module";
 import { GuestsModule } from "../guests/guests.module";
 import { LessonsModule } from "../lessons/lessons.module";
@@ -31,6 +32,7 @@ import { ClubJobsScheduler } from "./club-jobs.scheduler";
     FreezesModule,
     GuestsModule,
     TournamentsModule,
+    FreePlayModule,
   ],
   providers: [ClubJobsRunner, ClubJobsProcessor, ClubJobsScheduler],
   exports: [ClubJobsRunner],

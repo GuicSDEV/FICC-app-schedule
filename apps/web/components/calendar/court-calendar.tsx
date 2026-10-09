@@ -31,6 +31,7 @@ export function CourtCalendar({
   highlights,
   celebrate,
   onCell,
+  staff = false,
 }: {
   day: ScheduleDay;
   filter: SurfaceFilter;
@@ -41,6 +42,8 @@ export function CourtCalendar({
   /** Cell key playing the "booking confirmed" fill. */
   celebrate: string | null;
   onCell: (cell: ScheduleCell) => void;
+  /** Staff calendar: past bookings stay tappable. */
+  staff?: boolean;
 }) {
   const common = useTranslations("common");
   const timeZone = useClub()?.timezone;
@@ -122,6 +125,7 @@ export function CourtCalendar({
                         state={cell.state}
                         past={cell.past}
                         favorite={cell.favorite}
+                        pastBookingsOpen={staff}
                         mine={Boolean(
                           viewerId &&
                           cell.booking?.players.some((player) => player.user.id === viewerId),

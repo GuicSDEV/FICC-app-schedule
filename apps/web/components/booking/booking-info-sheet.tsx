@@ -40,9 +40,12 @@ const PLAYER_STATUS_TONE = {
 export function BookingInfoSheet({
   target: requested,
   onOpenChange,
+  staff = false,
 }: {
   target: BookingInfoTarget | null;
   onOpenChange: (open: boolean) => void;
+  /** Staff view (BOOKINGS_MANAGE): cancel any booking, mark no-shows of any player. */
+  staff?: boolean;
 }) {
   const target = useLastDefined(requested);
   const t = useTranslations();
@@ -79,7 +82,29 @@ export function BookingInfoSheet({
     },
   });
 
+  const [marked, setMarked] = useState<string[]>([]);
+  const noShow = useMutation({
+    mutationFn: (userId: string) => api.bookings.markNoShow(booking!.id, userId),
+    onSuccess: (_result, userId) => {
+      haptic(10);
+      setMarked((current) => [...current, userId]);
+      toast.success(t("bookingInfo.noShowMarked"));
+    },
+    onError: (failure) => toast.error(errorMessage(failure)),
+  });
+  const staffCancel = useMutation({
+    mutationFn: () => api.bookings.staffCancel(booking!.id),
+    onSuccess: () => {
+      haptic();
+      toast.success(t("bookingInfo.cancelled"));
+      onOpenChange(false);
+    },
+    onError: (failure) => toast.error(errorMessage(failure)),
+    onSettled: () => void client.invalidateQueries({ queryKey: queryKeys.schedule() }),
+  });
+
   function close(open: boolean) {
+    if (!open) setMarked([]);
     if (!open) setConfirmCancel(false);
     onOpenChange(open);
   }
@@ -87,6 +112,13 @@ export function BookingInfoSheet({
   const canAnswer = me?.status === "PENDING" && booking?.status === "PENDING" && !target?.past;
   const canCancel =
     Boolean(me) && me?.status !== "DECLINED" && !target?.past && booking?.status !== "CANCELLED";
+  /** After the slot started, a co-player (or staff) can say someone did not show up. */
+  const canMarkNoShow = (playerId: string, status: string) =>
+    Boolean(target?.past) &&
+    status !== "DECLINED" &&
+    playerId !== user?.id &&
+    (staff || Boolean(me)) &&
+    !marked.includes(playerId);
 
   return (
     <Sheet
@@ -114,6 +146,22 @@ export function BookingInfoSheet({
               {t("common.confirm")}
             </Button>
           </div>
+        ) : staff && !target?.past && booking?.status !== "CANCELLED" ? (
+          confirmCancel ? (
+            <Button
+              variant="danger"
+              size="lg"
+              block
+              loading={staffCancel.isPending}
+              onClick={() => staffCancel.mutate()}
+            >
+              {t("bookingInfo.staffCancelConfirm")}
+            </Button>
+          ) : (
+            <Button variant="dangerSoft" size="lg" block onClick={() => setConfirmCancel(true)}>
+              {t("bookingInfo.staffCancel")}
+            </Button>
+          )
         ) : canCancel ? (
           confirmCancel ? (
             <div className="flex gap-2">
@@ -192,9 +240,22 @@ export function BookingInfoSheet({
                         {t("common.elo", { elo: player.user.elo })}
                       </span>
                     </span>
-                    <Badge tone={PLAYER_STATUS_TONE[player.status]}>
-                      {t(`bookingInfo.status.${player.status}`)}
-                    </Badge>
+                    {canMarkNoShow(player.user.id, player.status) ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={noShow.isPending && noShow.variables === player.user.id}
+                        onClick={() => noShow.mutate(player.user.id)}
+                      >
+                        {t("bookingInfo.markNoShow")}
+                      </Button>
+                    ) : marked.includes(player.user.id) ? (
+                      <Badge tone="danger">{t("bookingInfo.noShow")}</Badge>
+                    ) : (
+                      <Badge tone={PLAYER_STATUS_TONE[player.status]}>
+                        {t(`bookingInfo.status.${player.status}`)}
+                      </Badge>
+                    )}
                   </li>
                 );
               })}

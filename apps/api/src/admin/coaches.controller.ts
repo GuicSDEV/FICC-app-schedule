@@ -8,12 +8,13 @@ import {
   updateCoachSchema,
 } from "@ficc/shared";
 
-import { Roles } from "../common/auth.decorators";
+import { Roles, RequirePermissions } from "../common/auth.decorators";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { CoachesAdminService } from "./coaches.service";
 
 @Controller("admin/coaches")
 @Roles(Role.ADMIN)
+@RequirePermissions("LESSONS_MANAGE")
 export class CoachesAdminController {
   constructor(private readonly coaches: CoachesAdminService) {}
 

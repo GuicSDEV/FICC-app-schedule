@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { type Notification, Prisma, Role } from "@ficc/db";
+import { type Notification, Prisma } from "@ficc/db";
 import type {
   NotificationItem,
   NotificationPayloads,
   NotificationsResponse,
   NotificationType,
+  Permission,
 } from "@ficc/shared";
 
 import { notFound } from "../common/domain.exception";
@@ -57,12 +58,17 @@ export class NotificationsService {
     }
   }
 
-  async notifyAdmins<T extends NotificationType>(
+  /** Notifies every active staff member holding `permission`. */
+  async notifyStaff<T extends NotificationType>(
+    permission: Permission,
     type: T,
     payload: NotificationPayloads[T],
   ): Promise<void> {
     const admins = await this.prisma.user.findMany({
-      where: { role: Role.ADMIN, isActive: true },
+      where: {
+        isActive: true,
+        staffRoles: { some: { role: { permissions: { has: permission } } } },
+      },
       select: { id: true },
     });
     await this.notify(

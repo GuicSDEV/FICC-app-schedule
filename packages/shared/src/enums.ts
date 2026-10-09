@@ -139,6 +139,10 @@ export const NOTIFICATION_TYPES = [
   "TOURNAMENT_CHAMPION",
   "TOURNAMENT_ANNOUNCEMENT",
   "TOURNAMENT_RESULT_OVERDUE",
+  "MEMBER_APPROVED",
+  "COURT_AVAILABLE",
+  "NEWS_POSTED",
+  "BOOKING_SUSPENDED",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -207,3 +211,55 @@ export const matchOutcomeSchema = z.enum(MATCH_OUTCOMES);
 
 export const RESULT_STATUSES = ["NONE", "REPORTED", "CONFIRMED"] as const;
 export type ResultStatus = (typeof RESULT_STATUSES)[number];
+
+// ── Club operations (Phase 9.8) ─────────────────────────────────────────────────
+
+/** How courts work on a day: normal reservations, or walk-up play with check-in (no bookings). */
+export const COURT_MODES = ["BOOKING", "FREE_PLAY"] as const;
+export type CourtMode = (typeof COURT_MODES)[number];
+export const courtModeSchema = z.enum(COURT_MODES);
+
+/** Member accounts created by self sign-up wait for staff approval. */
+export const USER_STATUSES = ["PENDING", "ACTIVE", "REJECTED"] as const;
+export type UserStatus = (typeof USER_STATUSES)[number];
+
+/** Free play queue: waiting → offered a court (claim window) → claimed, or expired / left. */
+export const QUEUE_STATUSES = ["WAITING", "OFFERED", "CLAIMED", "EXPIRED", "LEFT"] as const;
+export type QueueStatus = (typeof QUEUE_STATUSES)[number];
+
+/** A missed booking, or one cancelled inside the late-cancellation window. */
+export const NO_SHOW_KINDS = ["NO_SHOW", "LATE_CANCEL"] as const;
+export type NoShowKind = (typeof NO_SHOW_KINDS)[number];
+
+/**
+ * What a staff member may do. Permissions are grouped into editable roles (Secretaria,
+ * Diretoria…); a person can hold several roles and gets the union.
+ */
+export const PERMISSIONS = [
+  /** Cancel any booking, mark no-shows and see members' no-show history. */
+  "BOOKINGS_MANAGE",
+  /** Rain / maintenance freezes, date exceptions and free-play courts. */
+  "COURTS_MANAGE",
+  /** Club news board ("Mural"). */
+  "NEWS_MANAGE",
+  /** Approve or reject self sign-ups. */
+  "MEMBERS_APPROVE",
+  /** Member list, CSV import, deactivation. */
+  "MEMBERS_MANAGE",
+  /** Guest passes, blocked documents, hosts' permissions. */
+  "GUESTS_MANAGE",
+  /** Coaches and every lesson. */
+  "LESSONS_MANAGE",
+  /** Tournaments and circuits. */
+  "TOURNAMENTS_MANAGE",
+  /** Result disputes and the ladder. */
+  "RANKING_MANAGE",
+  /** Club rules (ClubSettings): schedules, booking opening, penalties… */
+  "SETTINGS_MANAGE",
+  /** Staff accounts and their roles; the audit log. */
+  "STAFF_MANAGE",
+  /** Platform: edit what each role may do (super admin only by default). */
+  "PLATFORM_MANAGE",
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+export const permissionSchema = z.enum(PERMISSIONS);

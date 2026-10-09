@@ -239,7 +239,8 @@ describe("Guest passes and the gate", () => {
       .http()
       .post("/api/v1/auth/register")
       .send({ membershipId: "300100", name: "Nova Sócia", password: "senha-forte-1" })
-      .expect(201);
+      // Listed now: the sign-up is accepted and waits for the secretaria's approval.
+      .expect(202, { status: "PENDING", rejectionReason: null });
   });
 
   describe("LGPD", () => {

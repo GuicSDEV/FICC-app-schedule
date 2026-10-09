@@ -1,4 +1,25 @@
 import type {
+  AuditLogItem,
+  AuditQuery,
+  CheckInRequest,
+  CheckInView,
+  CourtsNow,
+  CreateStaffInput,
+  MemberNoShows,
+  NewsPostItem,
+  NewsPostRequest,
+  NoShowItem,
+  PendingSignup,
+  QueueEntryView,
+  ScheduleExceptionItem,
+  ScheduleExceptionRequest,
+  SignupDecisionInput,
+  SignupStatusResponse,
+  StaffMemberItem,
+  StaffRoleItem,
+  StaffRoleRequest,
+  UpdateClubSettingsInput,
+  UpdateNewsPostInput,
   ActiveFreeze,
   Announcement,
   AutoScheduleInput,
@@ -176,8 +197,13 @@ export const api = {
     me: () => request<AuthUser>("/auth/me"),
     login: (input: LoginInput) =>
       request<AuthUser>("/auth/login", { method: "POST", body: input, noRefresh: true }),
+    /** A member, or { status: "PENDING" } when the club approves sign-ups first. */
     register: (input: RegisterInput) =>
-      request<AuthUser>("/auth/register", { method: "POST", body: input, noRefresh: true }),
+      request<AuthUser | SignupStatusResponse>("/auth/register", {
+        method: "POST",
+        body: input,
+        noRefresh: true,
+      }),
     logout: () => request<void>("/auth/logout", { method: "POST", noRefresh: true }),
   },
   club: () => request<ClubInfo>("/club", { noRefresh: true }),
@@ -195,6 +221,31 @@ export const api = {
     confirm: (id: string) => post<BookingDetail>(`/bookings/${id}/confirm`),
     decline: (id: string) => post<BookingDetail>(`/bookings/${id}/decline`),
     cancel: (id: string) => post<BookingDetail>(`/bookings/${id}/cancel`),
+    markNoShow: (id: string, userId: string, note?: string) =>
+      post<NoShowItem>(`/bookings/${id}/no-shows`, { userId, note }),
+    staffCancel: (id: string) => post<BookingDetail>(`/bookings/${id}/staff-cancel`),
+  },
+  scheduleExceptions: {
+    list: (from: string, to: string) =>
+      request<ScheduleExceptionItem[]>("/schedule-exceptions", { query: { from, to } }),
+    save: (input: ScheduleExceptionRequest) =>
+      put<ScheduleExceptionItem>("/schedule-exceptions", input),
+    remove: (id: string) => request<void>(`/schedule-exceptions/${id}`, { method: "DELETE" }),
+  },
+  freePlay: {
+    now: () => request<CourtsNow>("/free-play/now"),
+    checkIn: (input: CheckInRequest) => post<CheckInView>("/free-play/check-ins", input),
+    checkOut: (id: string) => post<void>(`/free-play/check-ins/${id}/check-out`),
+    join: () => post<QueueEntryView>("/free-play/queue"),
+    leave: () => request<void>("/free-play/queue", { method: "DELETE" }),
+  },
+  news: {
+    list: () => request<NewsPostItem[]>("/news"),
+    create: (input: NewsPostRequest) => post<NewsPostItem>("/news", input),
+    update: (id: string, input: UpdateNewsPostInput) => patch<NewsPostItem>(`/news/${id}`, input),
+    remove: (id: string) => request<void>(`/news/${id}`, { method: "DELETE" }),
+    react: (id: string) => post<NewsPostItem>(`/news/${id}/react`),
+    read: (id: string) => post<void>(`/news/${id}/read`),
   },
   favorites: {
     list: () => request<SlotFavoriteItem[]>("/favorites"),
@@ -361,7 +412,25 @@ export const api = {
       post<void>(`/admin/guests/suspensions/${memberId}`, { reason }),
     unsuspendGuests: (memberId: string) =>
       request<void>(`/admin/guests/suspensions/${memberId}`, { method: "DELETE" }),
-    members: (q?: string) => request<AdminMemberItem[]>("/admin/members", { query: { q } }),
+    members: (q?: string, status?: "PENDING" | "ACTIVE" | "REJECTED") =>
+      request<AdminMemberItem[]>("/admin/members", { query: { q, status } }),
+    pendingMembers: () => request<PendingSignup[]>("/admin/members/pending"),
+    decideMember: (id: string, input: SignupDecisionInput) =>
+      post<void>(`/admin/members/${id}/decision`, input),
+    memberNoShows: (id: string) => request<MemberNoShows>(`/admin/members/${id}/no-shows`),
+    updateSettings: (input: UpdateClubSettingsInput) => patch<ClubInfo>("/admin/settings", input),
+    roles: () => request<StaffRoleItem[]>("/admin/staff/roles"),
+    createRole: (input: StaffRoleRequest) => post<StaffRoleItem>("/admin/staff/roles", input),
+    updateRole: (id: string, input: StaffRoleRequest) =>
+      put<StaffRoleItem>(`/admin/staff/roles/${id}`, input),
+    deleteRole: (id: string) => request<void>(`/admin/staff/roles/${id}`, { method: "DELETE" }),
+    staff: () => request<StaffMemberItem[]>("/admin/staff"),
+    createStaff: (input: CreateStaffInput) => post<StaffMemberItem>("/admin/staff", input),
+    setStaffRoles: (id: string, roleIds: string[]) =>
+      put<StaffMemberItem>(`/admin/staff/${id}/roles`, { roleIds }),
+    setStaffActive: (id: string, isActive: boolean) =>
+      patch<StaffMemberItem>(`/admin/staff/${id}/active`, { isActive }),
+    auditLog: (query: AuditQuery = {}) => request<AuditLogItem[]>("/admin/audit", { query }),
     importMemberships: (csv: string) =>
       post<MembershipImportResult>("/admin/memberships/import", { csv }),
   },

@@ -5,6 +5,7 @@ import {
   type LoginInput,
   loginSchema,
   type RegisterInput,
+  type SignupStatusResponse,
   registerSchema,
 } from "@ficc/shared";
 import type { Request, Response } from "express";
@@ -29,8 +30,14 @@ export class AuthController {
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<AuthUser> {
-    return this.respond(response, await this.auth.register(body, request.headers["user-agent"]));
+  ): Promise<AuthUser | SignupStatusResponse> {
+    const result = await this.auth.register(body, request.headers["user-agent"]);
+    // Waiting for approval: no session, 202 Accepted.
+    if ("status" in result) {
+      response.status(202);
+      return result;
+    }
+    return this.respond(response, result);
   }
 
   @Public()

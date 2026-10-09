@@ -65,7 +65,7 @@ export function parseMembershipCsv(csv: string): MembershipCsvResult {
     const [rawId = "", ...rest] = line.split(/[;,]/);
     const membershipId = normalizeMembershipId(rawId);
     if (index === 0 && !/\d/.test(rawId)) return; // header
-    if (!isValidMembershipId(membershipId)) {
+    if (!isValidMembershipId(membershipId, true)) {
       errors.push({ line: index + 1, value: rawId.trim() });
       return;
     }

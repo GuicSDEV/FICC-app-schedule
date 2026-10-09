@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { EntryStatus, Prisma, Role, TournamentStatus } from "@ficc/db";
+import { EntryStatus, Prisma, TournamentStatus } from "@ficc/db";
 import {
   type CircuitDetail,
   type CircuitInput,
@@ -14,7 +14,7 @@ import {
   type UpdateCircuitInput,
 } from "@ficc/shared";
 
-import type { RequestUser } from "../common/auth.decorators";
+import { can, type RequestUser } from "../common/auth.decorators";
 import { forbidden, notFound } from "../common/domain.exception";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -92,7 +92,7 @@ export class CircuitsService {
   }
 
   async create(user: RequestUser, input: CircuitInput): Promise<CircuitDetail> {
-    if (user.role !== Role.ADMIN) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (!can(user, "TOURNAMENTS_MANAGE")) throw forbidden("FORBIDDEN", "api.forbidden");
     const created = await this.prisma.circuit.create({
       data: {
         name: input.name,
@@ -105,7 +105,7 @@ export class CircuitsService {
   }
 
   async update(user: RequestUser, id: string, input: UpdateCircuitInput): Promise<CircuitDetail> {
-    if (user.role !== Role.ADMIN) throw forbidden("FORBIDDEN", "api.forbidden");
+    if (!can(user, "TOURNAMENTS_MANAGE")) throw forbidden("FORBIDDEN", "api.forbidden");
     const circuit = await this.prisma.circuit.findUnique({
       where: { id },
       include: { categories: true },

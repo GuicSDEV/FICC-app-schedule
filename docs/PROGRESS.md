@@ -19,7 +19,7 @@ and what still needs a human to check.
 | 8     | Member: matches, ranking, H2H, guests | Done                                | `feat(phase-8)`   |
 | 9     | Coach, gate, admin screens            | Done                                | `feat(phase-9)`   |
 | 9.5   | Tournaments & circuits                | Done                                | `feat(phase-9.5)` |
-| 9.8   | FICC operations adjustments           | Not started                         |                   |
+| 9.8   | FICC operations adjustments           | Done                                | `feat(phase-9.8)` |
 | 10    | PWA, polish, QA                       | Not started                         |                   |
 | 11    | SaaS extensibility & feature workflow | On hold — waiting for club approval |                   |
 | 12    | Native apps (App Store & Google Play) | On hold — waiting for club approval |                   |
@@ -294,6 +294,64 @@ Phases 11 and 12.
   exported to PDF. The API e2e suite covers 12-player singles and 8-team doubles groups → KO from
   creation to champion, a two-stage circuit ranking, the public link and rain rescheduling.
 
+### Phase 9.8 — FICC operations adjustments
+
+- **Every rule is a ClubSettings value** edited at `/admin/settings` (SETTINGS_MANAGE): per-weekday
+  grids (start times picked from the club's `TimeSlot` rows; a weekday with no grid uses every
+  slot, an empty grid closes it), per-weekday court mode, booking window, opening rule, limits,
+  free play, sign-up approval, dependents, late-cancellation window, no-show penalty and the older
+  numeric rules. Date exceptions (close the club or some courts, another grid or mode, a note) are
+  managed by COURTS_MANAGE on the same page and override the weekday. One shared `dayPlan()`
+  decides how a date works for the calendar, bookings, lessons and tournament scheduling.
+- **FICC defaults in the seed:** weekdays 8 slots (08:30…21:00), weekends 7 slots
+  (07:15…17:15), Saturday is FREE_PLAY, bookings for a day open **1 day before at 07:00**, 1
+  booking per member per day. New clubs start with no opening rule (bookable as soon as the day
+  enters the window).
+- **Opening rush:** the countdown runs on the server clock (`serverNow` in every day plan and
+  error); the booking request fails fast on an occupied slot before the serializable transaction
+  (8 attempts with jittered backoff) and answers `SLOT_TAKEN` with the next free options, shown as
+  chips in the booking sheet. Booking creation is rate limited to 5 requests per 10 s per member.
+  The limiter is **in memory per API instance** (enough for one instance; a Redis limiter is
+  needed if the API runs on several). The load test fires 150 simultaneous requests for 6 courts:
+  exactly 6 win, everyone else gets a clear answer (≈2 s in total here).
+- **Free play:** check-in (player + up to 3 partners) on a free court; it ends by itself after
+  `freePlay.sessionMinutes` (default 75). Courts under a lesson, tournament match or freeze show as
+  busy. With the queue on, a freed court is offered to the first in line for `claimMinutes`
+  (default 5) with a push notification; unclaimed offers pass to the next person (job
+  `free-play.tick`, every minute, idempotent).
+- **Sign-up approval** is on by default: self sign-ups are PENDING, cannot log in (the login says
+  so), staff with MEMBERS_APPROVE approve or reject with a reason the person reads at login; the
+  approved member gets a notification. The holder name from the imported list is shown next to the
+  typed name, with a warning when they differ. CSV import is unchanged.
+- **Dependents** (off by default): "1234-01" style matrículas validated against the holder's
+  imported matrícula; each dependent has their own login and rating.
+- **Roles:** default roles per club — Secretaria (bookings/no-shows, courts and exceptions, Mural,
+  approvals, guests), Diretoria (everything except platform), Professor (no admin permissions;
+  coaches keep their portal), Super admin (all). Roles are editable (PLATFORM_MANAGE) and people
+  can hold several (permissions add up). Nobody can grant a permission they lack, and the club
+  can never lose its last active Super admin. An ADMIN account without roles sees nothing in the
+  admin area. Existing ADMIN users were migrated to Super admin, coaches to Professor.
+- **Audit log:** an interceptor records every successful POST/PUT/PATCH/DELETE by a staff account
+  (who, route, record id, body with passwords/tokens masked). Personal actions (reading a post,
+  marking notifications read) are marked `@SkipAudit()` and stay out.
+- **No-shows:** staff (BOOKINGS_MANAGE) or a co-player, after the slot started, mark a player;
+  cancelling inside `lateCancellationMinutes` records a late cancellation. History per member in
+  the admin member sheet. The penalty (suspension after N in M days) is **off by default**.
+- **Mural** (`/app/news`, managed at `/admin/news` with NEWS_MANAGE): title, text, photos (image
+  URLs, no upload storage yet), event date, pinned, optional push to every active member, 👍
+  reactions, read counts for staff (a post counts as read when it is on screen). The dashboard
+  shows the latest pinned post.
+- Backlog (not implemented) is in `docs/BACKLOG.md`.
+- Verified in the browser (Playwright, 390 px and 1280 px): rules editor (grids, modes, save bar),
+  a date exception turning today into a free-play day; Sunday's countdown "Reservas abrem 10 de
+  out, 07:00" and Saturday's free-play banner; check-in, all courts busy → queue position →
+  check-out → the first in line gets the court offer with a 5-minute countdown and a
+  COURT_AVAILABLE notification → claims it; self sign-up → pending screen → login refused →
+  Secretaria approves (member logs in and sees the approval notification) and rejects another
+  with a reason shown at login; admin navigation per role (Secretaria: Interdições, Reservas,
+  Quadras agora, Mural, Sócios, Convidados, Regras do clube, Portaria; Diretoria and Super admin:
+  everything, only Super admin edits roles); a Mural post with push reaches members.
+
 ## Known issues
 
 - None open.
@@ -319,5 +377,12 @@ Phases 11 and 12.
 - Share preview of the public tournament link in WhatsApp (needs a public URL; verified here that
   the page sets Open Graph tags and the image renders as PNG).
 - Printing the draw / order of play on the club's printer (verified PDF export in Chromium only).
+- Booking opening rush with real members on the club's network and production hardware (load
+  test here: 150 simultaneous requests against one local API instance).
+- Free-play queue push notifications on real phones (verified here as in-app notifications and
+  the live "Quadras agora" screen).
+- The club's real weekend grid, opening rule (1 day before at 07:00 assumed) and which days are
+  free play: confirm with the secretaria before launch.
+- Default role permissions (what Secretaria and Diretoria may do) confirmed by the board.
 - Gate camera scanning on real phones (iOS Safari and Android Chrome) and in the gate's lighting;
   verified here with Chromium's fake camera playing a QR video (accepted, then "already used").

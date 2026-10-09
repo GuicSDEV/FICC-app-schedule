@@ -196,6 +196,36 @@ enum NotificationType {
   TOURNAMENT_CHAMPION
   TOURNAMENT_ANNOUNCEMENT
   TOURNAMENT_RESULT_OVERDUE
+  MEMBER_APPROVED
+  COURT_AVAILABLE
+  NEWS_POSTED
+  BOOKING_SUSPENDED
+}
+
+// ── Club operations (Phase 9.8) ──────────────────────────────────────────────
+
+enum CourtMode {
+  BOOKING
+  FREE_PLAY
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum QueueStatus {
+  WAITING
+  OFFERED
+  CLAIMED
+  EXPIRED
+  LEFT
+}
+
+enum NoShowKind {
+  NO_SHOW
+  LATE_CANCEL
 }
 
 enum TournamentStatus {
@@ -307,6 +337,13 @@ model Club {
   announcements        TournamentAnnouncement[]
   circuits             Circuit[]
   circuitCategories    CircuitCategory[]
+  scheduleExceptions   ScheduleException[]
+  checkIns             CourtCheckIn[]
+  queueEntries         CourtQueueEntry[]
+  staffRoles           StaffRole[]
+  auditLogs            AuditLog[]
+  noShows              NoShow[]
+  newsPosts            NewsPost[]
 }
 
 /// The club's configurable rules. `values` holds the fields of clubSettingsSchema
@@ -341,9 +378,9 @@ model Category {
 /// Any account: member, coach, admin or gate staff.
 /// CHECK: members must have a membershipId; every user has a login (membershipId or email).
 model User {
-  id                         String    @id @default(cuid())
-  clubId                     String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
-  role                       Role      @default(MEMBER)
+  id                         String     @id @default(cuid())
+  clubId                     String     @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  role                       Role       @default(MEMBER)
   /// Matrícula, digits only, unique within the club. Members log in with it.
   membershipId               String?
   /// Login for staff accounts (coach, admin, gate), unique within the club.
@@ -351,12 +388,19 @@ model User {
   passwordHash               String
   name                       String
   photoUrl                   String?
-  isActive                   Boolean   @default(true)
+  isActive                   Boolean    @default(true)
   /// Set by an admin to stop this member from creating guest passes.
-  guestPassesSuspendedAt     DateTime? @db.Timestamptz(3)
+  guestPassesSuspendedAt     DateTime?  @db.Timestamptz(3)
   guestPassesSuspendedReason String?
-  createdAt                  DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime  @updatedAt @db.Timestamptz(3)
+  /// Self sign-ups start PENDING when the club requires approval.
+  status                     UserStatus @default(ACTIVE)
+  rejectionReason            String?
+  reviewedAt                 DateTime?  @db.Timestamptz(3)
+  reviewedById               String?
+  /// Set by the no-show penalty: no new bookings until then.
+  bookingSuspendedUntil      DateTime?  @db.Timestamptz(3)
+  createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime   @updatedAt @db.Timestamptz(3)
 
   club                       Club                     @relation(fields: [clubId], references: [id], onDelete: Restrict)
   membership                 ValidMembershipId?       @relation(fields: [clubId, membershipId], references: [clubId, membershipId], onDelete: Restrict, onUpdate: Cascade)
@@ -386,6 +430,19 @@ model User {
   announcements              TournamentAnnouncement[]
   reportedTournamentResults  TournamentMatch[]        @relation("TournamentResultReportedBy")
   confirmedTournamentResults TournamentMatch[]        @relation("TournamentResultConfirmedBy")
+  reviewedBy                 User?                    @relation("UserReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewed                   User[]                   @relation("UserReviewedBy")
+  staffRoles                 UserStaffRole[]
+  checkIns                   CourtCheckInPlayer[]
+  checkInsCreated            CourtCheckIn[]           @relation("CheckInCreatedBy")
+  queueEntries               CourtQueueEntry[]
+  noShows                    NoShow[]                 @relation("NoShowUser")
+  noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
+  newsPosts                  NewsPost[]
+  newsReactions              NewsReaction[]
+  newsReads                  NewsRead[]
+  auditLogs                  AuditLog[]
+  exceptionsCreated          ScheduleException[]
 
   @@unique([clubId, membershipId])
   @@unique([clubId, email])
@@ -497,6 +554,8 @@ model Court {
   freezes           CourtFreezeCourt[]
   matches           Match[]
   tournamentMatches TournamentMatch[]
+  checkIns          CourtCheckIn[]
+  queueOffers       CourtQueueEntry[]
 
   @@unique([clubId, name])
 }
@@ -678,6 +737,7 @@ model Booking {
   occupancy   SlotOccupancy?
   matches     Match[]
   guestPasses GuestPass[]
+  noShows     NoShow[]
 
   @@index([date, courtId])
   @@index([status, expiresAt])
@@ -1255,4 +1315,192 @@ model TournamentAnnouncement {
   author     User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([tournamentId, createdAt])
+}
+
+/// A date where staff override the weekday rules: holiday, event, maintenance day.
+model ScheduleException {
+  id             String     @id @default(cuid())
+  clubId         String     @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  date           DateTime   @db.Date
+  closed         Boolean    @default(false)
+  /// Start times used that day ("HH:mm" list); null keeps the weekday grid.
+  slotTimes      Json?
+  mode           CourtMode?
+  closedCourtIds String[]   @default([])
+  note           String?
+  createdById    String?
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  club      Club  @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([clubId, date])
+}
+
+/// Free play: players on a court right now (ended by check-out, staff or the session limit).
+model CourtCheckIn {
+  id          String    @id @default(cuid())
+  clubId      String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  courtId     String
+  date        DateTime  @db.Date
+  startedAt   DateTime  @default(now()) @db.Timestamptz(3)
+  /// Automatic check-out.
+  endsAt      DateTime  @db.Timestamptz(3)
+  endedAt     DateTime? @db.Timestamptz(3)
+  /// CHECKOUT, AUTO or STAFF.
+  endedReason String?
+  createdById String
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  club      Club                 @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  court     Court                @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  createdBy User                 @relation("CheckInCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  players   CourtCheckInPlayer[]
+
+  @@index([clubId, endedAt])
+  @@index([courtId, endedAt])
+}
+
+model CourtCheckInPlayer {
+  checkInId String
+  userId    String
+
+  checkIn CourtCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([checkInId, userId])
+  @@index([userId])
+}
+
+/// Free play queue when every court is busy; the first in line gets a court for a few minutes.
+model CourtQueueEntry {
+  id             String      @id @default(cuid())
+  clubId         String      @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId         String
+  date           DateTime    @db.Date
+  status         QueueStatus @default(WAITING)
+  joinedAt       DateTime    @default(now()) @db.Timestamptz(3)
+  offeredCourtId String?
+  offeredAt      DateTime?   @db.Timestamptz(3)
+  offerExpiresAt DateTime?   @db.Timestamptz(3)
+  resolvedAt     DateTime?   @db.Timestamptz(3)
+
+  club         Club   @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offeredCourt Court? @relation(fields: [offeredCourtId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, date, status, joinedAt])
+}
+
+/// Editable group of permissions (Secretaria, Diretoria…).
+model StaffRole {
+  id          String   @id @default(cuid())
+  clubId      String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  /// Default roles keep their key (SECRETARIA, DIRETORIA, PROFESSOR, SUPER_ADMIN).
+  key         String?
+  name        String
+  description String   @default("")
+  permissions String[] @default([])
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  club    Club            @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  members UserStaffRole[]
+
+  @@unique([clubId, name])
+  @@unique([clubId, key])
+}
+
+model UserStaffRole {
+  userId String
+  roleId String
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role StaffRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+/// Every staff action (mutating request by an admin, coach or gate account).
+model AuditLog {
+  id        String   @id @default(cuid())
+  clubId    String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  actorId   String?
+  /// "POST /freezes", "PATCH /members/:id/status"…
+  action    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  club  Club  @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([clubId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+/// A booking player who did not show up, or cancelled inside the late-cancellation window.
+model NoShow {
+  id         String     @id @default(cuid())
+  clubId     String     @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId     String
+  bookingId  String
+  kind       NoShowKind
+  markedById String?
+  note       String?
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+
+  club     Club    @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user     User    @relation("NoShowUser", fields: [userId], references: [id], onDelete: Cascade)
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  markedBy User?   @relation("NoShowMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
+
+  @@unique([bookingId, userId])
+  @@index([userId, createdAt])
+}
+
+/// Club news board ("Mural").
+model NewsPost {
+  id          String    @id @default(cuid())
+  clubId      String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  title       String
+  body        String
+  photoUrls   String[]  @default([])
+  eventDate   DateTime? @db.Date
+  pinned      Boolean   @default(false)
+  authorId    String
+  publishedAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
+
+  club      Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  reactions NewsReaction[]
+  reads     NewsRead[]
+
+  @@index([clubId, deletedAt, pinned, publishedAt])
+}
+
+model NewsReaction {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  post NewsPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+model NewsRead {
+  postId String
+  userId String
+  readAt DateTime @default(now()) @db.Timestamptz(3)
+
+  post NewsPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
 }

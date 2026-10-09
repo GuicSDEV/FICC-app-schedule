@@ -24,7 +24,12 @@ import {
 } from "@ficc/shared";
 import { z } from "zod";
 
-import { CurrentUser, type RequestUser, Roles } from "../common/auth.decorators";
+import {
+  CurrentUser,
+  type RequestUser,
+  Roles,
+  RequirePermissions,
+} from "../common/auth.decorators";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { GuestsService } from "./guests.service";
 
@@ -91,6 +96,7 @@ const reasonSchema = z.object({ reason: z.string().trim().max(300).optional() })
 
 @Controller("admin/guests")
 @Roles(Role.ADMIN)
+@RequirePermissions("GUESTS_MANAGE")
 export class AdminGuestsController {
   constructor(private readonly guests: GuestsService) {}
 

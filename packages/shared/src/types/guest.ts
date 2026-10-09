@@ -1,5 +1,11 @@
 import type { IsoDate } from "../dates";
-import type { GateScanMethod, GateScanResult, GuestDocumentType, GuestPassStatus } from "../enums";
+import type {
+  GateScanMethod,
+  GateScanResult,
+  GuestDocumentType,
+  GuestPassStatus,
+  UserStatus,
+} from "../enums";
 import type { IsoDateTime, PlayerSummary } from "./common";
 
 export interface GuestPassItem {
@@ -96,4 +102,10 @@ export interface AdminMemberItem {
   isActive: boolean;
   guestPassesSuspended: boolean;
   guestPassesSuspendedReason: string | null;
+  status: UserStatus;
+  /** No-shows and late cancellations in the penalty window. */
+  recentNoShows: number;
+  bookingSuspendedUntil: IsoDateTime | null;
+  /** Dependents (holder + dependents mode) of this holder. */
+  dependents: { id: string; name: string; membershipId: string }[];
 }

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Role } from "@ficc/db";
 import { fromDbDate, slotEndsAt, slotStartsAt, type TournamentMatchView } from "@ficc/shared";
 
-import type { RequestUser } from "../common/auth.decorators";
+import { can, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { forbidden, notFound } from "../common/domain.exception";
 import type { Tx } from "../common/transactions";
@@ -29,7 +29,7 @@ export class TournamentContextService {
     client: Tx = this.prisma,
   ): Promise<boolean> {
     if (!user) return false;
-    if (user.role === Role.ADMIN) return true;
+    if (can(user, "TOURNAMENTS_MANAGE")) return true;
     if (user.role !== Role.MEMBER) return false;
     const row = await client.tournamentOrganizer.findUnique({
       where: { tournamentId_userId: { tournamentId, userId: user.id } },

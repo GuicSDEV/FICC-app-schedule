@@ -1,5 +1,4 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { Role } from "@ficc/db";
 import {
   clubToday,
   type CourtsResponse,
@@ -8,7 +7,7 @@ import {
   scheduleQuerySchema,
 } from "@ficc/shared";
 
-import { CurrentUser, type RequestUser } from "../common/auth.decorators";
+import { can, CurrentUser, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { toCourtSummary, toSlotSummary } from "../common/mappers";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
@@ -33,7 +32,7 @@ export class ScheduleController {
     return this.schedule.getDay(query.date, {
       surface: query.surface,
       viewerId: user.id,
-      lessonDetailsFor: user.role === Role.ADMIN ? "all" : user.coachId ? [user.coachId] : [],
+      lessonDetailsFor: can(user, "LESSONS_MANAGE") ? "all" : user.coachId ? [user.coachId] : [],
     });
   }
 

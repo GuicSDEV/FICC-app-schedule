@@ -15,19 +15,24 @@ export type Tx = Omit<
 export async function serializable<T>(
   prisma: TenantPrismaClient,
   work: (tx: Tx) => Promise<T>,
-  attempts = 4,
+  attempts = 8,
 ): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await prisma.$transaction(work, {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        // Opening-time rushes queue many transactions for the pool: wait instead of failing.
+        maxWait: 10_000,
         timeout: 15_000,
       });
     } catch (error) {
       const retryable =
         error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
       if (!retryable || attempt >= attempts) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 20 * attempt + Math.random() * 30));
+      // Jittered backoff so the retries of a rush do not collide again.
+      await new Promise((resolve) =>
+        setTimeout(resolve, 15 * attempt + Math.random() * 40 * attempt),
+      );
     }
   }
 }

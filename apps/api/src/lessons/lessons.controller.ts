@@ -23,7 +23,12 @@ import {
   updateLessonSchema,
 } from "@ficc/shared";
 
-import { CurrentUser, type RequestUser, Roles } from "../common/auth.decorators";
+import {
+  CurrentUser,
+  type RequestUser,
+  Roles,
+  RequirePermissions,
+} from "../common/auth.decorators";
 import { forbidden } from "../common/domain.exception";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { PrismaService } from "../prisma/prisma.service";
@@ -116,6 +121,7 @@ export class CoachController {
 /** Admins manage every coach's lessons and can read the change log. */
 @Controller("admin/lessons")
 @Roles(Role.ADMIN)
+@RequirePermissions("LESSONS_MANAGE")
 export class AdminLessonsController {
   constructor(private readonly lessons: LessonsService) {}
 

@@ -2,13 +2,13 @@
 
 import { LogOut, Plus } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { EloCelebration } from "@/components/matches/elo-celebration";
+import { useLogout, useSession } from "@/components/providers/session-provider";
 import { ChampionCelebration } from "@/components/tournaments/champion-celebration";
-import { useLogout } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ import { AreaGuard } from "./area-guard";
 import { BottomNav } from "./bottom-nav";
 import { Brand } from "./brand";
 import { FreezeBanner } from "./freeze-banner";
-import { ADMIN_NAV, COACH_NAV, isActive, MEMBER_SIDEBAR, MEMBER_TABS } from "./nav-config";
+import { adminNavFor, COACH_NAV, isActive, MEMBER_SIDEBAR, MEMBER_TABS } from "./nav-config";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -116,12 +116,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const t = useTranslations("shell");
   const nav = useTranslations("nav");
   const pathname = usePathname();
+  const { user } = useSession();
+  const router = useRouter();
+  const items = adminNavFor(user?.permissions ?? []);
+  // The admin home is the freezes page; staff without that permission land on their first page.
+  const landing = items[0]?.href;
+  useEffect(() => {
+    if (user && pathname === "/admin" && !user.permissions.includes("COURTS_MANAGE") && landing) {
+      router.replace(landing);
+    }
+  }, [user, pathname, landing, router]);
   return (
     <AreaGuard area="/admin">
       <div className="flex min-h-dvh">
         <Sidebar
           group="admin"
-          items={ADMIN_NAV}
+          items={items}
           header={<Brand subtitle={t("adminArea")} />}
           footer={<SidebarFooter />}
         />
@@ -130,7 +140,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-label={nav("sections")}
             className="sticky top-0 z-40 -mx-4 no-scrollbar flex gap-2 overflow-x-auto border-b border-border glass px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden"
           >
-            {ADMIN_NAV.map((item) => {
+            {items.map((item) => {
               const active = isActive(pathname, item);
               return (
                 <Link

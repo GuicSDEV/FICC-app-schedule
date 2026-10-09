@@ -73,5 +73,8 @@ export const adminGuestPassesQuerySchema = z.object({
 });
 export type AdminGuestPassesQuery = z.infer<typeof adminGuestPassesQuerySchema>;
 
-export const adminMembersQuerySchema = z.object({ q: z.string().trim().max(60).optional() });
+export const adminMembersQuerySchema = z.object({
+  q: z.string().trim().max(60).optional(),
+  status: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
+});
 export type AdminMembersQuery = z.infer<typeof adminMembersQuerySchema>;

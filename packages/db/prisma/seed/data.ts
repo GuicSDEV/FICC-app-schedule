@@ -15,7 +15,43 @@ export const FICC_CLUB = {
   accentColor: "#8B7CF6",
 } as const;
 
-export const FICC_SETTINGS: ClubSettings = { ...DEFAULT_CLUB_SETTINGS };
+/** Weekdays use the 8 slots of the spec; weekends start earlier and end in the afternoon. */
+export const FICC_WEEKDAY_TIMES = [
+  "08:30",
+  "10:00",
+  "14:45",
+  "16:00",
+  "17:15",
+  "18:30",
+  "19:45",
+  "21:00",
+] as const;
+export const FICC_WEEKEND_TIMES = [
+  "07:15",
+  "08:30",
+  "09:45",
+  "11:00",
+  "14:45",
+  "16:00",
+  "17:15",
+] as const;
+
+export const FICC_SETTINGS: ClubSettings = {
+  ...DEFAULT_CLUB_SETTINGS,
+  scheduleGrids: {
+    MON: [...FICC_WEEKDAY_TIMES],
+    TUE: [...FICC_WEEKDAY_TIMES],
+    WED: [...FICC_WEEKDAY_TIMES],
+    THU: [...FICC_WEEKDAY_TIMES],
+    FRI: [...FICC_WEEKDAY_TIMES],
+    SAT: [...FICC_WEEKEND_TIMES],
+    SUN: [...FICC_WEEKEND_TIMES],
+  },
+  // Saturdays are walk-up play: check in at the court, digital queue when all are busy.
+  dayModes: { SAT: "FREE_PLAY" },
+  // Replaces the 7am WhatsApp list: tomorrow's courts open today at 07:00.
+  bookingOpening: { daysBefore: 1, time: "07:00" },
+};
 
 /** FICC's competitive categories. */
 export const FICC_CATEGORIES = [
@@ -27,18 +63,15 @@ export const FICC_CATEGORIES = [
 ] as const;
 export type CategoryKey = (typeof FICC_CATEGORIES)[number]["key"];
 
-/** Daily start times, club local time. Slots last 75 minutes; the grid is not hourly. */
+/**
+ * Every start time the club uses (the TimeSlot rows), club local time. Slots last 75 minutes; the
+ * grid is not hourly. Each weekday uses its own subset (FICC_SETTINGS.scheduleGrids).
+ */
 export const FICC_SLOT_START_TIMES = [
-  "08:30",
-  "10:00",
-  "14:45",
-  "16:00",
-  "17:15",
-  "18:30",
-  "19:45",
-  "21:00",
-] as const;
-export type SlotStartTime = (typeof FICC_SLOT_START_TIMES)[number];
+  ...new Set([...FICC_WEEKDAY_TIMES, ...FICC_WEEKEND_TIMES]),
+].sort() as (typeof FICC_WEEKDAY_TIMES)[number][];
+export type SlotStartTime =
+  (typeof FICC_WEEKDAY_TIMES)[number] | (typeof FICC_WEEKEND_TIMES)[number];
 
 export const FICC_SLOT_GRID: readonly SlotDefinition[] = FICC_SLOT_START_TIMES.map(
   (startTime, index) => ({
@@ -59,10 +92,51 @@ export const COURTS: readonly { name: CourtName; surface: Surface; sport: Sport 
   { name: "Q6", surface: Surface.SAIBRO, sport: Sport.TENNIS },
 ];
 
-export const STAFF: readonly { role: Role; name: string; email: string }[] = [
-  { role: Role.ADMIN, name: "Administração FICC", email: "admin@ficc.test" },
-  { role: Role.GATE, name: "Portaria FICC", email: "portaria@ficc.test" },
+/** Staff accounts and their roles (keys of DEFAULT_STAFF_ROLES). */
+export const STAFF: readonly { role: Role; name: string; email: string; roles: string[] }[] = [
+  {
+    role: Role.ADMIN,
+    name: "Administração FICC",
+    email: "admin@ficc.test",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    role: Role.ADMIN,
+    name: "Secretaria FICC",
+    email: "secretaria@ficc.test",
+    roles: ["SECRETARIA"],
+  },
+  { role: Role.ADMIN, name: "Diretoria FICC", email: "diretoria@ficc.test", roles: ["DIRETORIA"] },
+  { role: Role.GATE, name: "Portaria FICC", email: "portaria@ficc.test", roles: [] },
 ];
+
+/** A self sign-up waiting for the secretaria (matrícula from the unclaimed list). */
+export const PENDING_SIGNUP = { membershipId: "114650", name: "Ana Paula Moura" } as const;
+
+/** Mural posts, newest first (days before today). */
+export const NEWS_POSTS = [
+  {
+    daysAgo: 0,
+    title: "Bem-vindos ao novo app do FICC",
+    body: "Reservas, ranking, torneios e agora o **Mural**: os avisos do clube chegam aqui e no seu celular.\n\nAos sábados as quadras são de **uso livre**: faça check-in na quadra e, se todas estiverem ocupadas, entre na fila digital.",
+    pinned: true,
+    eventInDays: null,
+  },
+  {
+    daysAgo: 2,
+    title: "Aberto de Primavera: inscrições abertas",
+    body: "Simples e duplas, chaves com cabeças de chave pelo Elo. Inscreva-se na aba Torneios.",
+    pinned: false,
+    eventInDays: 10,
+  },
+  {
+    daysAgo: 6,
+    title: "Manutenção das quadras de saibro",
+    body: "As quadras Q5 e Q6 recebem saibro novo na próxima semana. Confira os dias fechados no calendário.",
+    pinned: false,
+    eventInDays: null,
+  },
+] as const;
 
 export type CoachKey = "alan" | "phelipe" | "club";
 
@@ -89,7 +163,10 @@ export const COACHES: Record<CoachKey, SeedCoach> = {
  * Default weekly lesson template, Monday to Friday (docs/SPEC.md, "Current typical lesson
  * schedule"). Each entry becomes one LessonSeries; missing courts are free.
  */
-export const LESSON_TEMPLATE: Record<SlotStartTime, Partial<Record<CourtName, CoachKey>>> = {
+export const LESSON_TEMPLATE: Record<
+  (typeof FICC_WEEKDAY_TIMES)[number],
+  Partial<Record<CourtName, CoachKey>>
+> = {
   "08:30": { Q1: "club", Q5: "alan", Q6: "phelipe" },
   "10:00": { Q1: "club", Q5: "alan", Q6: "phelipe" },
   "14:45": { Q1: "club", Q5: "alan", Q6: "club" },

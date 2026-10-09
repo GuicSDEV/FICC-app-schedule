@@ -69,6 +69,12 @@ export interface NotificationPayloads {
   TOURNAMENT_CHAMPION: TournamentRef & { categoryName: string; score: string };
   TOURNAMENT_ANNOUNCEMENT: TournamentRef & { body: string; categoryName: string | null };
   TOURNAMENT_RESULT_OVERDUE: TournamentMatchRef & { players: string; slotEndedAt: IsoDateTime };
+  MEMBER_APPROVED: { clubName: string };
+  /** Free play: the first in line has `claimMinutes` to claim this court. */
+  COURT_AVAILABLE: { courtId: string; courtName: string; expiresAt: IsoDateTime };
+  NEWS_POSTED: { postId: string; title: string; authorName: string };
+  /** The no-show penalty suspended the member's bookings. */
+  BOOKING_SUSPENDED: { until: IsoDateTime; count: number; windowDays: number };
 }
 
 interface TournamentRef {

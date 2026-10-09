@@ -6,7 +6,9 @@ import { emailSchema } from "./common";
 export const membershipIdSchema = z
   .string()
   .transform(normalizeMembershipId)
-  .refine(isValidMembershipId, { message: "validation.invalidMembershipId" });
+  .refine((value) => isValidMembershipId(value, true), {
+    message: "validation.invalidMembershipId",
+  });
 
 export const passwordSchema = z
   .string()

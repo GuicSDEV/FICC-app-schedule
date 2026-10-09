@@ -174,7 +174,7 @@ export interface OrderOfPlay {
   matches: TournamentMatchView[];
 }
 
-export type BoardCellState = "free" | "booking" | "lesson" | "frozen" | "tournament";
+export type BoardCellState = "free" | "booking" | "lesson" | "frozen" | "tournament" | "closed";
 
 export interface ScheduleBoard {
   date: IsoDate;

@@ -2,6 +2,7 @@
 
 import { formatMembershipId, registerSchema } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
+import { Hourglass } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api";
-import { haptic, sheetVariants, shakeAnimation } from "@/lib/motion";
+import { haptic, popVariants, sheetVariants, shakeAnimation } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -30,6 +31,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [pending, setPending] = useState(false);
+  const [waiting, setWaiting] = useState(false);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -45,9 +47,15 @@ export function RegisterForm() {
     setErrors({});
     setPending(true);
     try {
-      const user = await api.auth.register(parsed.data);
+      const result = await api.auth.register(parsed.data);
       haptic();
-      client.setQueryData(queryKeys.me, user);
+      if ("status" in result) {
+        // The club approves sign-ups first: no session yet.
+        setWaiting(true);
+        setPending(false);
+        return;
+      }
+      client.setQueryData(queryKeys.me, result);
       router.replace("/app");
     } catch (caught) {
       const message = errorMessage(caught, t("failed"));
@@ -59,6 +67,38 @@ export function RegisterForm() {
       void animate(scope.current, shakeAnimation);
       setPending(false);
     }
+  }
+
+  if (waiting) {
+    return (
+      <motion.div
+        variants={sheetVariants}
+        initial="hidden"
+        animate="show"
+        className="w-full max-w-sm space-y-6 text-center"
+      >
+        <motion.span
+          variants={popVariants}
+          initial="hidden"
+          animate="show"
+          className="mx-auto flex size-20 items-center justify-center rounded-full bg-ball-soft text-ball-ink"
+        >
+          <Hourglass className="size-9" />
+        </motion.span>
+        <div className="space-y-2">
+          <h1 className="font-display text-headline font-bold">{t("pendingTitle")}</h1>
+          <p className="text-body text-muted-foreground">
+            {t("pendingBody", { name: name.split(" ")[0] ?? name })}
+          </p>
+        </div>
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline"
+        >
+          {t("signIn")}
+        </Link>
+      </motion.div>
+    );
   }
 
   return (
