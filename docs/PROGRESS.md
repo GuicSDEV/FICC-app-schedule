@@ -13,7 +13,7 @@ and what still needs a human to check.
 | 3     | API core: auth, schedule, bookings    | Done        | `feat(phase-3)` |
 | 4     | API: coaches, lessons, maintenance    | Done        | `feat(phase-4)` |
 | 5     | API: matches, Elo, ranking, guests    | Done        | `feat(phase-5)` |
-| 6     | Frontend foundation (design + motion) | Not started |                 |
+| 6     | Frontend foundation (design + motion) | Done        | `feat(phase-6)` |
 | 7     | Member: dashboard, calendar, booking  | Not started |                 |
 | 8     | Member: matches, ranking, H2H, guests | Not started |                 |
 | 9     | Coach, gate, admin screens            | Not started |                 |
@@ -103,6 +103,21 @@ and what still needs a human to check.
   ahead; blocked documents are refused at creation too.
 - **shadcn/ui was initialized by hand** because the sandbox blocks `ui.shadcn.com`; the files
   match what the CLI generates.
+- **Fonts are self-hosted** with `next/font/local` (Bricolage Grotesque from
+  `@fontsource-variable`, Geist from the `geist` package) because Google Fonts is unreachable at
+  build time in some environments and self-hosting avoids a runtime dependency.
+- **Theme:** dark is the default (`next-themes`, stored in `localStorage`); all colors are OKLCH
+  tokens in `globals.css`. The coach area (`data-area="coach"`) swaps the primary accent to violet.
+- **Member navigation:** bottom bar Início · Quadras · ＋ (action sheet) · Ranking · Partidas; the
+  profile lives behind the header avatar (and the desktop sidebar), so the bar keeps 4 tabs + FAB.
+- **Page transitions are enter-only** (`template.tsx` per area with fade + 8 px slide-up). The App
+  Router unmounts the old page immediately, so exit animations would need a frozen router context;
+  enter-only keeps navigation instant.
+- **Session:** `useSession` only queries `/auth/me` when the `ficc_role` hint cookie exists, so the
+  login page does not log 401s. The middleware routes by that hint; the API remains the authority.
+- **The rain/maintenance banner is global:** every signed-in area shows active freezes.
+- **`/dev/components`** (living component showcase) is hidden in production builds unless
+  `NEXT_PUBLIC_SHOW_DEV_PAGES=true`.
 
 ## Known issues
 
@@ -110,4 +125,6 @@ and what still needs a human to check.
 
 ## Needs manual check
 
-- Nothing yet.
+- Feel of gestures (swipe cards, pull-to-refresh, bottom sheets) and haptics on a real phone;
+  verified here only with Playwright touch emulation at 390 px.
+- iOS safe areas (notch / home indicator) on a real device.

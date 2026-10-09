@@ -11,6 +11,7 @@ loadEnvConfig(workspaceRoot);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   outputFileTracingRoot: workspaceRoot,
 };
 
