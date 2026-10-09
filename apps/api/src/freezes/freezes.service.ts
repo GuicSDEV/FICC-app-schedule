@@ -77,6 +77,8 @@ export class FreezesService {
       include: freezeDetailInclude,
     });
 
+    // Grids first: notifying (web push included) everyone affected can take a while.
+    this.broadcast(freeze, "created");
     const detail = await this.toDetail(freeze);
     await this.notifications.notify(await this.impactedUserIds(detail), "COURT_FROZEN", {
       freezeId: freeze.id,
@@ -85,7 +87,6 @@ export class FreezesService {
       startsAt: detail.startsAt,
       endsAt: detail.endsAt,
     });
-    this.broadcast(freeze, "created");
     return detail;
   }
 
@@ -157,12 +158,13 @@ export class FreezesService {
       data: { liftedAt: this.clock.now(), liftedById: actor.id },
       include: freezeDetailInclude,
     });
+    // The slots are bookable again right now: tell the grids before notifying anyone.
+    this.broadcast(lifted, "lifted");
     const detail = await this.toDetail(freeze);
     await this.notifications.notify(await this.impactedUserIds(detail), "COURT_UNFROZEN", {
       freezeId,
       courtNames: detail.courtNames,
     });
-    this.broadcast(lifted, "lifted");
     return this.toDetail(lifted);
   }
 
