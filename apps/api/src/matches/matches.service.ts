@@ -29,12 +29,12 @@ import { can, type RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { conflict, forbidden, notFound, unprocessable } from "../common/domain.exception";
 import { playerSelect, toCourtSummary, toPlayerSummary } from "../common/mappers";
-import { serializable, type Tx } from "../common/transactions";
+import type { Tx } from "../common/transactions";
 import { validationException } from "../common/zod-validation.pipe";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
-import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
+import { clubSettings, clubTimeZone, tenant } from "../tenancy/tenant-context";
 
 /** Validates sets with the sport's rules; answers 400 VALIDATION_FAILED like the request pipe. */
 function parseScoreFor(sport: Sport, sets: SetScore[]): MatchScore {
@@ -401,7 +401,7 @@ export class MatchesService {
 
   /**
    * Confirms a match and, when it counts for the ladder, applies Elo for every player in one
-   * serializable transaction: ratings in the match's sport → shared calculateMatchElo with the
+   * transaction (one at a time per club): ratings in the match's sport → shared calculateMatchElo with the
    * club's K-factor → PlayerRating + EloHistory rows. Then notifies each player with their
    * personal change and rank movement, and broadcasts leaderboard.updated.
    */
@@ -421,77 +421,93 @@ export class MatchesService {
     ratedOverride?: boolean,
   ): Promise<MatchDetail> {
     const now = this.clock.now();
-    const outcome = await serializable(this.prisma, async (tx) => {
-      const match = await tx.match.findUniqueOrThrow({
-        where: { id: matchId },
-        include: { players: true, sets: true },
-      });
-      if (match.status !== MatchStatus.PENDING && match.status !== MatchStatus.DISPUTED) {
-        throw conflict("MATCH_ALREADY_RESOLVED", "api.matchAlreadyResolved");
-      }
-      const { eloKFactor, eloInitialRating } = clubSettings();
-      const sport = match.sport;
-      const stored = await tx.playerRating.findMany({
-        where: { sport, userId: { in: match.players.map((player) => player.userId) } },
-      });
-      const ratingOf = (userId: string) =>
-        stored.find((rating) => rating.userId === userId)?.elo ?? eloInitialRating;
-      const rated = ratedOverride ?? countsForRating(match);
-      const sideA = match.players.filter((player) => player.side === TeamSide.A);
-      const sideB = match.players.filter((player) => player.side === TeamSide.B);
-      const { deltaA, deltaB } = rated
-        ? calculateMatchElo({
-            sideA: sideA.map((player) => ratingOf(player.userId)),
-            sideB: sideB.map((player) => ratingOf(player.userId)),
-            winner: match.winnerSide,
-            k: eloKFactor,
-          })
-        : { deltaA: 0, deltaB: 0 };
-
-      const changes = [];
-      for (const player of match.players) {
-        const delta = player.side === TeamSide.A ? deltaA : deltaB;
-        const before = ratingOf(player.userId);
-        changes.push({
-          userId: player.userId,
-          side: player.side,
-          before,
-          after: before + delta,
-          delta,
-          rankBefore: await rankOf(tx, sport, before),
+    // Every rating change goes through here and reads the whole ladder (ranks), so a club's
+    // confirmations take turns behind an advisory lock instead of fighting as serializable
+    // transactions, which failed under a burst of approvals.
+    const outcome = await this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`elo:${tenant().clubId}`}, 0))`;
+        const match = await tx.match.findUniqueOrThrow({
+          where: { id: matchId },
+          include: { players: true, sets: true },
         });
-      }
-      if (rated) {
-        for (const change of changes) {
-          await tx.playerRating.upsert({
-            where: { userId_sport: { userId: change.userId, sport } },
-            update: { elo: change.after, matches: { increment: 1 } },
-            create: { userId: change.userId, sport, elo: change.after, matches: 1 },
+        if (match.status !== MatchStatus.PENDING && match.status !== MatchStatus.DISPUTED) {
+          throw conflict("MATCH_ALREADY_RESOLVED", "api.matchAlreadyResolved");
+        }
+        const { eloKFactor, eloInitialRating } = clubSettings();
+        const sport = match.sport;
+        const stored = await tx.playerRating.findMany({
+          where: { sport, userId: { in: match.players.map((player) => player.userId) } },
+        });
+        const ratingOf = (userId: string) =>
+          stored.find((rating) => rating.userId === userId)?.elo ?? eloInitialRating;
+        const rated = ratedOverride ?? countsForRating(match);
+        const sideA = match.players.filter((player) => player.side === TeamSide.A);
+        const sideB = match.players.filter((player) => player.side === TeamSide.B);
+        const { deltaA, deltaB } = rated
+          ? calculateMatchElo({
+              sideA: sideA.map((player) => ratingOf(player.userId)),
+              sideB: sideB.map((player) => ratingOf(player.userId)),
+              winner: match.winnerSide,
+              k: eloKFactor,
+            })
+          : { deltaA: 0, deltaB: 0 };
+
+        const changes = [];
+        for (const player of match.players) {
+          const delta = player.side === TeamSide.A ? deltaA : deltaB;
+          const before = ratingOf(player.userId);
+          changes.push({
+            userId: player.userId,
+            side: player.side,
+            before,
+            after: before + delta,
+            delta,
+            rankBefore: await rankOf(tx, sport, before),
           });
         }
-        await tx.eloHistory.createMany({
-          data: changes.map(({ userId, before, after, delta }) => ({
-            userId,
-            matchId,
-            sport,
-            before,
-            after,
-            delta,
-            createdAt: now,
-          })),
+        if (rated) {
+          for (const change of changes) {
+            await tx.playerRating.upsert({
+              where: { userId_sport: { userId: change.userId, sport } },
+              update: { elo: change.after, matches: { increment: 1 } },
+              create: { userId: change.userId, sport, elo: change.after, matches: 1 },
+            });
+          }
+          await tx.eloHistory.createMany({
+            data: changes.map(({ userId, before, after, delta }) => ({
+              userId,
+              matchId,
+              sport,
+              before,
+              after,
+              delta,
+              createdAt: now,
+            })),
+          });
+        }
+        // A dispute is not behind the lock: only confirm the status read above.
+        const { count } = await tx.match.updateMany({
+          where: { id: matchId, status: match.status },
+          data: { ...extra, status: MatchStatus.CONFIRMED, confirmation, confirmedAt: now },
         });
-      }
-      const confirmed = await tx.match.update({
-        where: { id: matchId },
-        data: { ...extra, status: MatchStatus.CONFIRMED, confirmation, confirmedAt: now },
-        include: matchInclude(),
-      });
-      const withRanks = [];
-      for (const change of changes) {
-        withRanks.push({ ...change, rankAfter: await rankOf(tx, sport, change.after) });
-      }
-      return { confirmed, changes: withRanks };
-    });
+        if (count === 0) throw conflict("MATCH_ALREADY_RESOLVED", "api.matchAlreadyResolved");
+        const confirmed = await tx.match.findUniqueOrThrow({
+          where: { id: matchId },
+          include: matchInclude(),
+        });
+        const withRanks = [];
+        for (const change of changes) {
+          withRanks.push({ ...change, rankAfter: await rankOf(tx, sport, change.after) });
+        }
+        return { confirmed, changes: withRanks };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        maxWait: 10_000,
+        timeout: 15_000,
+      },
+    );
 
     const score = formatScore(toSetScores(outcome.confirmed));
     for (const change of outcome.changes) {
