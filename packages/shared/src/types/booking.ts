@@ -32,7 +32,7 @@ export interface MyBookingsResponse {
   upcoming: BookingDetail[];
   /** Pending bookings waiting for the viewer's answer. */
   invites: BookingDetail[];
-  /** Confirmed bookings that ended in the last 14 days (to prefill a match report). */
+  /** Confirmed bookings that ended in the last 14 days and have no result yet (to prefill a report). */
   recent: BookingDetail[];
 }
 

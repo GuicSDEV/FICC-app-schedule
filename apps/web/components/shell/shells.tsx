@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { EloCelebration } from "@/components/matches/elo-celebration";
 import { useLogout } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ export function MemberShell({ children }: { children: ReactNode }) {
           actionLabel={t("actionsLabel")}
         />
         <ActionSheet open={actionsOpen} onOpenChange={setActionsOpen} />
+        <EloCelebration />
       </div>
     </AreaGuard>
   );

@@ -7,12 +7,15 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  leading,
   className,
   children,
 }: {
   title: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** Shown before the title (a back button). */
+  leading?: ReactNode;
   className?: string;
   children?: ReactNode;
 }) {
@@ -24,6 +27,7 @@ export function PageHeader({
       )}
     >
       <div className="flex min-h-16 items-center gap-3 py-2">
+        {leading ? <div className="-ml-2 shrink-0">{leading}</div> : null}
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-headline font-semibold">{title}</h1>
           {subtitle ? (

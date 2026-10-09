@@ -4,6 +4,7 @@ import {
   BookingPlayerStatus,
   BookingStatus,
   CourtStatus,
+  MatchStatus,
   Prisma,
   Role,
 } from "@ficc/db";
@@ -322,6 +323,18 @@ export class BookingsService {
     });
     const details = bookings.map((booking) => toBookingDetail(booking, userId));
     const upcoming = details.filter((booking) => Date.parse(booking.endsAt) > now.getTime());
+    // Bookings that already have a result (voided ones excepted) can't be reported again.
+    const reported = new Set(
+      (
+        await this.prisma.match.findMany({
+          where: {
+            bookingId: { in: details.map((booking) => booking.id) },
+            status: { not: MatchStatus.VOIDED },
+          },
+          select: { bookingId: true },
+        })
+      ).map((match) => match.bookingId),
+    );
     return {
       upcoming,
       invites: upcoming.filter(
@@ -332,7 +345,8 @@ export class BookingsService {
           (booking) =>
             booking.status === "CONFIRMED" &&
             Date.parse(booking.endsAt) <= now.getTime() &&
-            booking.date <= today,
+            booking.date <= today &&
+            !reported.has(booking.id),
         )
         .reverse(),
     };

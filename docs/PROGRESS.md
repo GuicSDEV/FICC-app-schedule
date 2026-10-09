@@ -16,7 +16,7 @@ and what still needs a human to check.
 | 6     | Frontend foundation (design + motion) | Done                                | `feat(phase-6)`   |
 | 7     | Member: dashboard, calendar, booking  | Done                                | `feat(phase-7)`   |
 | 7.5   | Multi-club-ready foundation           | Done                                | `feat(phase-7.5)` |
-| 8     | Member: matches, ranking, H2H, guests | Not started                         |                   |
+| 8     | Member: matches, ranking, H2H, guests | Done                                | `feat(phase-8)`   |
 | 9     | Coach, gate, admin screens            | Not started                         |                   |
 | 9.5   | Tournaments & circuits                | Not started                         |                   |
 | 9.8   | FICC operations adjustments           | Not started                         |                   |
@@ -195,6 +195,29 @@ Phases 11 and 12.
   `guestDataRetentionDays` (90). The gate's partial-document search decrypts only today's passes
   in memory.
 
+- **Match detail opens as an overlay on the matches list** (`/app/matches?m=<id>`), so its panel can
+  morph out of the tapped card (only the card's surface morphs; text fades in, so nothing
+  stretches). `/app/matches/<id>` is the same detail as a page, for notifications and links.
+- **Reporting from a booking:** recent bookings that ended and have no result yet are offered as
+  chips (the API now leaves reported bookings out of `recent`). For doubles the member taps their
+  partner; the other two become the opponents. The reporter is always on side A.
+- **Score entry** uses per-set steppers (games 0–7, tie-break points 0–30). The third set appears
+  only when the first two are split, as a regular set or a match tie-break. Validation runs live
+  with the sport's rules (`SportRules.scoreSchema`, plus a new `setWinner` per set).
+- **The Elo celebration is global in the member area,** triggered by each `MATCH_CONFIRMED`
+  notification (approval, auto-approval, admin resolution); several in a row play one after the
+  other. Confetti only on wins, never with reduced motion. The rank badge animates when the
+  player climbed.
+- **Leaderboard reorder:** each new version of a board is compared with the previous one; rows
+  (and podium places) that moved flash for 2.4 s with ↑/↓ while `layout` animates the reorder.
+- **Profiles:** `/app/profile` (own: ladder card, preferences, sign-out) and `/app/players/<id>`
+  (anyone, with "compare" into H2H). Charts use Recharts, loaded on demand.
+- **Chart and H2H colors use the `-ink` tokens** (lime/violet in dark, darker olive/violet in light)
+  so lines and numbers keep contrast on the light background.
+- **Guest pass sharing** renders a PNG of the pass (club, guest, date, QR) on a canvas and shares it
+  with the Web Share API (files); browsers without file sharing download it instead. The image
+  uses the fixed SPEC palette so it looks the same whatever theme the sender uses.
+
 ## Known issues
 
 - None open.
@@ -211,3 +234,7 @@ Phases 11 and 12.
 - `DATA_ENCRYPTION_KEY` custody: where production stores it and how it is backed up (losing it
   makes stored guest documents unreadable; rotating it needs a re-encryption script).
 - LGPD retention period (90 days by default) confirmed by the club's legal advisor.
+- Web Share with files (WhatsApp) on real Android/iOS phones; verified here only that the PNG is
+  generated and downloaded (headless Chromium has no share sheet).
+- QR card tilt from device orientation on a real phone (iOS needs a permission prompt, so there it
+  tilts only with touch).

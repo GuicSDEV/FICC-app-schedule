@@ -16,6 +16,7 @@ import type {
   CreateBookingInput,
   CreateCoachInput,
   CreateFreezeInput,
+  CreateGuestPassRequest,
   CreateLessonInput,
   CreateLessonResult,
   DocumentGuestStats,
@@ -193,13 +194,7 @@ export const api = {
   },
   guests: {
     mine: () => request<GuestPassItem[]>("/guest-passes"),
-    create: (input: {
-      guestName: string;
-      documentType: "CPF" | "RG";
-      documentNumber: string;
-      visitDate: string;
-      bookingId?: string;
-    }) => post<GuestPassItem>("/guest-passes", input),
+    create: (input: CreateGuestPassRequest) => post<GuestPassItem>("/guest-passes", input),
     cancel: (id: string) => post<GuestPassItem>(`/guest-passes/${id}/cancel`),
   },
   gate: {

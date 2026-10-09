@@ -1,12 +1,14 @@
 import type { z } from "zod";
 
-import type { MatchFormat, Sport } from "./enums";
+import type { MatchFormat, Sport, TeamSide } from "./enums";
 import {
   formatScore,
   type MatchScore,
   matchScoreSchema,
   type MatchScoreInput,
+  matchTiebreakWinner,
   parseScore,
+  regularSetWinner,
   type SetScore,
 } from "./score";
 
@@ -25,6 +27,10 @@ export interface SportRules {
   parseScore(text: string): MatchScore;
   /** Writes sets back as text. */
   formatScore(sets: readonly SetScore[]): string;
+  /** Winner of one finished set (or deciding tie-break); null while it is not a valid result. */
+  setWinner(set: SetScore): TeamSide | null;
+  /** Sets needed to win the match. */
+  setsToWin: number;
 }
 
 /** Tennis, best of 3 with an optional deciding match tie-break. */
@@ -34,6 +40,8 @@ export const TennisRules: SportRules = {
   scoreSchema: matchScoreSchema,
   parseScore,
   formatScore,
+  setWinner: (set) => (set.tiebreak ? matchTiebreakWinner(set) : regularSetWinner(set)),
+  setsToWin: 2,
 };
 
 const RULES: Record<Sport, SportRules> = { TENNIS: TennisRules };

@@ -41,6 +41,7 @@ export const createGuestPassSchema = z
   })
   .transform(normalizeAndValidate);
 export type CreateGuestPassInput = z.infer<typeof createGuestPassSchema>;
+export type CreateGuestPassRequest = z.input<typeof createGuestPassSchema>;
 
 export const gateScanSchema = z.object({ token: z.string().trim().min(10).max(2048) });
 export type GateScanInput = z.infer<typeof gateScanSchema>;

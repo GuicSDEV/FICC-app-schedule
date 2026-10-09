@@ -19,4 +19,13 @@ describe("SportRules", () => {
       "Informe pelo menos 2 sets",
     );
   });
+
+  it("knows when a single tennis set is won", () => {
+    expect(TennisRules.setWinner({ a: 7, b: 5, tiebreak: false })).toBe("A");
+    expect(TennisRules.setWinner({ a: 4, b: 6, tiebreak: false })).toBe("B");
+    expect(TennisRules.setWinner({ a: 6, b: 5, tiebreak: false })).toBeNull();
+    expect(TennisRules.setWinner({ a: 10, b: 8, tiebreak: true })).toBe("A");
+    expect(TennisRules.setWinner({ a: 10, b: 9, tiebreak: true })).toBeNull();
+    expect(TennisRules.setsToWin).toBe(2);
+  });
 });

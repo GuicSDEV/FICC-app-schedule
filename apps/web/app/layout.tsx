@@ -25,6 +25,8 @@ export const revalidate = 300;
 
 /** The club's name for titles; the build does not need the API (pages revalidate later). */
 async function clubName(): Promise<string | null> {
+  // Set by Next.js itself during `next build`, not by our environment.
+  // eslint-disable-next-line turbo/no-undeclared-env-vars
   if (process.env.NEXT_PHASE === "phase-production-build") return null;
   try {
     const response = await fetch(`${API_URL}${API_PREFIX}/club`, { next: { revalidate: 300 } });

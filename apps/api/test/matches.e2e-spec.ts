@@ -271,6 +271,9 @@ describe("Matches, Elo and ranking", () => {
     const bruno$ = await ctx.loginMember(bruno.membershipId!);
     await bruno$.post(`/api/v1/bookings/${booking.body.id}/confirm`).expect(200);
     ctx.clock.set("2030-03-04T15:00:00Z");
+    // Ended, unreported bookings are offered to prefill a report…
+    const before = await ana$.get("/api/v1/bookings/mine").expect(200);
+    expect(before.body.recent.map((entry: { id: string }) => entry.id)).toEqual([booking.body.id]);
     const linked = await ana$
       .post("/api/v1/matches")
       .send({
@@ -283,6 +286,9 @@ describe("Matches, Elo and ranking", () => {
       court: { name: "Q2" },
       surface: "HARTRU",
     });
+    // …and disappear once reported.
+    const after = await bruno$.get("/api/v1/bookings/mine").expect(200);
+    expect(after.body.recent).toEqual([]);
     await ana$
       .post("/api/v1/matches")
       .send({
