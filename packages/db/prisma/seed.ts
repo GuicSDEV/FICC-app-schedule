@@ -74,14 +74,24 @@ async function resetDatabase(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // A demo deployment may load this data on purpose (fresh database, its own password); the real
+  // club's database never: it is created with `pnpm db:bootstrap`.
   if (process.env.NODE_ENV === "production") {
-    throw new Error("Refusing to seed with NODE_ENV=production: the seed wipes every table.");
+    if (process.env.SEED_ALLOW_WIPE !== "yes") {
+      throw new Error(
+        "Refusing to seed with NODE_ENV=production: the seed wipes every table. " +
+          "Only for a demo deployment: set SEED_ALLOW_WIPE=yes and SEED_PASSWORD.",
+      );
+    }
+    if (!process.env.SEED_PASSWORD || process.env.SEED_PASSWORD === DEFAULT_SEED_PASSWORD) {
+      throw new Error("A demo deployment needs its own SEED_PASSWORD (not the development one).");
+    }
   }
 
   const now = new Date();
   const today = clubToday(now, FICC_CLUB.timezone);
   const random = createRandom(RANDOM_SEED);
-  const password = process.env.SEED_PASSWORD ?? DEFAULT_SEED_PASSWORD;
+  const password = process.env.SEED_PASSWORD || DEFAULT_SEED_PASSWORD;
   // Every seeded account shares one development password, so hash it once.
   const passwordHash = await hash(password);
 

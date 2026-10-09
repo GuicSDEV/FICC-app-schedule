@@ -108,8 +108,16 @@ import type {
   UpdateTournamentRequest,
 } from "@ficc/shared";
 
-/** Base URL of the API (the web app calls it directly with cookies). */
+/**
+ * Base URL of the API as the browser sees it. Empty in production: the web app proxies /api/v1 and
+ * /socket.io to the API (next.config.ts), so the browser only ever talks to one origin and the
+ * login cookies work on any host. Locally it is the API itself (cookies ignore the port).
+ */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+/** Absolute API URL for requests made on the server (private network address when set). */
+export const SERVER_API_URL =
+  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 /** Versioned path prefix of every API route. */
 export const API_PREFIX = "/api/v1";
@@ -155,7 +163,11 @@ export function refreshSession(): Promise<boolean> {
 }
 
 function buildUrl(path: string, query?: Query): string {
-  const url = new URL(`${API_URL}${API_PREFIX}${path}`);
+  // A relative API_URL (same origin) needs the page's origin as base.
+  const url = new URL(
+    `${API_URL}${API_PREFIX}${path}`,
+    typeof window === "undefined" ? SERVER_API_URL : window.location.origin,
+  );
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null && value !== "")
       url.searchParams.set(key, String(value));

@@ -11,6 +11,8 @@ Brazilian Portuguese.
 | [`docs/PHASES.md`](docs/PHASES.md)     | Build phases (11 and 12 are on hold, waiting for the club) |
 | [`docs/PROGRESS.md`](docs/PROGRESS.md) | Phase status, decisions, known issues, what needs a person |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md)   | Ideas recorded for later (not implemented)                 |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md)     | Railway deploy: demo and production (in Portuguese)        |
+| [`SECURITY.md`](SECURITY.md)           | Security audit, production secrets, checks to run          |
 
 ## What the app does
 

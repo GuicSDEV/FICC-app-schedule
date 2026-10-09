@@ -18,6 +18,12 @@ describe("validateEnv in production", () => {
     expect(validateEnv(production()).NODE_ENV).toBe("production");
   });
 
+  it("listens on API_PORT, else the platform's PORT, else 4000", () => {
+    expect(validateEnv(production({ PORT: "8080" })).API_PORT).toBe(8080);
+    expect(validateEnv(production({ PORT: "8080", API_PORT: "4000" })).API_PORT).toBe(4000);
+    expect(validateEnv(production()).API_PORT).toBe(4000);
+  });
+
   it("refuses missing secrets", () => {
     const { DATA_ENCRYPTION_KEY: _unused, ...missing } = production();
     expect(() => validateEnv(missing)).toThrow(/DATA_ENCRYPTION_KEY/);

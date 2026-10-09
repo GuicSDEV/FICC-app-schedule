@@ -59,7 +59,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // socket.io loads after the first paint: it is not needed to show the page.
     void import("socket.io-client").then(({ io }) => {
       if (cancelled) return;
-      connection = io(API_URL, {
+      // Same origin when API_URL is empty (production proxy).
+      connection = io(API_URL || undefined, {
         withCredentials: true,
         transports: ["websocket"],
         reconnectionDelayMax: 8000,

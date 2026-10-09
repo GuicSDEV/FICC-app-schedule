@@ -3,7 +3,7 @@ import { dehydrate, HydrationBoundary, QueryClient, type QueryKey } from "@tanst
 import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 
-import { API_PREFIX, API_URL } from "@/lib/api";
+import { API_PREFIX, SERVER_API_URL } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 
 export interface ServerQuery {
@@ -14,7 +14,7 @@ export interface ServerQuery {
 
 /** GET on the API as the signed-in person (their cookies forwarded). Throws on any error. */
 async function serverGet(path: string, query?: ServerQuery["query"]): Promise<unknown> {
-  const url = new URL(`${API_URL}${API_PREFIX}${path}`);
+  const url = new URL(`${SERVER_API_URL}${API_PREFIX}${path}`);
   for (const [name, value] of Object.entries(query ?? {})) {
     if (value) url.searchParams.set(name, value);
   }

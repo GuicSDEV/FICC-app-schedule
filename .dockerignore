@@ -1,0 +1,15 @@
+# Build context of apps/api/Dockerfile and apps/web/Dockerfile (both built from the repo root).
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+packages/db/generated
+.git
+.env
+.env*.local
+**/*.log
+apps/web/e2e/.artifacts
+apps/web/test-results
+apps/web/playwright-report
+.claude
