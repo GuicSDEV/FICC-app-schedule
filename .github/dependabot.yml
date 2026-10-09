@@ -1,0 +1,18 @@
+# Weekly dependency update PRs (security alerts open PRs as soon as they appear).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for routine minor/patch bumps; majors and security fixes come separately.
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

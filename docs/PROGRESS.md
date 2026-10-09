@@ -427,6 +427,13 @@ Phases 11 and 12.
 - **Ranking search:** a search box on `/app/ranking` filters the current board by name on the
   device (accents and case ignored, every typed word must match), showing each member's position;
   tapping a result opens their profile. Every active member is on the board, so no API call.
+- **Security pass (after an external audit; details in `SECURITY.md`):** the guest-document
+  decipher now requires the full 16-byte GCM tag; production refuses `.env.example` placeholder
+  secrets and a JWT secret reused for guest passes; vulnerable transitive packages pinned via
+  `overrides` (postcss, deepmerge-ts, esbuild), vitest 3 → 4 (tinypool/mocker advisories);
+  `pnpm audit` passes with the two upstream-unpatched tooling advisories ignored by id;
+  supply-chain settings (`blockExoticSubdeps`, `trustPolicy: no-downgrade` with two reviewed
+  exceptions, `minimumReleaseAge: 1440`) and weekly Dependabot PRs.
 - **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
   id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
   server-rendered (no `useSearchParams` bailout).
