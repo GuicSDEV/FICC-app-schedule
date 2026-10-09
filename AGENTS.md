@@ -5,10 +5,12 @@
 Private tennis club app: member management, court booking, coach lessons and an Elo ladder.
 Mobile-first web app that should feel native and later ship as a PWA or with Capacitor.
 
-> **Always read [`docs/SPEC.md`](docs/SPEC.md) before any task; follow the design and motion system exactly.**
+> **Always re-read [`docs/SPEC.md`](docs/SPEC.md) and the current phase in
+> [`docs/PHASES.md`](docs/PHASES.md) before working; follow the design and motion system exactly.**
 >
-> Delivery is phased. Each phase arrives as its own request: do only that phase. The spec's
-> DELIVERABLES section is superseded by those requests.
+> Work phase by phase. [`docs/PROGRESS.md`](docs/PROGRESS.md) tracks phase status, decisions,
+> known issues and what needs a manual check; update it when a phase is done and commit the phase
+> as `feat(phase-N): <summary>`. The spec's DELIVERABLES section is superseded by `docs/PHASES.md`.
 
 ## Stack
 

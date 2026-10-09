@@ -178,7 +178,7 @@ The seed includes: the 6 courts, the 8 slots, the 3 coaches with their allowed c
 
 # DELIVERABLES — generate in this order, complete code with no placeholders or "TODO: implement"
 
-> **Superseded.** Work is delivered in phases, each requested in its own message. Do not follow this list; do only the phase you are asked for.
+> **Superseded** by [`docs/PHASES.md`](PHASES.md). Do not follow this list.
 
 1. **Monorepo setup:** structure, `package.json`s, Turborepo, `docker-compose.yml` (Postgres), `.env.example`, README with setup commands
 2. **`schema.prisma` + seed**
