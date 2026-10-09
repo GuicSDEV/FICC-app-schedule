@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
-import { dropVariants, tap } from "@/lib/motion";
+import { dropVariants, enter, tap } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 type Tone = "rain" | "maintenance" | "danger" | "info";
@@ -48,7 +48,7 @@ export function AlertBanner({
           role="status"
           aria-live="polite"
           variants={dropVariants}
-          initial="hidden"
+          initial={enter("hidden")}
           animate="show"
           exit="exit"
           className={cn(

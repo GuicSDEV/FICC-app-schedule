@@ -11,7 +11,7 @@ import { SectionLabel } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
 import { MatchRow } from "../match-row";
@@ -54,7 +54,7 @@ export function PendingResults({
               key={match.id}
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
             >
               <MatchRow

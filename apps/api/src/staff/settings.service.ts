@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { type ClubInfo, clubSettingsSchema, type UpdateClubSettingsInput } from "@ficc/shared";
 
 import { unprocessable } from "../common/domain.exception";
+import { assertGridsValid } from "../schedule/grid-validation";
 import { PrismaService } from "../prisma/prisma.service";
 import { SlotEventsService } from "../schedule/slot-events.service";
 import { ClubsService } from "../tenancy/clubs.service";
@@ -32,6 +33,10 @@ export class SettingsService {
           params: { time: missing },
         });
       }
+    }
+    if (input.scheduleGrids) {
+      const active = await this.prisma.timeSlot.findMany({ where: { isActive: true } });
+      assertGridsValid(next.scheduleGrids, active);
     }
     await this.prisma.clubSettings.upsert({
       where: { clubId: current.clubId },

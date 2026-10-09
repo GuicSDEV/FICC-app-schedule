@@ -18,7 +18,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { fadeVariants, haptic, listItemVariants } from "@/lib/motion";
+import { enter, fadeVariants, haptic, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -189,7 +189,7 @@ export default function AdminGuestsPage() {
         <motion.div
           key={tab}
           variants={fadeVariants}
-          initial="hidden"
+          initial={enter("hidden")}
           animate="show"
           exit="exit"
           className="mt-5"
@@ -208,7 +208,7 @@ export default function AdminGuestsPage() {
                     key={entry.host.id}
                     custom={index}
                     variants={listItemVariants}
-                    initial="hidden"
+                    initial={enter("hidden")}
                     animate="show"
                     className="flex flex-wrap items-center gap-3 px-4 py-3"
                   >
@@ -273,7 +273,7 @@ export default function AdminGuestsPage() {
                     key={entry.samplePassId}
                     custom={index}
                     variants={listItemVariants}
-                    initial="hidden"
+                    initial={enter("hidden")}
                     animate="show"
                     className="flex flex-wrap items-center gap-3 px-4 py-3"
                   >
@@ -328,7 +328,7 @@ export default function AdminGuestsPage() {
                   key={entry.id}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   className="flex flex-wrap items-center gap-3 px-4 py-3"
                 >

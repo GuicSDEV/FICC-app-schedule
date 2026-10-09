@@ -9,7 +9,7 @@ import { createPortal } from "react-dom";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { duration, haptic, popVariants, spring, transitions } from "@/lib/motion";
+import { duration, enter, haptic, popVariants, spring, transitions } from "@/lib/motion";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ export function ScanResult({ result, onClose }: { result: GateScanResponse; onCl
     >
       <motion.span
         variants={popVariants}
-        initial="hidden"
+        initial={enter("hidden")}
         animate="show"
         transition={spring.snappy}
       >

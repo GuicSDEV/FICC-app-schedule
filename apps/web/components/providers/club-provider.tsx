@@ -18,13 +18,23 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
  * re-provides next-intl with the club's locale and time zone, so every date and number in the UI
  * is formatted the club's way.
  */
-export function ClubProvider({ children }: { children: ReactNode }) {
+export function ClubProvider({
+  children,
+  initialClub,
+}: {
+  children: ReactNode;
+  /** Fetched by the root layout on the server, so the first paint already has the club. */
+  initialClub: ClubInfo | null;
+}) {
   const locale = useLocale();
   const messages = useMessages();
   const { data: club } = useQuery({
     queryKey: queryKeys.club,
     queryFn: api.club,
     staleTime: 60 * 60_000,
+    initialData: initialClub ?? undefined,
+    // Server copy may be up to 5 minutes old: paint with it, then refresh in the background.
+    initialDataUpdatedAt: 0,
   });
   return (
     <ClubContext.Provider value={club ?? null}>

@@ -87,3 +87,22 @@ export function overlapsSlot(
     window.startsAt.getTime() < end && (window.endsAt === null || window.endsAt.getTime() > start)
   );
 }
+
+/**
+ * The first two slots of a day's grid that overlap in time (sorted by start), or null. Slots on
+ * the same day must not overlap: a court can only be used by one slot at a time.
+ */
+export function findOverlap<T extends SlotTiming>(slots: readonly T[]): [T, T] | null {
+  const sorted = [...slots].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  for (let index = 1; index < sorted.length; index++) {
+    const previous = sorted[index - 1]!;
+    const current = sorted[index]!;
+    if (
+      timeToMinutes(previous.startTime) + previous.durationMinutes >
+      timeToMinutes(current.startTime)
+    ) {
+      return [previous, current];
+    }
+  }
+  return null;
+}

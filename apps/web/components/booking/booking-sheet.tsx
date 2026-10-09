@@ -24,7 +24,7 @@ import { FieldError } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { api, ApiError } from "@/lib/api";
-import { fadeVariants, haptic, listItemVariants, tap } from "@/lib/motion";
+import { enter, fadeVariants, haptic, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { patchScheduleCells } from "@/lib/schedule-cache";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -213,7 +213,7 @@ export function BookingSheet({
           <motion.div
             key="done"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
           >
@@ -223,7 +223,7 @@ export function BookingSheet({
           <motion.div
             key="form"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="space-y-6"
@@ -288,7 +288,7 @@ export function BookingSheet({
                       key={`${option.courtId}-${option.timeSlotId}`}
                       custom={index}
                       variants={listItemVariants}
-                      initial="hidden"
+                      initial={enter("hidden")}
                       animate="show"
                     >
                       <motion.button

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findOverlap,
   hasSlotEnded,
   isSlotPast,
   isValidTime,
@@ -78,5 +79,24 @@ describe("slot instants", () => {
         tz,
       ),
     ).toBe(true);
+  });
+});
+
+describe("findOverlap", () => {
+  const slot = (startTime: string, durationMinutes = 75) => ({ startTime, durationMinutes });
+
+  it("accepts back-to-back slots and gaps", () => {
+    expect(findOverlap([slot("08:30"), slot("10:00"), slot("14:45"), slot("16:00")])).toBeNull();
+    expect(findOverlap([slot("07:15"), slot("08:30")])).toBeNull();
+    expect(findOverlap([])).toBeNull();
+  });
+
+  it("finds two slots that share minutes, whatever the input order", () => {
+    expect(findOverlap([slot("10:00"), slot("09:45")])).toEqual([slot("09:45"), slot("10:00")]);
+    expect(findOverlap([slot("08:30", 90), slot("10:00")])).toBeNull();
+    expect(findOverlap([slot("08:30", 91), slot("10:00")])).toEqual([
+      slot("08:30", 91),
+      slot("10:00"),
+    ]);
   });
 });

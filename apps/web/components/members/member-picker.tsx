@@ -11,7 +11,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import { listItemVariants, popVariants, spring, tap } from "@/lib/motion";
+import { enter, listItemVariants, popVariants, spring, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useDebounced } from "@/lib/use-debounced";
 import { cn } from "@/lib/utils";
@@ -74,7 +74,7 @@ export function MemberPicker({
               key={player.id}
               layout
               variants={popVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               transition={spring.snappy}
@@ -89,7 +89,7 @@ export function MemberPicker({
                   whileTap={tap}
                   onClick={() => onChange(selected.filter((entry) => entry.id !== player.id))}
                   aria-label={t("remove", { name: player.name })}
-                  className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-3 hover:text-foreground"
+                  className="relative inline-flex size-9 items-center justify-center rounded-full text-muted-foreground after:absolute after:-inset-1 after:content-[''] hover:bg-surface-3 hover:text-foreground"
                 >
                   <X className="size-4" />
                 </motion.button>
@@ -140,7 +140,7 @@ export function MemberPicker({
                   aria-selected={false}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                 >
                   <motion.button

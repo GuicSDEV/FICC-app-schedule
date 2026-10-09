@@ -21,7 +21,7 @@ import { ChipGroup, ChoiceChip } from "@/components/ui/choice-chip";
 import { Field, FieldError, Input, Label, Textarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { invalidateLessons, lessonApi, type LessonMode } from "@/lib/lessons";
-import { fadeVariants, haptic, tap } from "@/lib/motion";
+import { enter, fadeVariants, haptic, tap } from "@/lib/motion";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -253,7 +253,7 @@ export function LessonActionsSheet({
           <motion.div
             key="menu"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="space-y-3"
@@ -312,7 +312,7 @@ export function LessonActionsSheet({
           <motion.div
             key="edit"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="space-y-5"

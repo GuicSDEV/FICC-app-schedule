@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { TicketCard } from "@/components/booking/ticket-card";
 import { SwipeCard } from "@/components/ui/swipe-card";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -63,7 +63,7 @@ export function InviteList({ invites }: { invites: BookingDetail[] }) {
               layout
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
             >

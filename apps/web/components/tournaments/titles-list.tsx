@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 
 import { SectionLabel } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ export function TitlesList({ userId }: { userId: string }) {
               key={`${item.tournamentId}-${item.categoryName}`}
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               className={cn(
                 "flex w-60 shrink-0 items-center gap-3 rounded-lg border bg-card p-3 shadow-card md:w-auto",

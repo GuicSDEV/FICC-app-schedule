@@ -43,6 +43,7 @@ export const queryKeys = {
     pendingMembers: ["admin", "members", "pending"] as const,
     memberNoShows: (id: string) => ["admin", "members", id, "no-shows"] as const,
     roles: ["admin", "staff", "roles"] as const,
+    timeSlots: ["admin", "time-slots"] as const,
     staff: ["admin", "staff", "list"] as const,
     staffAudit: (actorId?: string) => ["admin", "staff-audit", actorId ?? "all"] as const,
   },

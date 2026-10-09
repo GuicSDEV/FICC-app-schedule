@@ -20,6 +20,7 @@ import { notFound, unprocessable } from "../common/domain.exception";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { PrismaService } from "../prisma/prisma.service";
 import { toDateException } from "./day-plan.service";
+import { assertNoOverlap } from "./grid-validation";
 import { SlotEventsService } from "./slot-events.service";
 
 /** Date exceptions: holidays, events and courts closed for a day. Everyone reads, staff edit. */
@@ -53,7 +54,7 @@ export class ScheduleExceptionsController {
     if (body.slotTimes) {
       const known = await this.prisma.timeSlot.findMany({
         where: { startTime: { in: body.slotTimes } },
-        select: { startTime: true },
+        select: { startTime: true, durationMinutes: true },
       });
       const missing = body.slotTimes.find((time) => !known.some((slot) => slot.startTime === time));
       if (missing) {
@@ -62,6 +63,7 @@ export class ScheduleExceptionsController {
           params: { time: missing },
         });
       }
+      assertNoOverlap(known);
     }
     const data = {
       closed: body.closed,

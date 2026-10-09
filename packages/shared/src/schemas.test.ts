@@ -4,24 +4,25 @@ import { translateIssue } from "./i18n";
 import {
   cancelAffectedSchema,
   checkInSchema,
-  createStaffSchema,
-  newsPostSchema,
-  scheduleExceptionSchema,
-  signupDecisionSchema,
-  staffRoleSchema,
   copyWeekSchema,
   createBookingSchema,
   createCoachSchema,
   createFreezeSchema,
   createGuestPassSchema,
   createLessonSchema,
+  createStaffSchema,
+  createTimeSlotSchema,
   gateSearchQuerySchema,
   h2hQuerySchema,
   loginSchema,
+  newsPostSchema,
   parseMembershipCsv,
   registerSchema,
   reportMatchSchema,
   resolveDisputeSchema,
+  scheduleExceptionSchema,
+  signupDecisionSchema,
+  staffRoleSchema,
   updateLessonSchema,
 } from "./schemas";
 import { TennisRules } from "./sports";
@@ -250,5 +251,28 @@ describe("club operations schemas", () => {
     expect(staff.error?.issues[0]?.message).toBe("validation.pickRole");
     expect(checkInSchema.parse({ courtId: "c1" })).toEqual({ courtId: "c1", partnerIds: [] });
     expect(staffRoleSchema.safeParse({ name: "Caixa", permissions: ["NOPE"] }).success).toBe(false);
+  });
+});
+
+describe("createTimeSlotSchema", () => {
+  it("accepts a slot that ends by midnight", () => {
+    expect(
+      createTimeSlotSchema.safeParse({ startTime: "22:45", durationMinutes: 75 }).success,
+    ).toBe(true);
+  });
+
+  it("rejects bad times, odd durations and slots running past midnight", () => {
+    expect(createTimeSlotSchema.safeParse({ startTime: "7:15", durationMinutes: 75 }).success).toBe(
+      false,
+    );
+    expect(
+      createTimeSlotSchema.safeParse({ startTime: "07:15", durationMinutes: 10 }).success,
+    ).toBe(false);
+    const late = createTimeSlotSchema.safeParse({ startTime: "23:00", durationMinutes: 75 });
+    expect(late.success).toBe(false);
+    expect(late.error?.issues[0]?.message).toBe("validation.slotPastMidnight");
+    expect(translateIssue(late.error!.issues[0]!)).toBe(
+      "O horário precisa terminar até a meia-noite.",
+    );
   });
 });

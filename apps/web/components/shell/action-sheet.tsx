@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Sheet } from "@/components/ui/sheet";
-import { listItemVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, tap } from "@/lib/motion";
 
 const ACTIONS: {
   href: string;
@@ -37,7 +37,7 @@ export function ActionSheet({
             key={action.href}
             custom={index}
             variants={listItemVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
           >
             <motion.button

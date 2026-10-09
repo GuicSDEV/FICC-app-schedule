@@ -1,16 +1,25 @@
-import type { ClubInfo } from "@ficc/shared";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers/providers";
-import { API_PREFIX, API_URL } from "@/lib/api";
+import { clubName, getClub } from "@/lib/club-server";
 
 import "./globals.css";
+
+/** Numbers (Elo, times, scores). Not preloaded: the system monospace fallback is close enough. */
+const geistMono = localFont({
+  src: "../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Roboto Mono", "monospace"],
+});
 
 /** Display face for headlines, player names and the giant Elo number. */
 const bricolage = localFont({
@@ -23,19 +32,6 @@ const bricolage = localFont({
 /** Pages re-read the club's name (titles) at most every 5 minutes. */
 export const revalidate = 300;
 
-/** The club's name for titles; the build does not need the API (pages revalidate later). */
-async function clubName(): Promise<string | null> {
-  // Set by Next.js itself during `next build`, not by our environment.
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
-  if (process.env.NEXT_PHASE === "phase-production-build") return null;
-  try {
-    const response = await fetch(`${API_URL}${API_PREFIX}/club`, { next: { revalidate: 300 } });
-    return response.ok ? ((await response.json()) as ClubInfo).name : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("app");
   const club = await clubName();
@@ -46,6 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: title,
     appleWebApp: { capable: true, statusBarStyle: "black-translucent", title },
     formatDetection: { telephone: false },
+    icons: { apple: "/icons/apple-touch-icon.png" },
   };
 }
 
@@ -60,16 +57,16 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, club] = await Promise.all([getLocale(), getMessages(), getClub()]);
   return (
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} ${bricolage.variable}`}
+      className={`${GeistSans.variable} ${geistMono.variable} ${bricolage.variable}`}
     >
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>
+          <Providers club={club}>
             {/* vaul scales this wrapper behind open sheets. */}
             <div {...{ "vaul-drawer-wrapper": "" }} className="min-h-dvh bg-background">
               {children}

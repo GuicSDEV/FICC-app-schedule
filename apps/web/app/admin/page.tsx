@@ -16,7 +16,7 @@ import { SectionLabel } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { useNow } from "@/lib/use-now";
@@ -47,7 +47,7 @@ function FreezeCard({
   const affected = freeze.affected.bookings.length + freeze.affected.lessons.length;
   const Icon = freeze.reason === "RAIN" ? CloudRain : Wrench;
   return (
-    <motion.li custom={index} variants={listItemVariants} initial="hidden" animate="show">
+    <motion.li custom={index} variants={listItemVariants} initial={enter("hidden")} animate="show">
       <motion.button
         type="button"
         whileTap={tap}

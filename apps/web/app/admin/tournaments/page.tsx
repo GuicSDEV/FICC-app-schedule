@@ -15,7 +15,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { TournamentFormSheet } from "@/components/tournaments/manager/tournament-form-sheet";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
 export default function AdminTournamentsPage() {
@@ -71,7 +71,7 @@ export default function AdminTournamentsPage() {
                 key={tournament.id}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
               >
                 <TournamentCard

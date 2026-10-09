@@ -23,3 +23,8 @@ coverage/
 # Logs and OS files
 *.log
 .DS_Store
+
+# Playwright (web e2e)
+apps/web/e2e/.artifacts/
+apps/web/test-results/
+apps/web/playwright-report/

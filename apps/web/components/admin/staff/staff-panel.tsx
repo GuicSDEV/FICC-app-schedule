@@ -26,7 +26,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { haptic, listItemVariants, tap } from "@/lib/motion";
+import { enter, haptic, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -329,7 +329,7 @@ export function StaffPanel() {
               key={person.id}
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
             >
               <motion.button

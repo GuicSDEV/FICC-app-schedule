@@ -19,7 +19,7 @@ import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
 /** How long the closed card stays raised: the panel's spring back takes about this long (ms). */
@@ -56,7 +56,7 @@ function MatchList({
             className={match.id === raisedId ? "relative z-20" : undefined}
             custom={index}
             variants={listItemVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
           >
             <MatchCard match={match} onOpen={() => onOpen(match)} raised={match.id === raisedId} />

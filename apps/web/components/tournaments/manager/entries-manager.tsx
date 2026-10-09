@@ -32,7 +32,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { datesBetween, ENTRY_TONE, invalidateTournament } from "@/lib/tournaments";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -552,7 +552,7 @@ export function EntriesManager({ tournament }: { tournament: TournamentDetail })
                 layout="position"
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 exit="exit"
               >

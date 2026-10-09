@@ -40,7 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { invalidateLessons } from "@/lib/lessons";
-import { fadeVariants, listItemVariants, tap } from "@/lib/motion";
+import { enter, fadeVariants, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -87,7 +87,7 @@ function AuditList({ entries }: { entries: LessonAuditItem[] }) {
             key={entry.id}
             custom={index}
             variants={listItemVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             className="flex min-h-16 items-start gap-3 px-4 py-3"
           >
@@ -215,7 +215,7 @@ export default function AdminLessonsPage() {
           <motion.div
             key="lessons"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="mt-5 space-y-5"
@@ -358,7 +358,7 @@ export default function AdminLessonsPage() {
           <motion.div
             key="audit"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="mt-5"

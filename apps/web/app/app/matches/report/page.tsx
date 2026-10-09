@@ -32,7 +32,15 @@ import { FieldError, Input, Label } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import { fadeVariants, haptic, listItemVariants, popVariants, spring, tap } from "@/lib/motion";
+import {
+  enter,
+  fadeVariants,
+  haptic,
+  listItemVariants,
+  popVariants,
+  spring,
+  tap,
+} from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -412,7 +420,7 @@ export default function ReportMatchPage() {
                   key={index}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   className="space-y-2 rounded-lg border border-border bg-card p-3"
                 >
@@ -421,7 +429,7 @@ export default function ReportMatchPage() {
                       <motion.span
                         key={setWinner ?? "none"}
                         variants={popVariants}
-                        initial="hidden"
+                        initial={enter("hidden")}
                         animate="show"
                         exit="exit"
                         className={cn(
@@ -465,7 +473,7 @@ export default function ReportMatchPage() {
               <motion.div
                 key="third"
                 variants={fadeVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 exit="exit"
               >
@@ -491,7 +499,7 @@ export default function ReportMatchPage() {
                 <motion.p
                   key="winner"
                   variants={popVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   exit="exit"
                   transition={spring.snappy}
@@ -509,7 +517,7 @@ export default function ReportMatchPage() {
                 <motion.p
                   key={scoreIssue}
                   variants={fadeVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   exit="exit"
                   className="flex items-center gap-2 rounded-md bg-surface-2 px-4 py-3 text-small text-muted-foreground"
@@ -573,7 +581,7 @@ function TeamsPreview({ mine, theirs }: { mine: PlayerSummary[]; theirs: PlayerS
   return (
     <motion.div
       variants={fadeVariants}
-      initial="hidden"
+      initial={enter("hidden")}
       animate="show"
       className="flex items-center gap-3 rounded-lg border border-border bg-card p-4"
     >

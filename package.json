@@ -22,7 +22,8 @@
     "db:seed": "turbo run db:seed --filter=@ficc/db",
     "db:studio": "pnpm --filter @ficc/db db:studio",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
-    "test:e2e": "turbo run test:e2e"
+    "test:e2e": "turbo run test:e2e",
+    "test:browser": "pnpm --filter @ficc/web test:browser"
   },
   "devDependencies": {
     "prettier": "^3.9.9",

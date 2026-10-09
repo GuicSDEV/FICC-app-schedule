@@ -98,6 +98,9 @@
   --animate-shimmer: shimmer var(--loop-shimmer) linear infinite;
   --animate-ball-spin: ball-spin var(--loop-spin) linear infinite;
   --animate-rain: rain-drop var(--loop-rain) linear infinite;
+  /* Entrances that must play before hydration (server-rendered content paints at once). */
+  --animate-page-in: enter-up var(--duration-base) var(--ease-out) both;
+  --animate-sheet-in: enter-rise var(--duration-slow) var(--ease-out) both;
 
   @keyframes shimmer {
     from {
@@ -105,6 +108,18 @@
     }
     to {
       transform: translateX(100%);
+    }
+  }
+  @keyframes enter-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes enter-rise {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
     }
   }
   @keyframes ball-spin {
@@ -158,7 +173,7 @@
   --success: oklch(0.615 0.144 154.6);
   --success-ink: oklch(0.504 0.112 157.3);
   --danger: oklch(0.623 0.196 28.7);
-  --danger-ink: oklch(0.543 0.18 28.9);
+  --danger-ink: oklch(0.52 0.18 28.9);
   --danger-soft: oklch(0.623 0.196 28.7 / 12%);
   --warning: oklch(0.626 0.125 70.4);
   --warning-ink: oklch(0.511 0.105 70.3);
@@ -337,6 +352,7 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }

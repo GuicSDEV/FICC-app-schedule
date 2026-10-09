@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
-import { haptic, popVariants, spring, tap } from "@/lib/motion";
+import { enter, haptic, popVariants, spring, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { patchScheduleCells } from "@/lib/schedule-cache";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -75,7 +75,7 @@ export function FavoriteToggle({
           <motion.span
             key="fill"
             variants={popVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="absolute inset-0"

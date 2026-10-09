@@ -21,7 +21,7 @@ import { ChoiceChip } from "@/components/ui/choice-chip";
 import { CourtLines } from "@/components/ui/court-lines";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/states";
-import { listItemVariants, spring, tap } from "@/lib/motion";
+import { enter, listItemVariants, spring, tap } from "@/lib/motion";
 import { formatMoney, STATUS_TONE, sideUserIds } from "@/lib/tournaments";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -208,7 +208,7 @@ export function AnnouncementList({ announcements }: { announcements: Announcemen
             key={announcement.id}
             custom={index}
             variants={listItemVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             className="flex gap-3 rounded-lg border border-border bg-card p-3"
           >
@@ -395,7 +395,7 @@ export function EntriesPanel({
                 key={entry.id}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 className="flex min-h-12 items-center gap-3 px-4 py-2 text-small"
               >
@@ -535,7 +535,7 @@ export function SchedulePanel({
                 key={match.id}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
               >
                 <MatchRow match={match} viewerId={viewerId} onOpen={onOpenMatch} />
@@ -597,7 +597,7 @@ export function ResultsPanel({
               key={match.id}
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
             >
               <MatchRow

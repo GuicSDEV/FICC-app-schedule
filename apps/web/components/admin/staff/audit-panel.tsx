@@ -13,7 +13,7 @@ import { ChoiceChip, ChipGroup } from "@/components/ui/choice-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, popVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, popVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,12 @@ function AuditRow({ entry, index }: { entry: AuditLogItem; index: number }) {
     entry.details !== undefined &&
     !(typeof entry.details === "object" && Object.keys(entry.details).length === 0);
   return (
-    <motion.li custom={index % PAGE} variants={listItemVariants} initial="hidden" animate="show">
+    <motion.li
+      custom={index % PAGE}
+      variants={listItemVariants}
+      initial={enter("hidden")}
+      animate="show"
+    >
       <motion.button
         type="button"
         whileTap={hasDetails ? tap : undefined}
@@ -79,7 +84,7 @@ function AuditRow({ entry, index }: { entry: AuditLogItem; index: number }) {
         {open ? (
           <motion.pre
             variants={popVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="hidden"
             className="mx-4 mb-3 max-h-64 overflow-auto rounded-md bg-surface-2 p-3 font-mono text-caption break-all whitespace-pre-wrap"

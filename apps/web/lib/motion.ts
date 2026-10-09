@@ -23,6 +23,22 @@ export const spring = {
   gentle: { type: "spring", stiffness: 200, damping: 25 },
 } as const satisfies Record<string, Transition>;
 
+let hydrated = false;
+
+/** Called once the app has hydrated (Providers). */
+export function markHydrated(): void {
+  hydrated = true;
+}
+
+/**
+ * `initial` for entrance animations. Content already on screen when the page loads (server HTML)
+ * shows at once instead of waiting for the scripts at opacity 0; anything mounted later (new data,
+ * navigation, sheets) plays its entrance as usual.
+ */
+export function enter<T extends string>(variant: T): T | false {
+  return hydrated ? variant : false;
+}
+
 /** List stagger: 40 ms between items, only the first 8 animate. */
 export const STAGGER = 0.04;
 export const MAX_STAGGERED = 8;

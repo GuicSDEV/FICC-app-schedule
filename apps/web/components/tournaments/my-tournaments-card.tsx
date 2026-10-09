@@ -11,7 +11,7 @@ import { useSession } from "@/components/providers/session-provider";
 import { Badge } from "@/components/ui/badge";
 import { SectionLabel } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { listItemVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { ENTRY_TONE, viewerSide } from "@/lib/tournaments";
 import { useFormat } from "@/lib/use-format";
@@ -31,7 +31,7 @@ function Item({ item, index }: { item: MyTournamentItem; index: number }) {
   const opponent = next ? (side === "B" ? next.a : next.b) : null;
 
   return (
-    <motion.li custom={index} variants={listItemVariants} initial="hidden" animate="show">
+    <motion.li custom={index} variants={listItemVariants} initial={enter("hidden")} animate="show">
       <MotionLink
         href={`/app/tournaments/${item.tournament.id}${next ? "?tab=schedule" : ""}`}
         whileTap={tap}
@@ -90,7 +90,7 @@ export function MyTournamentsCard() {
         <SectionLabel>{t("title")}</SectionLabel>
         <Link
           href="/app/tournaments"
-          className="text-caption font-medium text-accent-ink hover:underline"
+          className="inline-flex min-h-11 items-center text-caption font-medium text-accent-ink hover:underline"
         >
           {t("all")}
         </Link>

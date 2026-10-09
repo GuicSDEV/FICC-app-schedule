@@ -363,14 +363,14 @@ export function BracketView({
           whileTap={tap}
           onClick={() => setZoom((current) => clamp(current - 0.15))}
           aria-label={t("zoomOut")}
-          className="inline-flex size-9 items-center justify-center rounded-full hover:bg-surface-2"
+          className="inline-flex size-11 items-center justify-center rounded-full hover:bg-surface-2"
         >
           <Minus className="size-4" />
         </motion.button>
         <button
           type="button"
           onClick={() => setZoom(1)}
-          className="w-12 num text-caption text-muted-foreground"
+          className="h-11 w-12 num text-caption text-muted-foreground"
           aria-label={t("zoomReset")}
         >
           {Math.round(zoom * 100)}%
@@ -380,7 +380,7 @@ export function BracketView({
           whileTap={tap}
           onClick={() => setZoom((current) => clamp(current + 0.15))}
           aria-label={t("zoomIn")}
-          className="inline-flex size-9 items-center justify-center rounded-full hover:bg-surface-2"
+          className="inline-flex size-11 items-center justify-center rounded-full hover:bg-surface-2"
         >
           <Plus className="size-4" />
         </motion.button>

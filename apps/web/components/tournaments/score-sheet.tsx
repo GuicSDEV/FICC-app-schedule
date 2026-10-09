@@ -23,7 +23,7 @@ import { ChoiceChip, ChipGroup } from "@/components/ui/choice-chip";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
-import { fadeVariants, haptic, popVariants } from "@/lib/motion";
+import { enter, fadeVariants, haptic, popVariants } from "@/lib/motion";
 import { invalidateTournament, scoreSeenBy, viewerSide } from "@/lib/tournaments";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -100,7 +100,7 @@ function ScoreEntry({
             <motion.li
               key={index}
               variants={fadeVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               className="space-y-2 rounded-lg border border-border bg-card p-3"
             >
@@ -458,7 +458,7 @@ export function ScoreSheet({
                         <motion.p
                           key="ok"
                           variants={popVariants}
-                          initial="hidden"
+                          initial={enter("hidden")}
                           animate="show"
                           exit="exit"
                           className="flex items-center gap-2 rounded-md bg-ball-soft px-4 py-3 text-small font-medium text-ball-ink"
@@ -473,7 +473,7 @@ export function ScoreSheet({
                         <motion.p
                           key={issue}
                           variants={fadeVariants}
-                          initial="hidden"
+                          initial={enter("hidden")}
                           animate="show"
                           exit="exit"
                           className="flex items-center gap-2 rounded-md bg-surface-2 px-4 py-3 text-small text-muted-foreground"

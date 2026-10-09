@@ -17,7 +17,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { haptic, listItemVariants, popVariants, sheetVariants, spring } from "@/lib/motion";
+import { enter, haptic, listItemVariants, popVariants, sheetVariants, spring } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -255,7 +255,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
             <motion.section
               key="mine"
               variants={sheetVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="flex items-center gap-4 rounded-xl border border-primary/50 bg-ball-soft p-4 shadow-card"
@@ -283,7 +283,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
             <motion.section
               key="offer"
               variants={popVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="space-y-3 rounded-xl border-2 border-primary bg-ball-soft p-5 text-center shadow-glow"
@@ -307,7 +307,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
             <motion.section
               key="waiting"
               variants={sheetVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card"
@@ -315,7 +315,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
               <motion.span
                 key={me.position}
                 variants={popVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary font-display text-headline font-bold text-primary-foreground"
               >
@@ -340,7 +340,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
             <motion.section
               key="join"
               variants={sheetVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card"
@@ -372,7 +372,7 @@ export function CourtsNowView({ staff = false }: { staff?: boolean }) {
               key={court.court.id}
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
             >
               <CourtCard

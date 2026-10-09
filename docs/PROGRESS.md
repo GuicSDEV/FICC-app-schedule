@@ -20,7 +20,7 @@ and what still needs a human to check.
 | 9     | Coach, gate, admin screens            | Done                                | `feat(phase-9)`   |
 | 9.5   | Tournaments & circuits                | Done                                | `feat(phase-9.5)` |
 | 9.8   | FICC operations adjustments           | Done                                | `feat(phase-9.8)` |
-| 10    | PWA, polish, QA                       | Not started                         |                   |
+| 10    | PWA, polish, QA                       | Done                                | `feat(phase-10)`  |
 | 11    | SaaS extensibility & feature workflow | On hold — waiting for club approval |                   |
 | 12    | Native apps (App Store & Google Play) | On hold — waiting for club approval |                   |
 
@@ -352,9 +352,188 @@ Phases 11 and 12.
   Quadras agora, Mural, Sócios, Convidados, Regras do clube, Portaria; Diretoria and Super admin:
   everything, only Super admin edits roles); a Mural post with push reaches members.
 
+### Phase 10 — PWA, polish, QA
+
+- **PWA:** `app/manifest.ts` (built per request so it carries the club's name; standalone, starts
+  on `/app`, shortcuts to booking, "Quadras agora" and ranking), icons rendered from the ball mark
+  (`public/icons`: 192/512 any, 512 maskable, Apple touch) and a small `favicon.ico`. The service
+  worker (`public/sw.js`, plain JS, registered only in production builds) caches pages network
+  first with the last good copy offline and `/offline` as the fallback, build assets cache first,
+  and API GETs network first with the last answer offline (auth and sockets never cached; writes
+  always need the network). Logout tells it to drop cached API answers and pages. Install prompt:
+  a card on the dashboard (bottom, dismissible) and in the profile; Android/desktop use the
+  browser prompt, iPhone gets the share-sheet steps. An offline banner explains stale data.
+- **Server-side first paint:** the root layout fetches the club (`getClub`, 5-minute cache) and
+  seeds the client cache (refreshed in the background); member, coach and gate layouts read the
+  `ficc_role` cookie so the shell renders on the server instead of waiting for `/auth/me`; the
+  dashboard, calendar and ranking prefetch their first queries on the server with the person's
+  cookies (`Prefetched` in `lib/server-prefetch.tsx`) and hand them to TanStack Query. Anything
+  that fails there (expired access cookie, API down) is simply fetched by the browser as before.
+- **Entrances and hydration:** content in the server HTML must not wait for scripts at opacity 0.
+  The page transition and the login/sign-up entrances are CSS animations built from the motion
+  tokens (`--duration-*`, `--ease-out`); Motion entrances use `initial={enter("hidden")}`, which
+  skips the entrance for elements already on screen at load and plays it for everything mounted
+  later. Reduced motion still turns all of it into an instant change.
+- **Slot catalogue (spec: "make the grid admin-editable"):** staff with SETTINGS_MANAGE add a
+  start time (with its duration) or retire one at `/admin/settings`; slots are never deleted
+  (history points at them). A start time still in a weekday grid, a future date exception, a
+  future booking or lesson, or a running series cannot be retired. Grids, date exceptions and new
+  slots are checked so two slots of one day never overlap (`findOverlap` in `@ficc/shared`).
+- **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
+  id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
+  server-rendered (no `useSearchParams` bailout).
+- **Audit fixes:** two ad-hoc animation values replaced by tokens; touch targets ≥ 44 px
+  (segmented controls, chips, links on the dashboard, bracket zoom, member-picker remove button
+  via a larger hit area); motion `whileTap` wrappers inside links no longer add a second tab stop;
+  accessible names start with the visible text (day strip, avatar link, 👍 button); heading order
+  on the dashboard; light-theme `--danger-ink` darkened for AA. axe-core (WCAG 2.1 A/AA,
+  including contrast) reports no violations on 29 pages × 2 themes, and every interactive element
+  measured at 390 px is at least 44 × 44 px (one visually hidden file input aside).
+- **Lighthouse (mobile, `next start` on localhost, after the changes above):** accessibility 100
+  and best practices 96–100 on login, dashboard, calendar and ranking. Performance with
+  Lighthouse's default 4× CPU slowdown: login 68–76, dashboard 50–59, calendar 52–53, ranking
+  57–59. This container benchmarks at ~900–1500 (Lighthouse's own guidance is about a 2× slowdown
+  for such a machine); with 2×: login 86–87, dashboard 80, calendar 69–73, ranking 70. CLS is 0.
+  The observed (unsimulated) LCP equals FCP on every page — the content is in the first paint —
+  but on localhost the scripts arrive before the first frame, so Lighthouse's model charges
+  hydration to LCP. **The ≥ 90 target is not met here**; it has to be re-measured on the deployed
+  site (see "Needs manual check").
+- **Browser e2e (Playwright, `apps/web/e2e`, `pnpm test:browser`):** login for every role and the
+  area redirects, the Secretaria menu, a wrong password; booking with a partner seen by another
+  member; coach cancels a lesson → member books the freed slot; report → opponent approves → Elo
+  moves by the same amount both ways; gate scans a guest pass QR through Chromium's fake camera
+  (accepted, then refused as already used). The global setup reseeds and relaxes the booking
+  opening rule so the journeys do not depend on the time of day. 12/12 pass.
+- **Verified here:** service worker active and controlling; ranking reloaded offline from cache
+  with the offline banner; logout empties the API cache; manifest served with the club's name; no
+  hydration errors on the member, coach and gate pages.
+
+## SPEC checklist
+
+Review of [`SPEC.md`](SPEC.md) at the end of Phase 10. ✅ done · ⚠️ partial / differs (reason
+in Decisions) · ⏸ on hold by the product owner.
+
+**Tech stack**
+
+- ✅ pnpm + Turborepo monorepo; Next.js 15 App Router + Tailwind v4 + shadcn/ui; NestJS modular
+  API; Prisma + PostgreSQL; `packages/shared` (Zod, DTOs, Elo, score validation, slot helpers)
+- ✅ Motion + vaul; TanStack Query with optimistic updates; Socket.IO for calendar, leaderboard,
+  notifications, tournaments, free play and news
+- ✅ JWT access + refresh in httpOnly cookies, argon2; qrcode, club-time helpers (`date-fns-tz`
+  inside `@ficc/shared`), Recharts, sonner, lucide-react, canvas-confetti; no payment gateway
+- ✅ PWA: manifest, service worker, install icons, `viewport-fit=cover` + safe-area insets
+
+**Design system "Night Session"**
+
+- ✅ OKLCH tokens (background, surface, saibro, hartru, ball, lesson, success/danger/warning), dark
+  default + light; Bricolage Grotesque / Geist Sans / Geist Mono tabular numbers; type scale;
+  16 px cards, pills, layered shadows, glass bottom nav and sticky headers, grain, court lines
+- ✅ WCAG AA in both themes (axe-core, 29 pages × 2 themes); touch targets ≥ 44 px; no hover-only
+  actions; primary actions in the thumb zone
+- ⚠️ Mobile bottom bar: Início · Quadras · ＋ · Ranking · Partidas; Profile lives behind the header
+  avatar (and the desktop sidebar) so the bar keeps four tabs around the central "+"
+- ✅ Tablet/desktop collapsible sidebar with 2–3 column content
+
+**Motion system**
+
+- ✅ `lib/motion.ts` tokens (durations, easings, springs) and variants; only transform/opacity
+- ⚠️ Page transitions are enter-only (fade + 8 px slide-up, now a CSS animation from the same
+  tokens so server HTML paints at once); exit animations would need a frozen router context
+- ✅ 40 ms list stagger (max 8); tap feedback + `navigator.vibrate`; `layoutId` morphs (match card
+  → detail, avatar → profile, nav pill); shimmer skeletons; number tickers; vaul sheets with
+  scaled background; swipe invites; pull-to-refresh with the spinning ball; reduced motion
+- ✅ Signature moments: Elo celebration (ticker, +N chip, confetti, rank climb), leaderboard FLIP
+  reorder with ↑/↓ flash, booking confirmed (surface fill, drawn check, ticket), lesson cancelled
+  live on every calendar, guest QR scan-line reveal + 3D tilt, rain mode banner + stripes + rain icon
+
+**Courts & schedule**
+
+- ✅ Q1–Q4 Har-Tru, Q5–Q6 Saibro; 75-minute slots `08:30 … 21:00`; the slot catalogue and the grid
+  of each weekday are admin-editable (Phase 9.8 grids, Phase 10 start times)
+- ✅ Lesson template seeded as Mon–Fri series for Alan, Phelipe and "Professor do Clube"
+- ✅ `LessonSeries` + `Lesson` occurrences (rolling 8-week generation job, one-off lessons,
+  SCHEDULED/CANCELLED, notes/students); calendar reads occurrences only
+
+**1. Authentication & members**
+
+- ✅ Matrícula + password, validated against the imported list (CSV import); roles MEMBER, COACH,
+  ADMIN, GATE with per-role areas; coach accounts by email; categories (per-club table), Elo 1200
+- ✅ Login hero with court lines, auto-formatted matrícula, shake on invalid credentials
+
+**2. Court booking**
+
+- ✅ Singles = 2, doubles = 4 players; PENDING → confirm/decline → CONFIRMED / CANCELLED; 2 h expiry
+  job; one transaction with the shared slot occupancy key; no double booking, player clash, limit
+  of active bookings, past or frozen slots; favourites with "slot opened" notifications
+- ✅ Mobile calendar (snap day strip, segmented surface filter, slot rows with Q1–Q6 chips and all
+  states, booking sheet with member search, coach profile on lesson tap, live updates); desktop grid
+
+**3. Coach portal**
+
+- ✅ `/coach` with Agenda · Quadras · Perfil and the violet accent; weekly agenda on allowed courts
+- ✅ Add lesson (one day / weekly with end date, students, note), cancel one day / this and future,
+  edit (move), swipe-left cancel with 5 s undo; live violet → free; "slot opened" notifications;
+  copy week; admins manage coaches, allowed courts, all lessons and the `LessonAuditLog`
+
+**4. Guest day pass**
+
+- ✅ No quota, one date, one entry; name + CPF/RG + date, optional booking link; signed QR token;
+  Web Share / download as image; admin history per member and document, block document, suspend
+  host; gate scanner with full-screen result, scan log, manual search by document; masked
+  documents everywhere except the gate
+
+**5. Elo & ranking**
+
+- ✅ Elo K = 32 (now a club setting) with unit tests; doubles team average; result reporting with
+  shared validation (sets, match tie-break, best of 3); approve / dispute / 48 h auto-approve;
+  admin dispute queue (accept, correct, void); optional booking link
+- ✅ Leaderboards by category with rank, Elo, W/L, win rate and 30-day trend, podium, live updates;
+  head-to-head (record, win rate, Elo chart, last 5 meetings, surface split)
+
+**6. Maintenance & rain mode**
+
+- ✅ Freeze per court / surface / all with reason, start and optional end; blocks bookings and
+  lessons; affected list with bulk cancel; notifications + global banner; unfreeze animates back
+
+**7. Notifications**
+
+- ✅ `Notification` model, bell with animated badge, notification center, real-time over socket;
+  `NotificationChannel` interface ready for Web Push / native push (⏸ Phase 12)
+
+**8. Tournaments & circuits (Phase 9.5)**
+
+- ✅ Everything listed in the spec: status flow, categories and formats, registration options,
+  draw (seeding, byes, groups), order of play with collision guarantee and rain rescheduling,
+  results with approval/organizer confirmation/W.O./overdue alerts, announcements, circuits,
+  bracket with pinch-zoom and live advancement, groups view, champion screen, hall of fame,
+  public link with share image, printable/PDF draw and order of play
+
+**9. FICC operations (Phase 9.8)**
+
+- ✅ Weekday grids + date exceptions, BOOKING/FREE_PLAY, courts now with check-in/out and queue;
+  booking opening rule + daily limit, server-time countdown, rush handling with load test;
+  sign-up approval, optional dependents; editable roles with audit log; no-shows, late
+  cancellations, optional penalty; Mural with reactions and read counts; backlog in BACKLOG.md
+
+**Multi-club strategy (Phase 7.5)**
+
+- ✅ `clubId` everywhere through the tenant extension, `DEFAULT_CLUB_SLUG`, `ClubSettings`,
+  `PlayerRating` per sport, `SportRules` (Tennis), per-club categories, next-intl, BullMQ, LGPD
+  encryption and retention, `/api/v1`
+
+**SaaS extensibility (Phase 11)** — ⏸ on hold, waiting for club approval.
+
+**Native apps (Phase 12)** — ⏸ on hold, waiting for club approval (Capacitor notes in the README).
+
+**Data model** — ✅ every listed model, plus `SlotOccupancy`, `RefreshToken`, `CourtFreezeCourt`,
+tenancy, tournament, operations and audit models; enums, indexes, unique slot constraint, CHECKs.
+
+**Performance target (Phase 10)** — ⚠️ Lighthouse mobile ≥ 90 not reached in this environment
+(see Phase 10 above); accessibility 100.
+
 ## Known issues
 
-- None open.
+- Lighthouse mobile performance below the 90 target in this environment (see Phase 10 above).
 
 ## Needs manual check
 
@@ -384,5 +563,9 @@ Phases 11 and 12.
 - The club's real weekend grid, opening rule (1 day before at 07:00 assumed) and which days are
   free play: confirm with the secretaria before launch.
 - Default role permissions (what Secretaria and Diretoria may do) confirmed by the board.
+- Lighthouse mobile on the deployed site (HTTPS, compression, CDN) for the dashboard, calendar and
+  ranking: target ≥ 90 performance; measured here 50–87 depending on CPU calibration.
+- PWA install on real devices: Android/Chrome install prompt and the shortcuts, iPhone "Adicionar
+  à Tela de Início", standalone launch, status-bar colour; offline use on a flaky mobile network.
 - Gate camera scanning on real phones (iOS Safari and Android Chrome) and in the gate's lighting;
   verified here with Chromium's fake camera playing a QR video (accepted, then "already used").

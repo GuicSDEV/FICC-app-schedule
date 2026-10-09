@@ -16,7 +16,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { haptic, sheetVariants } from "@/lib/motion";
+import { enter, haptic, sheetVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { datesBetween, invalidateTournament } from "@/lib/tournaments";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -387,7 +387,7 @@ export function ScheduleBoardView({ tournament }: { tournament: TournamentDetail
           <motion.div
             key="selection"
             variants={sheetVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-lg items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-raised md:bottom-6"

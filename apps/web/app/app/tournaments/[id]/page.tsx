@@ -31,7 +31,7 @@ import {
   TournamentHero,
 } from "@/components/tournaments/tournament-panels";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { ACTIVE_ENTRY, ENTRY_TONE, invalidateTournament } from "@/lib/tournaments";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -255,7 +255,7 @@ function TournamentScreen() {
                         key={item.nextMatch!.id}
                         custom={index}
                         variants={listItemVariants}
-                        initial="hidden"
+                        initial={enter("hidden")}
                         animate="show"
                       >
                         <MatchRow

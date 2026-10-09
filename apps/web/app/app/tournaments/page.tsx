@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { api } from "@/lib/api";
-import { listItemVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
 type Filter = NonNullable<TournamentListQuery["status"]>;
@@ -113,7 +113,7 @@ export default function TournamentsPage() {
                   key={tournament.id}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                 >
                   <TournamentCard
@@ -131,7 +131,7 @@ export default function TournamentsPage() {
               <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {circuits.data!.map((circuit) => (
                   <li key={circuit.id}>
-                    <motion.div whileTap={tap}>
+                    <motion.div whileTap={tap} tabIndex={-1}>
                       <Link
                         href={`/app/circuits/${circuit.id}`}
                         className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-card hover:border-border-strong"

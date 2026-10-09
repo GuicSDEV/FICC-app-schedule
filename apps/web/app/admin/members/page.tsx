@@ -30,7 +30,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { haptic, listItemVariants, popVariants, tap } from "@/lib/motion";
+import { enter, haptic, listItemVariants, popVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useDebounced } from "@/lib/use-debounced";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -115,7 +115,7 @@ function MembershipImport() {
       {result ? (
         <motion.div
           variants={popVariants}
-          initial="hidden"
+          initial={enter("hidden")}
           animate="show"
           className="rounded-md bg-surface-2 px-4 py-3 text-small"
         >
@@ -260,7 +260,7 @@ function ApprovalsPanel() {
                   layout
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   exit={{ opacity: 0, scale: 0.96 }}
                   className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card"
@@ -494,7 +494,7 @@ function MembersPanel() {
                 key={entry.player.id}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
               >
                 <motion.button

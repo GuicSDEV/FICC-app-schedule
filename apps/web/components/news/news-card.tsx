@@ -13,7 +13,7 @@ import { SimpleMarkdown } from "@/components/tournaments/simple-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { haptic, popVariants, tap } from "@/lib/motion";
+import { enter, haptic, popVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -115,7 +115,7 @@ export function NewsCard({
               </Badge>
             ) : null}
           </div>
-          <h3 className="font-display text-title font-semibold">{post.title}</h3>
+          <h2 className="font-display text-title font-semibold">{post.title}</h2>
           <p className="text-caption text-muted-foreground">
             {post.author.name} · {format.relative(post.publishedAt)}
           </p>
@@ -168,21 +168,21 @@ export function NewsCard({
           type="button"
           whileTap={tap}
           aria-pressed={post.reactedByMe}
-          aria-label={t("like")}
           onClick={() => react.mutate()}
           className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-full border px-3 text-small font-medium transition-tokens",
+            "inline-flex h-11 items-center gap-2 rounded-full border px-3 text-small font-medium transition-tokens",
             post.reactedByMe
               ? "border-primary bg-ball-soft text-ball-ink"
               : "border-border hover:bg-surface-2",
           )}
         >
-          <ThumbsUp className={cn("size-4", post.reactedByMe && "fill-current")} />
+          <ThumbsUp aria-hidden className={cn("size-4", post.reactedByMe && "fill-current")} />
+          <span className="sr-only">{t("like")}</span>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={post.reactions}
               variants={popVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="num"

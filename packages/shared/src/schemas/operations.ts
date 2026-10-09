@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isoDateSchema } from "../dates";
+import { isValidTime, timeToMinutes } from "../slots";
 import { courtModeSchema, permissionSchema } from "../enums";
 import { passwordSchema, personNameSchema } from "./auth";
 import { emailSchema, idSchema, isoDateTimeSchema, optionalText } from "./common";
@@ -107,3 +108,25 @@ export const auditQuerySchema = z.object({
   before: isoDateTimeSchema.optional(),
 });
 export type AuditQuery = z.infer<typeof auditQuerySchema>;
+
+/** A new start time in the club's slot catalogue (each weekday grid then picks from it). */
+export const createTimeSlotSchema = z
+  .object({
+    startTime: timeOfDaySchema,
+    durationMinutes: z.number().int().min(15).max(240),
+  })
+  .refine(
+    (slot) =>
+      // The time itself is reported by its own check.
+      !isValidTime(slot.startTime) ||
+      timeToMinutes(slot.startTime) + slot.durationMinutes <= 24 * 60,
+    {
+      message: "validation.slotPastMidnight",
+      path: ["durationMinutes"],
+    },
+  );
+export type CreateTimeSlotInput = z.infer<typeof createTimeSlotSchema>;
+
+/** Retire a start time (or bring it back). */
+export const timeSlotActiveSchema = z.object({ isActive: z.boolean() });
+export type TimeSlotActiveInput = z.infer<typeof timeSlotActiveSchema>;

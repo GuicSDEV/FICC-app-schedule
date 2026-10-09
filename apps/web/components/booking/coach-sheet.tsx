@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useFormat } from "@/lib/use-format";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useLastDefined } from "@/lib/use-last-defined";
 
@@ -139,7 +139,7 @@ export function CoachSheet({
                           key={`${lesson.date}-${lesson.court.id}-${lesson.slot.id}`}
                           custom={index}
                           variants={listItemVariants}
-                          initial="hidden"
+                          initial={enter("hidden")}
                           animate="show"
                           className="flex h-12 items-center gap-3 rounded-md bg-surface-2 px-3 text-small"
                         >

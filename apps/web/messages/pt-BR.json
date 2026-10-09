@@ -352,8 +352,6 @@
   "calendar": {
     "title": "Quadras",
     "dayLabel": "Dia",
-    "dayOption": "{weekday} {day} de {month}",
-    "todayOption": "Hoje, {weekday} {day} de {month}",
     "surfaceLabel": "Piso",
     "all": "Todas",
     "slots": "Horários",
@@ -366,7 +364,8 @@
       "mine": "Sua reserva",
       "tournament": "Torneio",
       "closed": "Fechada"
-    }
+    },
+    "dayOptionMonth": "de {month}"
   },
   "dashboard": {
     "title": "Início",
@@ -1895,6 +1894,20 @@
       "closedBadge": "Fechado",
       "courtsClosedBadge": "Fechadas: {courts}",
       "noTimes": "Sem horários"
+    },
+    "slots": {
+      "title": "Horários do clube",
+      "hint": "Os horários que as grades de cada dia e as exceções podem usar. Um horário que ainda está numa grade, numa exceção futura ou tem reservas, aulas ou séries não pode ser retirado.",
+      "inGrid": "Em uso",
+      "inactive": "Retirado",
+      "retire": "Retirar",
+      "restore": "Reativar",
+      "startTime": "Novo horário",
+      "duration": "Duração (min)",
+      "add": "Adicionar",
+      "added": "Horário {time} adicionado. Inclua-o na grade dos dias em que deve valer.",
+      "retired": "Horário {time} retirado",
+      "restored": "Horário {time} reativado"
     }
   },
   "adminStaff": {
@@ -1966,6 +1979,29 @@
         "PATCH": "Alterou",
         "DELETE": "Removeu"
       }
+    }
+  },
+  "pwa": {
+    "shortcuts": {
+      "book": "Reservar quadra",
+      "courtsNow": "Quadras agora",
+      "ranking": "Ranking"
+    },
+    "install": {
+      "title": "Instale o app",
+      "body": "Abre direto da tela inicial, em tela cheia.",
+      "cta": "Instalar",
+      "dismiss": "Agora não",
+      "iosTitle": "Adicionar à Tela de Início",
+      "iosStep1": "Toque em Compartilhar na barra do Safari.",
+      "iosStep2": "Escolha “Adicionar à Tela de Início” e confirme."
+    },
+    "offline": {
+      "title": "Sem conexão",
+      "body": "Esta tela ainda não foi aberta neste aparelho. Conecte-se à internet e tente de novo; as telas que você já visitou abrem mesmo offline.",
+      "retry": "Tentar de novo",
+      "bannerTitle": "Você está offline",
+      "bannerBody": "Mostrando os últimos dados salvos. Reservas e alterações voltam quando a conexão voltar."
     }
   }
 }

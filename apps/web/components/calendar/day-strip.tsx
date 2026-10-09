@@ -50,7 +50,6 @@ export function DayStrip({
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-label={t(isToday ? "todayOption" : "dayOption", parts)}
             data-date={date}
             whileTap={tap}
             onClick={() => onChange(date)}
@@ -69,7 +68,7 @@ export function DayStrip({
             <span
               className={cn(
                 "relative text-caption font-medium capitalize",
-                selected ? "opacity-80" : "text-muted-foreground",
+                selected ? undefined : "text-muted-foreground",
               )}
             >
               {isToday ? common("today") : parts.weekday}
@@ -77,6 +76,7 @@ export function DayStrip({
             <span className="relative num font-display text-title leading-tight font-semibold">
               {parts.day}
             </span>
+            <span className="sr-only">{t("dayOptionMonth", parts)}</span>
             {isToday && !selected ? (
               <span aria-hidden className="relative size-1 rounded-full bg-primary" />
             ) : (

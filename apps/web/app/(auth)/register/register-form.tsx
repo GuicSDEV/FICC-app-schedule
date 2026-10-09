@@ -12,7 +12,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api";
-import { haptic, popVariants, sheetVariants, shakeAnimation } from "@/lib/motion";
+import { enter, haptic, popVariants, shakeAnimation, sheetVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -73,13 +73,13 @@ export function RegisterForm() {
     return (
       <motion.div
         variants={sheetVariants}
-        initial="hidden"
+        initial={enter("hidden")}
         animate="show"
         className="w-full max-w-sm space-y-6 text-center"
       >
         <motion.span
           variants={popVariants}
-          initial="hidden"
+          initial={enter("hidden")}
           animate="show"
           className="mx-auto flex size-20 items-center justify-center rounded-full bg-ball-soft text-ball-ink"
         >
@@ -102,12 +102,7 @@ export function RegisterForm() {
   }
 
   return (
-    <motion.div
-      variants={sheetVariants}
-      initial="hidden"
-      animate="show"
-      className="w-full max-w-sm"
-    >
+    <div className="w-full max-w-sm animate-sheet-in">
       <div className="mb-8 space-y-3">
         <h1 className="font-display text-display leading-[1.05] font-bold">
           {t("headline")} <span className="text-accent-ink">{t("headlineAccent")}</span>
@@ -172,6 +167,6 @@ export function RegisterForm() {
           {t("signIn")}
         </Link>
       </p>
-    </motion.div>
+    </div>
   );
 }

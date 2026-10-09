@@ -15,7 +15,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, popVariants, tap } from "@/lib/motion";
+import { enter, listItemVariants, popVariants, tap } from "@/lib/motion";
 import { type NotificationTone, useNotificationCopy } from "@/lib/notifications";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
@@ -86,7 +86,7 @@ export function NotificationBell() {
             <motion.span
               key={unread}
               variants={popVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="absolute top-1.5 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 num text-[11px] font-bold text-primary-foreground ring-2 ring-background"
@@ -131,7 +131,7 @@ export function NotificationBell() {
                   key={item.id}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                 >
                   <button

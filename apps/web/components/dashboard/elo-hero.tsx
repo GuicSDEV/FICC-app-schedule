@@ -50,7 +50,10 @@ export function EloHero({ userId }: { userId: string }) {
         <div className="flex items-center justify-between gap-3">
           <SectionLabel>{t("label")}</SectionLabel>
           {data ? (
-            <Link href="/app/ranking" className="rounded-full">
+            <Link
+              href="/app/ranking"
+              className="-my-2 inline-flex min-h-11 items-center rounded-full"
+            >
               <Badge tone="neutral">
                 <Trophy aria-hidden />{" "}
                 {t.rich("rank", {

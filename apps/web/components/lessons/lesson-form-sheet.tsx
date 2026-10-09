@@ -21,7 +21,7 @@ import { Field, FieldError, Input, Label, Textarea } from "@/components/ui/input
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { invalidateLessons, lessonApi, type LessonMode } from "@/lib/lessons";
-import { fadeVariants, haptic } from "@/lib/motion";
+import { enter, fadeVariants, haptic } from "@/lib/motion";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -256,7 +256,7 @@ export function LessonFormSheet({
             <motion.div
               key="weekly"
               variants={fadeVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="space-y-4"

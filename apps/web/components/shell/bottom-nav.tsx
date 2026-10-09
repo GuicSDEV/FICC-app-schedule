@@ -21,7 +21,11 @@ function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group
       aria-current={active ? "page" : undefined}
       className="relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
-      <motion.span whileTap={tap} className="relative flex h-8 w-14 items-center justify-center">
+      <motion.span
+        whileTap={tap}
+        tabIndex={-1}
+        className="relative flex h-8 w-14 items-center justify-center"
+      >
         {active ? (
           <motion.span
             layoutId={`nav-pill-${group}`}

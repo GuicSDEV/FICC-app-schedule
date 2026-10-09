@@ -18,7 +18,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { haptic, listItemVariants } from "@/lib/motion";
+import { enter, haptic, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -173,7 +173,7 @@ export default function AdminDisputesPage() {
                   key={match.id}
                   custom={index}
                   variants={listItemVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   className="space-y-3 rounded-lg border border-danger/30 bg-card p-4 shadow-card"
                 >

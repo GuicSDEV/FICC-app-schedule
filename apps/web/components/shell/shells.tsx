@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@ficc/shared";
 import { LogOut, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ import { AreaGuard } from "./area-guard";
 import { BottomNav } from "./bottom-nav";
 import { Brand } from "./brand";
 import { FreezeBanner } from "./freeze-banner";
+import { OfflineBanner } from "./offline-banner";
 import { adminNavFor, COACH_NAV, isActive, MEMBER_SIDEBAR, MEMBER_TABS } from "./nav-config";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
@@ -45,11 +47,17 @@ function SidebarFooter({ children }: { children?: ReactNode }) {
 /** Space reserved at the bottom on phones for the tab bar and safe area. */
 const MOBILE_BOTTOM = "pb-[calc(env(safe-area-inset-bottom)+6.5rem)] md:pb-12";
 
-export function MemberShell({ children }: { children: ReactNode }) {
+export function MemberShell({
+  children,
+  roleHint,
+}: {
+  children: ReactNode;
+  roleHint: Role | null;
+}) {
   const t = useTranslations("shell");
   const [actionsOpen, setActionsOpen] = useState(false);
   return (
-    <AreaGuard area="/app">
+    <AreaGuard area="/app" roleHint={roleHint}>
       <div className="flex min-h-dvh">
         <Sidebar
           group="member"
@@ -66,6 +74,7 @@ export function MemberShell({ children }: { children: ReactNode }) {
         <main className={cn("min-w-0 flex-1 px-4 md:px-8", MOBILE_BOTTOM)}>
           <div className="mx-auto w-full max-w-5xl">
             <div className="pt-[max(0.75rem,env(safe-area-inset-top))] empty:hidden md:pt-4">
+              <OfflineBanner />
               <FreezeBanner />
             </div>
             {children}
@@ -86,10 +95,10 @@ export function MemberShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function CoachShell({ children }: { children: ReactNode }) {
+export function CoachShell({ children, roleHint }: { children: ReactNode; roleHint: Role | null }) {
   const t = useTranslations("shell");
   return (
-    <AreaGuard area="/coach">
+    <AreaGuard area="/coach" roleHint={roleHint}>
       <div data-area="coach" className="flex min-h-dvh">
         <Sidebar
           group="coach"
@@ -100,6 +109,7 @@ export function CoachShell({ children }: { children: ReactNode }) {
         <main className={cn("min-w-0 flex-1 px-4 md:px-8", MOBILE_BOTTOM)}>
           <div className="mx-auto w-full max-w-5xl">
             <div className="pt-[max(0.75rem,env(safe-area-inset-top))] empty:hidden md:pt-4">
+              <OfflineBanner />
               <FreezeBanner />
             </div>
             {children}
@@ -168,11 +178,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
 }
 
 /** Gate: full-screen tool with a minimal header. */
-export function GateShell({ children }: { children: ReactNode }) {
+export function GateShell({ children, roleHint }: { children: ReactNode; roleHint: Role | null }) {
   const t = useTranslations("shell");
   const logout = useLogout();
   return (
-    <AreaGuard area="/gate">
+    <AreaGuard area="/gate" roleHint={roleHint}>
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-border glass pt-safe">
           <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">

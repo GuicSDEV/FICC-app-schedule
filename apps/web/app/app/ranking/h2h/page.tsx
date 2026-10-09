@@ -22,7 +22,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, spring, tap, transitions } from "@/lib/motion";
+import { enter, listItemVariants, spring, tap, transitions } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -217,7 +217,7 @@ function Comparison({ data }: { data: H2HResponse }) {
                 key={meeting.matchId}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
               >
                 <Link

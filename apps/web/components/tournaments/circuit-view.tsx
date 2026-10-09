@@ -14,7 +14,7 @@ import { Card, SectionLabel } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants, spring } from "@/lib/motion";
+import { enter, listItemVariants, spring } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export function CircuitView({
                     transition={spring.gentle}
                     custom={index}
                     variants={listItemVariants}
-                    initial="hidden"
+                    initial={enter("hidden")}
                     animate="show"
                     className={cn(
                       "border-t border-border",

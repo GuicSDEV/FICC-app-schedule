@@ -70,7 +70,7 @@ export function PublicTournamentView({
             <Link
               href={`/t/${publicId}/print?view=${tab === "schedule" ? "day" : "draw"}${category ? `&category=${category.id}` : ""}`}
               target="_blank"
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface-2 px-4 text-caption font-medium hover:bg-surface-3"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface-2 px-4 text-caption font-medium hover:bg-surface-3"
             >
               <Printer className="size-4" />
               {publicT("print")}

@@ -20,7 +20,10 @@ export function LatestNews() {
     <section className="space-y-3" aria-label={t("title")}>
       <div className="flex items-center justify-between">
         <SectionLabel>{t("title")}</SectionLabel>
-        <Link href="/app/news" className="text-caption font-medium text-accent-ink hover:underline">
+        <Link
+          href="/app/news"
+          className="inline-flex min-h-11 items-center text-caption font-medium text-accent-ink hover:underline"
+        >
           {t("all")}
         </Link>
       </div>

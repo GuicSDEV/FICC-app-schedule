@@ -1,7 +1,7 @@
 import type { IsoDate } from "../dates";
 import type { CourtMode, NoShowKind, Permission, QueueStatus, Role, UserStatus } from "../enums";
 import type { DateException } from "../operations";
-import type { CourtSummary, IsoDateTime, PlayerSummary } from "./common";
+import type { CourtSummary, IsoDateTime, PlayerSummary, SlotSummary } from "./common";
 
 export interface ScheduleExceptionItem extends DateException {
   id: string;
@@ -150,4 +150,9 @@ export interface AuditLogItem {
   /** Request body without secrets, for context. */
   details: unknown;
   createdAt: IsoDateTime;
+}
+
+/** A start time of the club's slot catalogue, active or retired (staff view). */
+export interface AdminTimeSlotItem extends SlotSummary {
+  isActive: boolean;
 }

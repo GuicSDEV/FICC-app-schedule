@@ -18,7 +18,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { fadeVariants, listItemVariants } from "@/lib/motion";
+import { enter, fadeVariants, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -149,7 +149,7 @@ export default function GatePage() {
           <motion.section
             key="scan"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             aria-label={t("tabs.scan")}
@@ -167,7 +167,7 @@ export default function GatePage() {
           <motion.section
             key="manual"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             aria-label={t("tabs.manual")}
@@ -213,7 +213,7 @@ export default function GatePage() {
                     key={pass.id}
                     custom={index}
                     variants={listItemVariants}
-                    initial="hidden"
+                    initial={enter("hidden")}
                     animate="show"
                   >
                     <PassCard
@@ -230,7 +230,7 @@ export default function GatePage() {
           <motion.section
             key="history"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             aria-label={t("tabs.history")}
@@ -257,7 +257,7 @@ export default function GatePage() {
                     key={entry.id}
                     custom={index}
                     variants={listItemVariants}
-                    initial="hidden"
+                    initial={enter("hidden")}
                     animate="show"
                     className="flex min-h-16 items-center gap-3 px-4 py-3"
                   >

@@ -13,7 +13,7 @@ import { useSocketEvent } from "@/components/providers/socket-provider";
 import { Button } from "@/components/ui/button";
 import { CourtLines } from "@/components/ui/court-lines";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { duration, haptic, popVariants, spring, transitions } from "@/lib/motion";
+import { duration, ease, enter, haptic, popVariants, spring, transitions } from "@/lib/motion";
 import { formatDelta } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
@@ -105,7 +105,7 @@ function Celebration({ result, onClose }: { result: Result; onClose: () => void 
             {revealed ? (
               <motion.span
                 variants={popVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 transition={{ ...spring.snappy, delay: duration.fast }}
                 className={cn(
@@ -129,7 +129,7 @@ function Celebration({ result, onClose }: { result: Result; onClose: () => void 
           <motion.div
             initial={{ opacity: 0, scale: 0.6 }}
             animate={revealed ? { opacity: 1, scale: [0.6, 1.15, 1] } : { opacity: 0, scale: 0.6 }}
-            transition={{ duration: duration.slow, ease: [0.22, 1, 0.36, 1], delay: duration.slow }}
+            transition={{ duration: duration.slow, ease: ease.out, delay: duration.slow }}
             className="inline-flex h-14 items-center gap-3 rounded-full border border-gold/40 bg-card px-5 shadow-card"
           >
             <Trophy className="size-5 text-gold" aria-hidden />

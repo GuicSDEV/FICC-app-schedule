@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { Avatar } from "@/components/ui/avatar";
-import { popVariants, spring, staggerDelay, tap } from "@/lib/motion";
+import { enter, popVariants, spring, staggerDelay, tap } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const PLACES = {
@@ -48,7 +48,7 @@ export function Podium({
             }}
             className="flex flex-col items-center"
           >
-            <motion.div whileTap={tap} className="w-full">
+            <motion.div whileTap={tap} tabIndex={-1} className="w-full">
               <Link
                 href={`/app/players/${entry.player.id}`}
                 className="flex flex-col items-center gap-2 rounded-lg px-1 pb-2"
@@ -80,7 +80,7 @@ export function Podium({
                       <motion.span
                         key={flash[entry.player.id]}
                         variants={popVariants}
-                        initial="hidden"
+                        initial={enter("hidden")}
                         animate="show"
                         exit="exit"
                         className={cn(

@@ -42,7 +42,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { invalidateLessons } from "@/lib/lessons";
-import { fadeVariants, listItemVariants } from "@/lib/motion";
+import { enter, fadeVariants, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { cellKey } from "@/lib/schedule-cache";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -231,7 +231,7 @@ export function CoachCalendar({ scope }: { scope: "agenda" | "club" }) {
                         layout
                         custom={index}
                         variants={listItemVariants}
-                        initial="hidden"
+                        initial={enter("hidden")}
                         animate="show"
                         exit="exit"
                       >
@@ -263,7 +263,7 @@ export function CoachCalendar({ scope }: { scope: "agenda" | "club" }) {
               <motion.div
                 key="error"
                 variants={fadeVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 exit="exit"
               >
@@ -283,7 +283,7 @@ export function CoachCalendar({ scope }: { scope: "agenda" | "club" }) {
                 <motion.div
                   key={`day-${day.date}`}
                   variants={fadeVariants}
-                  initial="hidden"
+                  initial={enter("hidden")}
                   animate="show"
                   exit="exit"
                 >
@@ -302,7 +302,7 @@ export function CoachCalendar({ scope }: { scope: "agenda" | "club" }) {
               <motion.div
                 key="skeleton"
                 variants={fadeVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
                 exit="exit"
               >

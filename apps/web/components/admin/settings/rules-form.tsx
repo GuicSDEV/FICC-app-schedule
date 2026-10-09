@@ -21,10 +21,12 @@ import { Field, Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import { haptic, popVariants } from "@/lib/motion";
+import { enter, haptic, popVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
+
+import { SlotCatalogue } from "./slot-catalogue";
 
 /** Numeric rules, by dotted path in ClubSettings, grouped by section. */
 const NUMBER_FIELDS = {
@@ -256,6 +258,7 @@ export function RulesForm({ settings }: { settings: ClubSettings }) {
 
   return (
     <div className="space-y-6 pb-28">
+      <SlotCatalogue settings={settings} />
       <Card className="space-y-4 p-5">
         <div>
           <SectionLabel>{t("gridTitle")}</SectionLabel>
@@ -293,7 +296,7 @@ export function RulesForm({ settings }: { settings: ClubSettings }) {
           {draft.bookingOpening ? (
             <motion.div
               variants={popVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="hidden"
               className="grid grid-cols-2 gap-3"
@@ -435,7 +438,7 @@ export function RulesForm({ settings }: { settings: ClubSettings }) {
         {changed ? (
           <motion.div
             variants={popVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="hidden"
             className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-lg items-center gap-3 rounded-full border border-border glass px-4 py-2 shadow-raised"

@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
 import { ButtonLink } from "@/components/ui/button";
-import { haptic, sheetVariants } from "@/lib/motion";
+import { enter, haptic, sheetVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 
@@ -117,7 +117,7 @@ function Banner({
   return (
     <motion.div
       variants={sheetVariants}
-      initial="hidden"
+      initial={enter("hidden")}
       animate="show"
       role="status"
       className={

@@ -59,6 +59,7 @@ export const ptBR = {
     surfaceRequired: "Informe a superfície",
     differentPlayers: "Escolha dois jogadores diferentes",
     invalidTime: "Horário inválido (use HH:mm)",
+    slotPastMidnight: "O horário precisa terminar até a meia-noite.",
     invalidPhone: "Telefone inválido (DDD + número)",
     onePartner: "Escolha um parceiro sócio ou convidado, não os dois",
     advanceBelowGroupSize: "Classificados por grupo precisa ser menor que o tamanho do grupo",
@@ -105,6 +106,10 @@ export const ptBR = {
     courtClosedToday: "A {court} está fechada neste dia.",
     slotNotInGrid: "Este horário não existe neste dia.",
     gridSlotUnknown: "Horário {time} não está cadastrado no clube.",
+    gridOverlap: "Os horários {first} e {second} se sobrepõem no mesmo dia.",
+    timeSlotExists: "Já existe um horário às {time}.",
+    timeSlotInUse:
+      "Este horário ainda está na grade de algum dia ou tem reservas, aulas ou séries futuras.",
     notFreePlayNow: "Agora não é horário de uso livre.",
     courtBusy: "Esta quadra está ocupada.",
     courtHeld: "Esta quadra está reservada para o próximo da fila por alguns minutos.",

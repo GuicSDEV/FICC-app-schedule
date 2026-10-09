@@ -22,7 +22,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { listItemVariants } from "@/lib/motion";
+import { enter, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { formatDelta } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
@@ -204,7 +204,7 @@ export function PlayerProfileView({ userId, extra }: { userId: string; extra?: R
                 key={match.id}
                 custom={index}
                 variants={listItemVariants}
-                initial="hidden"
+                initial={enter("hidden")}
                 animate="show"
               >
                 <MatchCard match={match} onOpen={() => router.push(`/app/matches/${match.id}`)} />

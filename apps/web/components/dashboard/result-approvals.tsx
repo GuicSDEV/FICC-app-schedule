@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { haptic, listItemVariants } from "@/lib/motion";
+import { enter, haptic, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -54,7 +54,7 @@ export function ResultApprovals({ matches }: { matches: MatchDetail[] }) {
               layout
               custom={index}
               variants={listItemVariants}
-              initial="hidden"
+              initial={enter("hidden")}
               animate="show"
               exit="exit"
               className="rounded-lg border border-border bg-card p-4 shadow-card"

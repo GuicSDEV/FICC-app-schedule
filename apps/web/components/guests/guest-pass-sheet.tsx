@@ -23,7 +23,7 @@ import { Field, FieldError, Input, Label } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
-import { fadeVariants, haptic, tap } from "@/lib/motion";
+import { enter, fadeVariants, haptic, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
@@ -158,7 +158,7 @@ export function GuestPassSheet({
           <motion.div
             key="done"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
           >
@@ -168,7 +168,7 @@ export function GuestPassSheet({
           <motion.div
             key="form"
             variants={fadeVariants}
-            initial="hidden"
+            initial={enter("hidden")}
             animate="show"
             exit="exit"
             className="space-y-5"

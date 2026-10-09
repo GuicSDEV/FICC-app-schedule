@@ -68,6 +68,86 @@ describe("Club operations (Phase 9.8)", () => {
     await patchSettings(RULES);
   });
 
+  describe("slot catalogue", () => {
+    it("staff add and retire start times; grids and exceptions never overlap", async () => {
+      const added = await admin$
+        .post(ctx.api("/admin/time-slots"))
+        .send({ startTime: "07:15", durationMinutes: 75 })
+        .expect(201);
+      expect(added.body).toMatchObject({
+        startTime: "07:15",
+        endTime: "08:30",
+        sortOrder: 1,
+        isActive: true,
+      });
+      const courts = await admin$.get(ctx.api("/courts")).expect(200);
+      expect((courts.body as { slots: { startTime: string }[] }).slots[0]?.startTime).toBe("07:15");
+
+      const duplicate = await admin$
+        .post(ctx.api("/admin/time-slots"))
+        .send({ startTime: "07:15", durationMinutes: 60 })
+        .expect(409);
+      expect(duplicate.body.code).toBe("TIME_SLOT_EXISTS");
+
+      // Thursday has no grid of its own (every active slot): 09:45 would overlap 10:00 there.
+      const overlapping = await admin$
+        .post(ctx.api("/admin/time-slots"))
+        .send({ startTime: "09:45", durationMinutes: 75 })
+        .expect(422);
+      expect(overlapping.body.code).toBe("GRID_OVERLAP");
+
+      const weekdayGrid = RULES.scheduleGrids!.MON!;
+      await patchSettings({
+        scheduleGrids: {
+          ...RULES.scheduleGrids,
+          THU: weekdayGrid,
+          FRI: weekdayGrid,
+          SUN: ["07:15", "08:30"],
+        },
+      });
+      const brunch = await admin$
+        .post(ctx.api("/admin/time-slots"))
+        .send({ startTime: "09:45", durationMinutes: 75 })
+        .expect(201);
+
+      const badGrid = await admin$
+        .patch(ctx.api("/admin/settings"))
+        .send({ scheduleGrids: { SAT: ["08:30", "09:45", "10:00"] } })
+        .expect(422);
+      expect(badGrid.body.code).toBe("GRID_OVERLAP");
+      const badException = await admin$
+        .put(ctx.api("/schedule-exceptions"))
+        .send({ date: WEDNESDAY, slotTimes: ["09:45", "10:00"] })
+        .expect(422);
+      expect(badException.body.code).toBe("GRID_OVERLAP");
+
+      // A start time still used by a grid stays; an unused one is retired and can come back.
+      const inUse = await admin$
+        .patch(ctx.api(`/admin/time-slots/${added.body.id}`))
+        .send({ isActive: false })
+        .expect(409);
+      expect(inUse.body.code).toBe("TIME_SLOT_IN_USE");
+      const retired = await admin$
+        .patch(ctx.api(`/admin/time-slots/${brunch.body.id}`))
+        .send({ isActive: false })
+        .expect(200);
+      expect(retired.body.isActive).toBe(false);
+      const list = await admin$.get(ctx.api("/admin/time-slots")).expect(200);
+      expect(list.body).toHaveLength(10);
+      await admin$
+        .patch(ctx.api(`/admin/time-slots/${brunch.body.id}`))
+        .send({ isActive: true })
+        .expect(200);
+
+      const member = await createMember(ctx.prisma, { membershipId: "5099" });
+      const member$ = await ctx.loginMember(member.membershipId!);
+      await member$
+        .post(ctx.api("/admin/time-slots"))
+        .send({ startTime: "06:00", durationMinutes: 75 })
+        .expect(403);
+    });
+  });
+
   describe("schedules per day", () => {
     it("weekday and weekend grids differ, Saturday is free play and rules are validated", async () => {
       const member = await createMember(ctx.prisma, { membershipId: "5001" });

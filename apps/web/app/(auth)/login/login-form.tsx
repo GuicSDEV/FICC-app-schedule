@@ -3,9 +3,9 @@
 import { formatMembershipId, loginSchema, type Role } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
-import { motion, useAnimate } from "motion/react";
+import { useAnimate } from "motion/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { api } from "@/lib/api";
-import { haptic, sheetVariants, shakeAnimation } from "@/lib/motion";
+import { haptic, shakeAnimation } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { AREA_BY_ROLE, AREA_ROLES } from "@/lib/roles";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -28,12 +28,12 @@ function destination(role: Role, next: string | null): string {
   return next && area && AREA_ROLES[area]!.includes(role) ? next : AREA_BY_ROLE[role];
 }
 
-export function LoginForm() {
+/** `next`: where to go after login (from the URL, read by the server page). */
+export function LoginForm({ next }: { next: string | null }) {
   const t = useTranslations("auth.login");
   const issueMessage = useIssueMessage();
   const errorMessage = useErrorMessage();
   const router = useRouter();
-  const params = useSearchParams();
   const client = useQueryClient();
   const [scope, animate] = useAnimate();
   const [kind, setKind] = useState<Kind>("member");
@@ -60,7 +60,7 @@ export function LoginForm() {
       const user = await api.auth.login(parsed.data);
       haptic();
       client.setQueryData(queryKeys.me, user);
-      router.replace(destination(user.role, params.get("next")));
+      router.replace(destination(user.role, next));
     } catch (caught) {
       setError(errorMessage(caught, t("failed")));
       void animate(scope.current, shakeAnimation);
@@ -69,12 +69,7 @@ export function LoginForm() {
   }
 
   return (
-    <motion.div
-      variants={sheetVariants}
-      initial="hidden"
-      animate="show"
-      className="w-full max-w-sm"
-    >
+    <div className="w-full max-w-sm animate-sheet-in">
       <div className="mb-8 space-y-3">
         <h1 className="font-display text-display leading-[1.05] font-bold sm:text-hero">
           {t("headline")}
@@ -172,6 +167,6 @@ export function LoginForm() {
           </Link>
         </p>
       ) : null}
-    </motion.div>
+    </div>
   );
 }

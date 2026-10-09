@@ -5,9 +5,10 @@ import { AuditInterceptor } from "./audit.interceptor";
 import { SettingsService } from "./settings.service";
 import { AuditController, SettingsController, StaffController } from "./staff.controller";
 import { StaffService } from "./staff.service";
+import { TimeSlotsController } from "./time-slots.controller";
 
 @Module({
-  controllers: [StaffController, AuditController, SettingsController],
+  controllers: [StaffController, AuditController, SettingsController, TimeSlotsController],
   providers: [
     StaffService,
     SettingsService,
