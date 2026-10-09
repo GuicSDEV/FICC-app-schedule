@@ -3,10 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SLOT_GRID,
   DEFAULT_SLOT_START_TIMES,
+  hasSlotEnded,
+  isSlotPast,
   isValidTime,
   minutesToTime,
   SLOT_DURATION_MINUTES,
+  overlapsSlot,
+  slotEndsAt,
   slotEndTime,
+  slotStartsAt,
   timeToMinutes,
 } from "./slots";
 
@@ -67,5 +72,45 @@ describe("time helpers", () => {
     expect(() => timeToMinutes("7:5")).toThrow(RangeError);
     expect(() => minutesToTime(1440)).toThrow(RangeError);
     expect(() => minutesToTime(12.5)).toThrow(RangeError);
+  });
+});
+
+describe("slot instants", () => {
+  const slot = { startTime: "18:30", durationMinutes: 75 };
+
+  it("maps a club date + slot to UTC start and end", () => {
+    expect(slotStartsAt("2026-10-08", slot).toISOString()).toBe("2026-10-08T21:30:00.000Z");
+    expect(slotEndsAt("2026-10-08", slot).toISOString()).toBe("2026-10-08T22:45:00.000Z");
+  });
+
+  it("treats a slot as past once it has started", () => {
+    expect(isSlotPast("2026-10-08", slot, new Date("2026-10-08T21:29:59Z"))).toBe(false);
+    expect(isSlotPast("2026-10-08", slot, new Date("2026-10-08T21:30:00Z"))).toBe(true);
+    expect(hasSlotEnded("2026-10-08", slot, new Date("2026-10-08T22:00:00Z"))).toBe(false);
+    expect(hasSlotEnded("2026-10-08", slot, new Date("2026-10-08T22:45:00Z"))).toBe(true);
+  });
+
+  it("detects windows overlapping a slot", () => {
+    const at = (iso: string) => new Date(iso);
+    expect(
+      overlapsSlot({ startsAt: at("2026-10-08T20:00:00Z"), endsAt: null }, "2026-10-08", slot),
+    ).toBe(true);
+    expect(
+      overlapsSlot(
+        { startsAt: at("2026-10-08T20:00:00Z"), endsAt: at("2026-10-08T21:30:00Z") },
+        "2026-10-08",
+        slot,
+      ),
+    ).toBe(false);
+    expect(
+      overlapsSlot({ startsAt: at("2026-10-08T22:45:00Z"), endsAt: null }, "2026-10-08", slot),
+    ).toBe(false);
+    expect(
+      overlapsSlot(
+        { startsAt: at("2026-10-08T22:00:00Z"), endsAt: at("2026-10-08T23:00:00Z") },
+        "2026-10-08",
+        slot,
+      ),
+    ).toBe(true);
   });
 });

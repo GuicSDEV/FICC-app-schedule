@@ -2,7 +2,7 @@
 // coaches, lesson template) plus fictional members and a history of confirmed matches.
 // Run with `pnpm db:seed`. Deterministic: the same data every run, dated relative to today.
 
-import { DEFAULT_SLOT_GRID, ELO_INITIAL_RATING } from "@ficc/shared";
+import { CATEGORY_LABELS, DEFAULT_SLOT_GRID, ELO_INITIAL_RATING } from "@ficc/shared";
 import { hash } from "argon2";
 
 import {
@@ -360,14 +360,6 @@ async function runIntegrityChecks(anyMemberId: string): Promise<IntegrityCheck[]
 
   return checks;
 }
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  CLASS_A: "Classe A",
-  CLASS_B: "Classe B",
-  CLASS_C: "Classe C",
-  WOMENS: "Feminino",
-  SENIORS: "Sênior",
-};
 
 async function printSummary({
   today,

@@ -28,6 +28,19 @@ export function expectedScore(rating: number, opponentRating: number): number {
   return 1 / (1 + 10 ** ((opponentRating - rating) / 400));
 }
 
+/**
+ * Single-player update `R' = R + K·(S − E)`, rounded to an integer.
+ * `score` is 1 for a win, 0 for a loss (0.5 is accepted for completeness).
+ */
+export function updateRating(
+  rating: number,
+  opponentRating: number,
+  score: 0 | 0.5 | 1,
+  k: number = ELO_K_FACTOR,
+): number {
+  return Math.round(rating + k * (score - expectedScore(rating, opponentRating)));
+}
+
 /** Doubles team rating: the average of its players. */
 export function teamRating(ratings: readonly number[]): number {
   if (ratings.length === 0) {
