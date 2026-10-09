@@ -24,10 +24,11 @@ import { cn } from "@/lib/utils";
 
 type FreezeState = "active" | "scheduled" | "ended";
 
-function stateOf(freeze: FreezeDetail, now: Date): FreezeState {
-  if (freeze.liftedAt || (freeze.endsAt && Date.parse(freeze.endsAt) <= now.getTime()))
-    return "ended";
-  return Date.parse(freeze.startsAt) > now.getTime() ? "scheduled" : "active";
+function stateOf(freeze: FreezeDetail, tick: Date): FreezeState {
+  // `tick` only advances once a minute: a freeze started "now" must not read as scheduled.
+  const now = Math.max(tick.getTime(), Date.now());
+  if (freeze.liftedAt || (freeze.endsAt && Date.parse(freeze.endsAt) <= now)) return "ended";
+  return Date.parse(freeze.startsAt) > now ? "scheduled" : "active";
 }
 
 function FreezeCard({

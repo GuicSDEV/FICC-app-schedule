@@ -136,6 +136,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         void client.invalidateQueries({ queryKey: queryKeys.freezesActive });
         void client.invalidateQueries({ queryKey: queryKeys.schedule() });
         void client.invalidateQueries({ queryKey: queryKeys.admin.freezes });
+        void client.invalidateQueries({ queryKey: queryKeys.freePlay });
+      });
+      // Events sent while the socket was down (phone asleep, network change, expired cookie)
+      // are lost: refetch everything on screen when it comes back.
+      let connectedBefore = false;
+      connection.on("connect", () => {
+        if (connectedBefore) void client.invalidateQueries();
+        connectedBefore = true;
       });
       // The access cookie lasts 15 minutes; when the server drops us, refresh and reconnect.
       connection.on("disconnect", (reason) => {
