@@ -7,6 +7,8 @@ import type { Env } from "../config/env";
 
 const VERSION = "v1";
 const IV_BYTES = 12;
+/** GCM authentication tag: always the full 16 bytes (shorter tags weaken tamper detection). */
+const TAG_BYTES = 16;
 
 /** Fields a guest pass or block keeps about a document. */
 export interface StoredDocument {
@@ -47,8 +49,17 @@ export class DocumentCryptoService {
     const [version, iv, tag, data] = stored.split(":");
     if (version !== VERSION || !iv || !tag || !data)
       throw new Error("Unknown document ciphertext format");
-    const decipher = createDecipheriv("aes-256-gcm", this.encryptionKey, Buffer.from(iv, "base64"));
-    decipher.setAuthTag(Buffer.from(tag, "base64"));
+    const tagBuffer = Buffer.from(tag, "base64");
+    if (tagBuffer.length !== TAG_BYTES) throw new Error("Invalid document ciphertext tag");
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      this.encryptionKey,
+      Buffer.from(iv, "base64"),
+      {
+        authTagLength: TAG_BYTES,
+      },
+    );
+    decipher.setAuthTag(tagBuffer);
     return Buffer.concat([decipher.update(Buffer.from(data, "base64")), decipher.final()]).toString(
       "utf8",
     );

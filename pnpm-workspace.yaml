@@ -16,3 +16,31 @@ ignoredBuiltDependencies:
   - "@nestjs/core"
   # Jest watch mode only; prebuilt binaries ship as optional dependencies.
   - "@parcel/watcher"
+
+# Supply chain: no git/tarball transitive deps, no provenance downgrades, and only releases that
+# are at least a day old (time for a hijacked version to be pulled before we install it).
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+# Versions published without provenance after earlier ones had it (reviewed, not takeovers).
+trustPolicyExclude:
+  - "chokidar@4.0.3"
+  - "semver@6.3.1"
+minimumReleaseAge: 1440
+
+# Patched versions of vulnerable transitive dependencies (pnpm audit). Remove an entry once the
+# parent package ships the fix itself.
+overrides:
+  # next → postcss (build time): GHSA-6g55-p6wh-862q, GHSA-r28c-9q8g-f849 and follow-ups
+  postcss: ">=8.5.23"
+  # prisma → @prisma/config → deepmerge-ts (CLI): GHSA-ggr8-5vv4-36mx
+  deepmerge-ts: ">=8.0.0"
+  # tsup → esbuild (build time): GHSA-g7r4-m6w7-qqqr
+  esbuild: ">=0.28.1"
+
+auditConfig:
+  # No patched release exists upstream; both are dev/test-only (never in the running apps).
+  ignoreGhsas:
+    # @next/eslint-plugin-next → fast-glob → micromatch → braces (lint only)
+    - GHSA-vfj7-8cjw-p6xm
+    # jest → … → js-yaml → argparse → sprintf-js (tests only)
+    - GHSA-hp3w-g68c-fv3c

@@ -54,6 +54,20 @@ const envSchema = z
         ctx.addIssue({ code: "custom", path: [key], message: "Required in production" });
       }
     }
+    // The placeholders of .env.example and the development fallback must never reach production.
+    for (const key of ["JWT_ACCESS_SECRET", "GUEST_PASS_SECRET"] as const) {
+      const value = env[key];
+      if (production && value && (value.startsWith("change-me") || value === DEV_SECRET)) {
+        ctx.addIssue({ code: "custom", path: [key], message: "Placeholder value in production" });
+      }
+    }
+    if (production && env.JWT_ACCESS_SECRET && env.JWT_ACCESS_SECRET === env.GUEST_PASS_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["GUEST_PASS_SECRET"],
+        message: "Must differ from JWT_ACCESS_SECRET",
+      });
+    }
     if (ctx.issues.length > 0) return z.NEVER;
     return {
       ...env,
