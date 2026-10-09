@@ -2,7 +2,7 @@
 #   docker build -f apps/api/Dockerfile -t ficc-api .
 # The whole workspace stays in the image so migrations, `pnpm db:bootstrap` and the demo seed can
 # run from the same container (Railway pre-deploy command / shell).
-FROM node:22-bookworm-slim
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
