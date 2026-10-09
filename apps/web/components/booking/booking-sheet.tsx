@@ -12,12 +12,14 @@ import {
   type SlotSummary,
 } from "@ficc/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Timer } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { MemberPicker } from "@/components/members/member-picker";
+import { useServerCountdown } from "@/components/operations/server-countdown";
 import { useSession } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/input";
@@ -34,6 +36,7 @@ import { useLastDefined } from "@/lib/use-last-defined";
 import { cn } from "@/lib/utils";
 
 import { BookingConfirmed } from "./booking-confirmed";
+import { formatClock } from "./hold-wait-sheet";
 import { FavoriteToggle } from "./favorite-toggle";
 
 export interface BookingTarget {
@@ -41,6 +44,8 @@ export interface BookingTarget {
   court: CourtSummary;
   slot: SlotSummary;
   favorite: boolean;
+  /** The court is kept for the member until `expiresAt` (server clock) while they book it. */
+  hold?: { expiresAt: string; serverNow: string };
 }
 
 /**
@@ -77,6 +82,11 @@ export function BookingSheet({
   const open = requested !== null;
   const lastRequested = useLastDefined(requested);
   const target = moved ?? lastRequested;
+  const holdLeft = useServerCountdown(
+    open && !booked ? (target?.hold?.expiresAt ?? null) : null,
+    target?.hold?.serverNow ?? null,
+  );
+  const [switching, setSwitching] = useState(false);
 
   // Fresh form every time the sheet opens on a slot.
   useEffect(() => {
@@ -90,15 +100,44 @@ export function BookingSheet({
     }
   }, [requested]);
 
-  function pickAlternative(option: SlotAlternative) {
+  async function pickAlternative(option: SlotAlternative) {
     const layout = client.getQueryData<CourtsResponse>(queryKeys.courts);
     const court = layout?.courts.find((entry) => entry.id === option.courtId);
     const slot = layout?.slots.find((entry) => entry.id === option.timeSlotId);
     if (!court || !slot || !target) return;
     haptic(10);
-    setMoved({ date: target.date, court, slot, favorite: false });
-    setAlternatives([]);
-    setError(null);
+    // Keep the new court first (this gives the previous one back), then book it.
+    setSwitching(true);
+    try {
+      const view = await api.slotHolds.claim({
+        courtId: court.id,
+        timeSlotId: slot.id,
+        date: target.date,
+      });
+      if (view.status !== "HOLDING" || !view.expiresAt) {
+        toast(t("hold.alternativeBusy"));
+        return;
+      }
+      setMoved({
+        date: target.date,
+        court,
+        slot,
+        favorite: false,
+        hold: { expiresAt: view.expiresAt, serverNow: view.serverNow },
+      });
+      setAlternatives([]);
+      setError(null);
+    } catch (failure) {
+      toast.error(errorMessage(failure));
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  /** Closing without booking gives the court back, so the next member in line gets it at once. */
+  function close(nextOpen: boolean) {
+    if (!nextOpen && !booked && target?.hold) void api.slotHolds.release().catch(() => undefined);
+    onOpenChange(nextOpen);
   }
 
   const mutation = useMutation({
@@ -189,15 +228,21 @@ export function BookingSheet({
   return (
     <Sheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={close}
       title={booked ? t("booking.doneTitle") : t("booking.title")}
       footer={
         booked ? (
-          <Button block size="lg" onClick={() => onOpenChange(false)}>
+          <Button block size="lg" onClick={() => close(false)}>
             {t("common.close")}
           </Button>
         ) : (
-          <Button block size="lg" loading={mutation.isPending} onClick={submit} disabled={!target}>
+          <Button
+            block
+            size="lg"
+            loading={mutation.isPending || switching}
+            onClick={submit}
+            disabled={!target}
+          >
             {players.length < needed
               ? t("booking.choosePlayers", { count: needed - players.length })
               : t("booking.submit", {
@@ -228,6 +273,27 @@ export function BookingSheet({
             exit="exit"
             className="space-y-6"
           >
+            {target.hold ? (
+              <div
+                role="status"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border p-3 text-small",
+                  holdLeft > 0
+                    ? "border-primary/40 bg-ball-soft text-ball-ink"
+                    : "border-warning/50 bg-warning-soft text-warning-ink",
+                )}
+              >
+                <Timer aria-hidden className="size-5 shrink-0" />
+                <p className="min-w-0 flex-1 font-medium">
+                  {holdLeft > 0 ? t("hold.keptForYou") : t("hold.timeUp")}
+                </p>
+                {holdLeft > 0 ? (
+                  <span className="num font-display text-title font-semibold" aria-hidden>
+                    {formatClock(holdLeft)}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 p-3">
               <span
                 className={cn(
@@ -294,7 +360,7 @@ export function BookingSheet({
                       <motion.button
                         type="button"
                         whileTap={tap}
-                        onClick={() => pickAlternative(option)}
+                        onClick={() => void pickAlternative(option)}
                         className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-primary/50 bg-ball-soft text-small font-semibold text-ball-ink"
                       >
                         {option.courtName} · <span className="num">{option.startTime}</span>

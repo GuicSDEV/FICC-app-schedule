@@ -33,6 +33,7 @@ import { isUniqueViolation, serializable, type Tx } from "../common/transactions
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { NoShowsService } from "./no-shows.service";
+import { SlotHoldStore } from "./slot-hold.store";
 import { DayPlanService } from "../schedule/day-plan.service";
 import { freezesOverlapping, isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
@@ -92,6 +93,7 @@ export class BookingsService {
     private readonly slotEvents: SlotEventsService,
     private readonly plans: DayPlanService,
     private readonly noShows: NoShowsService,
+    private readonly holds: SlotHoldStore,
   ) {}
 
   /**
@@ -116,46 +118,12 @@ export class BookingsService {
         await this.alternatives(input.date, input.timeSlotId, input.courtId),
       );
     }
+    const slotKey = { courtId: input.courtId, date: input.date, timeSlotId: input.timeSlotId };
+    // Hand the court over if its holder's time ran out, before checking who may book it.
+    await this.holds.settleAndAnnounce(slotKey);
     const booking = await serializable(this.prisma, async (tx) => {
-      const [court, slot] = await Promise.all([
-        tx.court.findUnique({ where: { id: input.courtId } }),
-        tx.timeSlot.findUnique({ where: { id: input.timeSlotId } }),
-      ]);
-      if (!court || court.status !== CourtStatus.ACTIVE) {
-        throw notFound("COURT_NOT_FOUND", "api.courtNotFound");
-      }
-      if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "api.slotNotFound");
-      if (isSlotPast(input.date, slot, now, clubTimeZone())) {
-        throw unprocessable("SLOT_IN_PAST", "api.slotInPast");
-      }
-      const settings = clubSettings();
-      const plan = await this.plans.plan(input.date, tx);
-      this.plans.assertSlotInPlan(plan, slot, court);
-      if (plan.mode === "FREE_PLAY") throw conflict("FREE_PLAY_DAY", "api.freePlayDay");
-      // The server's clock decides when a day opens; the phone's clock is never trusted.
-      const availability = bookingAvailability(input.date, now, settings, clubTimeZone());
-      if (!availability.inWindow) {
-        throw unprocessable("BEYOND_BOOKING_WINDOW", {
-          key: "api.beyondBookingWindow",
-          params: { days: settings.bookingWindowDays },
-        });
-      }
-      if (!availability.open && availability.opensAt) {
-        const opensAt = availability.opensAt;
-        const day = clubToday(opensAt, clubTimeZone());
-        const when = `${day === clubToday(now, clubTimeZone()) ? "hoje" : `em ${day.slice(8, 10)}/${day.slice(5, 7)}`} às ${clubTimeOfDay(opensAt, clubTimeZone())}`;
-        throw unprocessable(
-          "BOOKING_NOT_OPEN_YET",
-          { key: "api.bookingNotOpenYet", params: { when } },
-          { opensAt: opensAt.toISOString(), serverNow: now.toISOString() },
-        );
-      }
-
-      const startsAt = slotStartsAt(input.date, slot, clubTimeZone());
-      const frozen = await isCourtFrozen(tx, court.id, input.date, slot);
-      if (frozen) {
-        throw conflict("COURT_FROZEN", { key: "api.courtFrozen", params: { court: court.name } });
-      }
+      const { court, slot, startsAt } = await this.assertBookable(tx, input, now);
+      await this.holds.assertNotHeldByOther(tx, creatorId, slotKey, now);
 
       const playerIds = [creatorId, ...input.playerIds];
       if (input.playerIds.includes(creatorId)) {
@@ -239,6 +207,12 @@ export class BookingsService {
       invitedBy: creator,
     });
     this.slotEvents.changed("booking.created", [booking]);
+    // Whoever was waiting for this court is told right away, with other free options.
+    await this.holds.clearBooked(
+      slotKey,
+      creatorId,
+      await this.alternatives(input.date, input.timeSlotId, input.courtId),
+    );
     return toBookingDetail(booking, creatorId);
   }
 
@@ -441,6 +415,94 @@ export class BookingsService {
     return booking;
   }
 
+  /**
+   * The court + date + slot exists and can be booked now: active court and slot, not started, in
+   * the day's plan (not a free-play day), inside the booking window and already open, not frozen.
+   */
+  async assertBookable(
+    tx: Tx,
+    input: { courtId: string; timeSlotId: string; date: string },
+    now: Date,
+  ) {
+    const [court, slot] = await Promise.all([
+      tx.court.findUnique({ where: { id: input.courtId } }),
+      tx.timeSlot.findUnique({ where: { id: input.timeSlotId } }),
+    ]);
+    if (!court || court.status !== CourtStatus.ACTIVE) {
+      throw notFound("COURT_NOT_FOUND", "api.courtNotFound");
+    }
+    if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "api.slotNotFound");
+    if (isSlotPast(input.date, slot, now, clubTimeZone())) {
+      throw unprocessable("SLOT_IN_PAST", "api.slotInPast");
+    }
+    const settings = clubSettings();
+    const plan = await this.plans.plan(input.date, tx);
+    this.plans.assertSlotInPlan(plan, slot, court);
+    if (plan.mode === "FREE_PLAY") throw conflict("FREE_PLAY_DAY", "api.freePlayDay");
+    // The server's clock decides when a day opens; the phone's clock is never trusted.
+    const availability = bookingAvailability(input.date, now, settings, clubTimeZone());
+    if (!availability.inWindow) {
+      throw unprocessable("BEYOND_BOOKING_WINDOW", {
+        key: "api.beyondBookingWindow",
+        params: { days: settings.bookingWindowDays },
+      });
+    }
+    if (!availability.open && availability.opensAt) {
+      const opensAt = availability.opensAt;
+      const day = clubToday(opensAt, clubTimeZone());
+      const when = `${day === clubToday(now, clubTimeZone()) ? "hoje" : `em ${day.slice(8, 10)}/${day.slice(5, 7)}`} às ${clubTimeOfDay(opensAt, clubTimeZone())}`;
+      throw unprocessable(
+        "BOOKING_NOT_OPEN_YET",
+        { key: "api.bookingNotOpenYet", params: { when } },
+        { opensAt: opensAt.toISOString(), serverNow: now.toISOString() },
+      );
+    }
+
+    const startsAt = slotStartsAt(input.date, slot, clubTimeZone());
+    const frozen = await isCourtFrozen(tx, court.id, input.date, slot);
+    if (frozen) {
+      throw conflict("COURT_FROZEN", { key: "api.courtFrozen", params: { court: court.name } });
+    }
+
+    return { court, slot, startsAt };
+  }
+
+  /**
+   * A member may start booking this slot (tapping it keeps it for them): the slot is bookable and
+   * free, and they could book it themselves (not suspended, not busy at that time, under limits).
+   */
+  async assertCanStart(
+    tx: Tx,
+    userId: string,
+    input: { courtId: string; timeSlotId: string; date: string },
+    now: Date,
+  ): Promise<void> {
+    await this.assertBookable(tx, input, now);
+    const occupied = await tx.slotOccupancy.findUnique({
+      where: {
+        courtId_date_timeSlotId: {
+          courtId: input.courtId,
+          date: toDbDate(input.date),
+          timeSlotId: input.timeSlotId,
+        },
+      },
+    });
+    if (occupied) {
+      throw this.slotTaken(
+        occupied.lessonId !== null,
+        occupied.lessonId !== null
+          ? undefined
+          : await this.alternatives(input.date, input.timeSlotId, input.courtId),
+      );
+    }
+    const me = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const nameOf = () => me?.name ?? "";
+    await this.assertNotSuspended(tx, userId, [userId], now, nameOf);
+    await this.assertPlayersFree(tx, [userId], input.date, input.timeSlotId, nameOf);
+    await this.assertBookingLimit(tx, [userId], now, nameOf);
+    await this.assertDailyLimit(tx, [userId], input.date, nameOf);
+  }
+
   /** No player may be in two active bookings at the same date + slot (on any court). */
   private async assertPlayersFree(
     tx: Tx,
@@ -532,6 +594,8 @@ export class BookingsService {
       ),
     ]);
     const taken = new Set(occupied.map((row) => `${row.courtId}:${row.timeSlotId}`));
+    // Courts other members are booking right now are not offered either.
+    for (const cell of await this.holds.heldCells(date, now)) taken.add(cell);
     const wanted = slots.find((slot) => slot.id === timeSlotId);
     const ordered = [
       ...(wanted ? [wanted] : []),

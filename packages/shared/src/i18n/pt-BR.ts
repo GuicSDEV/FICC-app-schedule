@@ -98,6 +98,7 @@ export const ptBR = {
     dependentsDisabled: "O clube não usa matrículas de dependentes.",
     holderNotRegistered: "O titular {holder} ainda não tem cadastro no clube.",
     bookingNotOpenYet: "As reservas para este dia abrem {when}.",
+    slotHeld: "Outro sócio está reservando esta quadra agora. Se ele desistir, ela fica livre.",
     maxBookingsPerDay: "{name} já tem {max, plural, one {# reserva} other {# reservas}} neste dia.",
     bookingSuspended: "Reservas suspensas até {until} por faltas.",
     bookingSuspendedPlayer: "{name} está com as reservas suspensas por faltas.",

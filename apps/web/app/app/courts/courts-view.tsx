@@ -5,6 +5,7 @@ import {
   type BookingDetail,
   clubToday,
   type ScheduleCell,
+  type SlotHoldView,
   SOCKET_EVENTS,
 } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { type BookingInfoTarget, BookingInfoSheet } from "@/components/booking/booking-info-sheet";
 import { type BookingTarget, BookingSheet } from "@/components/booking/booking-sheet";
 import { CoachSheet, type LessonTarget } from "@/components/booking/coach-sheet";
+import { type HoldWait, HoldWaitSheet } from "@/components/booking/hold-wait-sheet";
 import {
   CalendarLegend,
   CourtCalendar,
@@ -35,9 +37,10 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { enter, fadeVariants } from "@/lib/motion";
+import { enter, fadeVariants, haptic } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { cellKey } from "@/lib/schedule-cache";
+import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
 import { useNow } from "@/lib/use-now";
 
@@ -72,6 +75,9 @@ export function CourtsView() {
   const [bookingTarget, setBookingTarget] = useState<BookingTarget | null>(null);
   const [lessonTarget, setLessonTarget] = useState<LessonTarget | null>(null);
   const [infoTarget, setInfoTarget] = useState<BookingInfoTarget | null>(null);
+  const [wait, setWait] = useState<HoldWait | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const errorMessage = useErrorMessage();
 
   const courts = useQuery({
     queryKey: queryKeys.courts,
@@ -97,6 +103,72 @@ export function CourtsView() {
     });
   });
   useEffect(() => setHighlights({}), [date]);
+
+  /** The member's turn came while waiting: open the booking sheet on the kept court. */
+  const openHeld = useCallback((target: BookingTarget, view: SlotHoldView) => {
+    setWait(null);
+    setBookingTarget({
+      ...target,
+      hold: view.expiresAt ? { expiresAt: view.expiresAt, serverNow: view.serverNow } : undefined,
+    });
+  }, []);
+
+  /** Tapping a free court keeps it for the member (or puts them in line behind whoever is booking it). */
+  const startBooking = useCallback(
+    async (target: BookingTarget) => {
+      if (claiming) return;
+      setClaiming(true);
+      try {
+        const view = await api.slotHolds.claim({
+          courtId: target.court.id,
+          timeSlotId: target.slot.id,
+          date: target.date,
+        });
+        haptic(10);
+        if (view.status === "HOLDING") openHeld(target, view);
+        else setWait({ target, view, taken: false, alternatives: [] });
+      } catch (failure) {
+        toast.error(errorMessage(failure));
+        void schedule.refetch();
+      } finally {
+        setClaiming(false);
+      }
+    },
+    [claiming, errorMessage, openHeld, schedule],
+  );
+
+  const waitRef = useRef<HoldWait | null>(null);
+  useEffect(() => {
+    waitRef.current = wait;
+  }, [wait]);
+  const onWaitUpdate = useCallback(
+    (view: SlotHoldView | null) => {
+      const current = waitRef.current;
+      if (!current) return;
+      if (view?.status === "HOLDING") {
+        haptic([12, 40, 12]);
+        toast.success(t("hold.yourTurn", { court: current.target.court.name }));
+        openHeld(current.target, view);
+      } else if (view === null) {
+        // Dropped from the line (left on another device, or the court was booked).
+        if (!current.taken) setWait({ ...current, taken: true });
+      } else {
+        setWait({ ...current, view });
+      }
+    },
+    [openHeld, t],
+  );
+
+  // Personal events: the member's turn came, or the court they waited for was booked.
+  useSocketEvent(SOCKET_EVENTS.slotHoldUpdated, (event) => {
+    if (event.reason === "TAKEN") {
+      setWait((current) =>
+        current ? { ...current, taken: true, alternatives: event.alternatives } : current,
+      );
+      return;
+    }
+    if (event.hold) onWaitUpdate(event.hold);
+  });
   useEffect(() => () => clearTimeout(celebrateTimer.current), []);
 
   // The fill plays on the calendar as the booking sheet slides away, so it is actually seen.
@@ -124,7 +196,7 @@ export function CourtsView() {
       return;
     }
     if (cell.state === "free")
-      setBookingTarget({ date: cell.date, court, slot, favorite: cell.favorite });
+      void startBooking({ date: cell.date, court, slot, favorite: cell.favorite });
     else if (cell.state === "lesson" && cell.lesson) {
       setLessonTarget({
         date: cell.date,
@@ -251,6 +323,19 @@ export function CourtsView() {
         target={bookingTarget}
         onOpenChange={(open) => !open && closeBookingSheet()}
         onBooked={onBooked}
+      />
+      <HoldWaitSheet
+        wait={wait}
+        onOpenChange={(open) => {
+          if (open) return;
+          if (wait && !wait.taken) void api.slotHolds.release().catch(() => undefined);
+          setWait(null);
+        }}
+        onUpdate={onWaitUpdate}
+        onPick={(target) => {
+          setWait(null);
+          void startBooking(target);
+        }}
       />
       <CoachSheet target={lessonTarget} onOpenChange={(open) => !open && setLessonTarget(null)} />
       <BookingInfoSheet target={infoTarget} onOpenChange={(open) => !open && setInfoTarget(null)} />

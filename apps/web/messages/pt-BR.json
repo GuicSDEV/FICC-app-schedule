@@ -274,7 +274,9 @@
     "frozen": "{court}, interditada por {reason, select, RAIN {chuva} other {manutenção}}",
     "freeLabel": "Livre",
     "tournament": "{court}, jogo do torneio {name}: {match}",
-    "closed": "{court}, fechada neste dia"
+    "closed": "{court}, fechada neste dia",
+    "held": "{court}, outro sócio está reservando agora. Toque para entrar na fila",
+    "heldLabel": "Em reserva"
   },
   "picker": {
     "chosen": "Jogadores escolhidos",
@@ -363,7 +365,8 @@
       "frozen": "Interditada",
       "mine": "Sua reserva",
       "tournament": "Torneio",
-      "closed": "Fechada"
+      "closed": "Fechada",
+      "held": "Em reserva"
     },
     "dayOptionMonth": "de {month}"
   },
@@ -1808,6 +1811,10 @@
         "label": "Cancelamento tardio (min)",
         "hint": "Cancelar com menos antecedência conta como cancelamento tardio."
       },
+      "slotHoldSeconds": {
+        "label": "Quadra guardada ao tocar (seg)",
+        "hint": "Tempo que a quadra fica guardada para quem tocou nela enquanto preenche a reserva."
+      },
       "freePlay_claimMinutes": {
         "label": "Tempo para assumir a quadra (min)",
         "hint": "Quando uma quadra libera, o primeiro da fila tem este tempo."
@@ -2003,5 +2010,23 @@
       "bannerTitle": "Você está offline",
       "bannerBody": "Mostrando os últimos dados salvos. Reservas e alterações voltam quando a conexão voltar."
     }
+  },
+  "hold": {
+    "keptForYou": "Quadra guardada para você enquanto escolhe com quem jogar",
+    "timeUp": "Seu tempo acabou. Se ninguém estiver esperando, você ainda consegue reservar.",
+    "alternativeBusy": "Essa quadra acabou de ser escolhida por outro sócio. Tente outra.",
+    "waitTitle": "Outro sócio está reservando esta quadra",
+    "takenTitle": "Esta quadra foi reservada",
+    "waitBody": "Ele tem alguns instantes para concluir. Se desistir ou o tempo acabar, a quadra passa para você automaticamente.",
+    "waitHint": "Pode deixar esta tela aberta: quando for a sua vez, a reserva abre sozinha.",
+    "takenBody": "O outro sócio concluiu a reserva. Escolha outro horário livre abaixo.",
+    "position": "Sua posição",
+    "positionValue": "{position}º",
+    "timeLeft": "Tempo dele",
+    "orPick": "Ou escolha outra quadra livre",
+    "leave": "Sair da fila",
+    "close": "Fechar",
+    "yourTurn": "É a sua vez! A quadra {court} está guardada para você.",
+    "lostPlace": "Você saiu da fila desta quadra."
   }
 }

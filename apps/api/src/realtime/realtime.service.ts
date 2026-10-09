@@ -56,7 +56,7 @@ export class RealtimeService {
     this.server?.to(userRoom(userId)).emit(event, payload);
   }
 
-  private toClub(event: string, payload: unknown): void {
+  toClub(event: string, payload: unknown): void {
     this.server?.to(clubRoom(tenant().clubId)).emit(event, payload);
   }
 }

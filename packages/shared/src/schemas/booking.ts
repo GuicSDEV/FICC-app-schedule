@@ -32,6 +32,14 @@ export const createBookingSchema = z
   });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
+/** A court + date + slot a member taps to keep while booking it. */
+export const slotHoldSchema = z.object({
+  courtId: idSchema,
+  timeSlotId: idSchema,
+  date: isoDateSchema,
+});
+export type SlotHoldInput = z.infer<typeof slotHoldSchema>;
+
 export const scheduleQuerySchema = z.object({
   date: isoDateSchema,
   surface: surfaceSchema.optional(),

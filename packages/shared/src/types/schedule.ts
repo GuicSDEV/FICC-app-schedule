@@ -1,4 +1,5 @@
 import type { IsoDate } from "../dates";
+import type { SlotHoldInfo } from "../events";
 import type {
   BookingPlayerStatus,
   BookingStatus,
@@ -67,6 +68,8 @@ export interface ScheduleCell {
   booking: ScheduleBookingInfo | null;
   tournament: ScheduleTournamentInfo | null;
   freeze: Pick<FreezeSummary, "id" | "reason"> | null;
+  /** A free court a member is booking right now (kept for them until `until`). */
+  hold: SlotHoldInfo | null;
 }
 
 export interface ScheduleDay {

@@ -36,6 +36,7 @@ const NUMBER_FIELDS = {
     "maxBookingsPerDay",
     "bookingConfirmationMinutes",
     "lateCancellationMinutes",
+    "slotHoldSeconds",
   ],
   freePlay: ["freePlay.claimMinutes", "freePlay.sessionMinutes"],
   noShows: ["noShowPenalty.count", "noShowPenalty.windowDays", "noShowPenalty.suspensionDays"],

@@ -9,6 +9,8 @@ import {
   type TournamentUpdatedEvent,
   type CourtsNowUpdatedEvent,
   type NewsUpdatedEvent,
+  type SlotHoldsChangedEvent,
+  type SlotHoldUpdatedEvent,
 } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
@@ -16,6 +18,7 @@ import type { Socket } from "socket.io-client";
 
 import { API_URL, refreshSession } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { patchScheduleCells } from "@/lib/schedule-cache";
 
 import { useSession } from "./session-provider";
 
@@ -27,6 +30,8 @@ interface SocketEvents {
   [SOCKET_EVENTS.tournamentUpdated]: TournamentUpdatedEvent;
   [SOCKET_EVENTS.courtsNowUpdated]: CourtsNowUpdatedEvent;
   [SOCKET_EVENTS.newsUpdated]: NewsUpdatedEvent;
+  [SOCKET_EVENTS.slotHoldsChanged]: SlotHoldsChangedEvent;
+  [SOCKET_EVENTS.slotHoldUpdated]: SlotHoldUpdatedEvent;
 }
 
 type Listener<E extends keyof SocketEvents> = (payload: SocketEvents[E]) => void;
@@ -106,6 +111,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       });
       connection.on(SOCKET_EVENTS.courtsNowUpdated, () => {
         void client.invalidateQueries({ queryKey: queryKeys.freePlay });
+      });
+      // A court started or stopped being booked by someone: update that cell in place.
+      connection.on(SOCKET_EVENTS.slotHoldsChanged, (event: SlotHoldsChangedEvent) => {
+        patchScheduleCells(
+          client,
+          (cell) =>
+            cell.date === event.date &&
+            cell.courtId === event.courtId &&
+            cell.timeSlotId === event.timeSlotId,
+          (cell) => ({ ...cell, hold: event.hold }),
+        );
       });
       connection.on(SOCKET_EVENTS.newsUpdated, () => {
         void client.invalidateQueries({ queryKey: queryKeys.news });

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Surface } from "@ficc/shared";
-import { Ban, CloudRain, Lock, Plus, Star, Trophy, Wrench } from "lucide-react";
+import { Ban, CloudRain, Hourglass, Lock, Plus, Star, Trophy, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 
@@ -27,6 +27,8 @@ export interface SlotChipProps {
   players?: { id: string; name: string; photoUrl: string | null; pending?: boolean }[];
   bookingStatus?: "PENDING" | "CONFIRMED";
   freezeReason?: "RAIN" | "MAINTENANCE";
+  /** Free, but another member is booking it right now (it may free up again). */
+  held?: boolean;
   /** Tournament match holding the slot. */
   tournament?: { tournamentName: string; label: string } | null;
   /** Bumped when the cell changed live, to flash it. */
@@ -61,6 +63,7 @@ function describe(props: SlotChipProps, t: Translate): string {
   if (props.past) return t("past", { court });
   switch (props.state) {
     case "free":
+      if (props.held) return t("held", { court });
       return props.favorite ? t("freeFavorite", { court }) : t("free", { court });
     case "lesson":
       return props.coach
@@ -102,6 +105,7 @@ export function SlotChip(props: SlotChipProps) {
     players,
     bookingStatus,
     freezeReason,
+    held,
     highlightKey,
     celebrate,
     onPress,
@@ -125,7 +129,8 @@ export function SlotChip(props: SlotChipProps) {
       transition={spring.snappy}
       className={cn(
         "@container relative flex h-14 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-md border text-caption font-semibold transition-tokens outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
-        state === "free" && cn("border-dashed bg-transparent", styles.free, styles.ink),
+        state === "free" && !held && cn("border-dashed bg-transparent", styles.free, styles.ink),
+        state === "free" && held && "border-warning/60 bg-warning-soft text-warning-ink",
         state === "lesson" && "border-lesson/40 bg-lesson-soft text-lesson-ink",
         state === "booking" &&
           (bookingStatus === "PENDING"
@@ -171,13 +176,19 @@ export function SlotChip(props: SlotChipProps) {
       {/* Content crossfades between states: a cancelled lesson dissolves into a free slot. */}
       <AnimatePresence initial={false} mode="popLayout">
         <motion.span
-          key={`${state}-${bookingStatus ?? ""}`}
+          key={`${state}-${bookingStatus ?? ""}-${held ? "held" : ""}`}
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1, transition: transitions.base }}
           exit={{ opacity: 0, scale: 1.15, transition: transitions.slow }}
           className="relative flex w-full min-w-0 items-center justify-center gap-1.5 px-1 @[5.5rem]:px-1.5"
         >
-          {state === "free" ? (
+          {state === "free" && held ? (
+            <>
+              <Hourglass aria-hidden className="size-3.5 shrink-0" />
+              <span className="num">{courtName}</span>
+              <span className="hidden font-medium @[7.5rem]:inline">{t("heldLabel")}</span>
+            </>
+          ) : state === "free" ? (
             <>
               <span className="num">{courtName}</span>
               <Plus aria-hidden className="hidden size-3.5 @[5.5rem]:block" />

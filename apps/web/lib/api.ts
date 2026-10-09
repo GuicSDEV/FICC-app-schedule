@@ -85,6 +85,8 @@ import type {
   SignupStatusResponse,
   SlotFavoriteInput,
   SlotFavoriteItem,
+  SlotHoldInput,
+  SlotHoldView,
   StaffMemberItem,
   StaffRoleItem,
   StaffRoleRequest,
@@ -226,6 +228,15 @@ export const api = {
     markNoShow: (id: string, userId: string, note?: string) =>
       post<NoShowItem>(`/bookings/${id}/no-shows`, { userId, note }),
     staffCancel: (id: string) => post<BookingDetail>(`/bookings/${id}/staff-cancel`),
+  },
+  slotHolds: {
+    claim: (input: SlotHoldInput) => post<SlotHoldView>("/slot-holds", input),
+    /** Null when the member keeps nothing (the API answers an empty body). */
+    mine: async () => {
+      const view = await request<SlotHoldView | Record<string, never>>("/slot-holds/mine");
+      return view && "status" in view ? (view as SlotHoldView) : null;
+    },
+    release: () => request<void>("/slot-holds", { method: "DELETE" }),
   },
   scheduleExceptions: {
     list: (from: string, to: string) =>

@@ -340,6 +340,7 @@ model Club {
   scheduleExceptions   ScheduleException[]
   checkIns             CourtCheckIn[]
   queueEntries         CourtQueueEntry[]
+  slotHolds            SlotHold[]
   staffRoles           StaffRole[]
   auditLogs            AuditLog[]
   noShows              NoShow[]
@@ -436,6 +437,7 @@ model User {
   checkIns                   CourtCheckInPlayer[]
   checkInsCreated            CourtCheckIn[]           @relation("CheckInCreatedBy")
   queueEntries               CourtQueueEntry[]
+  slotHolds                  SlotHold[]
   noShows                    NoShow[]                 @relation("NoShowUser")
   noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
   newsPosts                  NewsPost[]
@@ -556,6 +558,7 @@ model Court {
   tournamentMatches TournamentMatch[]
   checkIns          CourtCheckIn[]
   queueOffers       CourtQueueEntry[]
+  slotHolds         SlotHold[]
 
   @@unique([clubId, name])
 }
@@ -581,6 +584,7 @@ model TimeSlot {
   occupancies       SlotOccupancy[]
   favorites         SlotFavorite[]
   tournamentMatches TournamentMatch[]
+  slotHolds         SlotHold[]
 
   @@unique([clubId, startTime])
 }
@@ -1391,6 +1395,32 @@ model CourtQueueEntry {
   offeredCourt Court? @relation(fields: [offeredCourtId], references: [id], onDelete: SetNull)
 
   @@index([clubId, date, status, joinedAt])
+}
+
+/// A member keeping a free court while they book it, or waiting in line for it. Not a claim on the
+/// slot (that is SlotOccupancy, created with the booking): it only decides who may book it first.
+/// One row per member; the holder of a slot is its row with `expiresAt` set (at most one, see the
+/// partial unique index in the migration), the others wait in `createdAt` order.
+model SlotHold {
+  id         String    @id @default(cuid())
+  clubId     String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId     String
+  courtId    String
+  date       DateTime  @db.Date
+  timeSlotId String
+  /// Set while this member holds the slot; null while waiting in line.
+  expiresAt  DateTime? @db.Timestamptz(3)
+  /// Waiting members ping while their screen is open; silent ones lose their place.
+  lastSeenAt DateTime  @db.Timestamptz(3)
+  createdAt  DateTime  @db.Timestamptz(3)
+
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  court    Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@index([courtId, date, timeSlotId, createdAt])
 }
 
 /// Editable group of permissions (Secretaria, Diretoria…).

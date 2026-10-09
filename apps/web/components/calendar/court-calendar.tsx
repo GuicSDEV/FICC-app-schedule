@@ -142,6 +142,11 @@ export function CourtCalendar({
                         }
                         freezeReason={cell.freeze?.reason}
                         tournament={cell.tournament}
+                        held={Boolean(
+                          cell.hold &&
+                          cell.hold.userId !== viewerId &&
+                          Date.parse(cell.hold.until) > now.getTime(),
+                        )}
                         highlightKey={highlights[key]}
                         celebrate={celebrate === key}
                         onPress={() => onCell(cell)}
@@ -194,6 +199,7 @@ export function CalendarLegend() {
   const t = useTranslations("calendar.legend");
   const items = [
     { key: "free", className: "border border-dashed border-hartru/70" },
+    { key: "held", className: "bg-warning-soft border border-warning/60" },
     { key: "lesson", className: "bg-lesson-soft border border-lesson/40" },
     { key: "booking", className: "bg-hartru-soft border border-hartru/40" },
     { key: "tournament", className: "bg-gold/15 border border-gold/50" },

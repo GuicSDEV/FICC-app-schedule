@@ -383,6 +383,24 @@ Phases 11 and 12.
   `loadEnvConfig(root, …, forceReload)`. Without the force flag @next/env returned its cached
   (empty) result under `pnpm dev`/`pnpm build`, so `NEXT_PUBLIC_API_URL` silently fell back to
   `http://localhost:4000` (invisible locally, broke phone testing over the LAN).
+- **Court kept on tap (slot holds, after Phase 10, asked by the club):** older members found it
+  stressful to pick a partner and then learn the court was gone. Tapping a free court now keeps
+  it for that member for `slotHoldSeconds` (ClubSettings, default 120 s, editable in the rules
+  form) with a countdown in the booking sheet. Anyone else who taps it sees a waiting sheet (place
+  in line, the holder's time left, other free courts); every calendar shows the cell as "Em
+  reserva". If the holder closes the sheet or runs out of time, the first in line gets the court
+  with a fresh full hold and the booking sheet opens by itself ("É a sua vez"); if the holder
+  books it, everyone waiting is told and offered alternatives. Holds live in their own `SlotHold`
+  table (one row per member, so one court at a time; a partial unique index allows one holder per
+  slot) and never claim the slot: `SlotOccupancy` still does that with the booking, so double
+  booking stays impossible. Booking a court someone else holds fails with `SLOT_HELD`. A hold is
+  only granted to a member who could book that court right now (same window, limits, suspension
+  and conflict rules). Waiting screens check in every 15 s; a waiter silent for 45 s
+  (`WAITER_STALE_MS`) loses their place, so a closed phone never blocks the line. Expiry and
+  promotion are evaluated lazily on the club clock whenever anyone touches the slot (claim,
+  check-in, booking), no timer job needed. Covered by `apps/api/test/slot-holds.e2e-spec.ts`
+  (incl. 12 simultaneous taps → exactly one holder, positions 1–11) and the browser journey
+  `apps/web/e2e/slot-hold.spec.ts` (two members: hold → waiting sheet → hand-over).
 - **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
   id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
   server-rendered (no `useSearchParams` bailout).
@@ -406,8 +424,9 @@ Phases 11 and 12.
   area redirects, the Secretaria menu, a wrong password; booking with a partner seen by another
   member; coach cancels a lesson → member books the freed slot; report → opponent approves → Elo
   moves by the same amount both ways; gate scans a guest pass QR through Chromium's fake camera
-  (accepted, then refused as already used). The global setup reseeds and relaxes the booking
-  opening rule so the journeys do not depend on the time of day. 12/12 pass.
+  (accepted, then refused as already used); a tapped court kept for one member while another
+  waits and takes over when the first gives up. The global setup reseeds and relaxes the booking
+  opening rule so the journeys do not depend on the time of day. 13/13 pass.
 - **Verified here:** service worker active and controlling; ranking reloaded offline from cache
   with the offline banner; logout empties the API cache; manifest served with the club's name; no
   hydration errors on the member, coach and gate pages.

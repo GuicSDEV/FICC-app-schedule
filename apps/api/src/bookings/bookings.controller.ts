@@ -12,6 +12,9 @@ import {
   type SlotFavoriteInput,
   type SlotFavoriteItem,
   slotFavoriteSchema,
+  type SlotHoldInput,
+  slotHoldSchema,
+  type SlotHoldView,
 } from "@ficc/shared";
 
 import {
@@ -19,12 +22,14 @@ import {
   type RequestUser,
   RequirePermissions,
   Roles,
+  SkipAudit,
 } from "../common/auth.decorators";
 import { RateLimit } from "../common/rate-limit.guard";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { BookingsService } from "./bookings.service";
 import { FavoritesService } from "./favorites.service";
 import { NoShowsService } from "./no-shows.service";
+import { SlotHoldsService } from "./slot-holds.service";
 
 @Controller("bookings")
 export class BookingsController {
@@ -133,5 +138,36 @@ export class MemberNoShowsController {
   @RequirePermissions("BOOKINGS_MANAGE")
   history(@Param("id") id: string): Promise<MemberNoShows> {
     return this.noShows.history(id);
+  }
+}
+
+/** Keeping a free court while booking it, and the line of members waiting for it. */
+@Controller("slot-holds")
+@Roles(Role.MEMBER)
+export class SlotHoldsController {
+  constructor(private readonly holds: SlotHoldsService) {}
+
+  /** Tap on a free court: keep it (HOLDING) or join the line behind whoever is booking it. */
+  @Post()
+  @SkipAudit()
+  @RateLimit({ name: "slot-hold", limit: 10, windowMs: 10_000 })
+  claim(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(slotHoldSchema)) body: SlotHoldInput,
+  ): Promise<SlotHoldView> {
+    return this.holds.claim(user.id, body);
+  }
+
+  /** The member's hold or place in line (waiting screens call it to stay in line). */
+  @Get("mine")
+  mine(@CurrentUser() user: RequestUser): Promise<SlotHoldView | null> {
+    return this.holds.mine(user.id);
+  }
+
+  @Delete()
+  @HttpCode(204)
+  @SkipAudit()
+  release(@CurrentUser() user: RequestUser): Promise<void> {
+    return this.holds.release(user.id);
   }
 }

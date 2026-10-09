@@ -6,6 +6,7 @@ import type {
   BookingType,
 } from "../enums";
 import type { CourtSummary, IsoDateTime, SlotSummary } from "./common";
+import type { SlotAlternative } from "./operations";
 import type { BookingPlayerInfo } from "./schedule";
 
 export interface BookingDetail {
@@ -40,4 +41,32 @@ export interface SlotFavoriteItem {
   id: string;
   courtId: string;
   timeSlotId: string;
+}
+
+/**
+ * The viewer's hold on a court while booking it: HOLDING (it is theirs until `expiresAt`) or
+ * WAITING (another member is booking it; they get it if that member gives up).
+ */
+export interface SlotHoldView {
+  status: "HOLDING" | "WAITING";
+  courtId: string;
+  date: IsoDate;
+  timeSlotId: string;
+  /** HOLDING: when the court stops being kept for the viewer. */
+  expiresAt: IsoDateTime | null;
+  /** WAITING: when the current holder's time runs out, and the viewer's place in line (1-based). */
+  holderExpiresAt: IsoDateTime | null;
+  position: number | null;
+  /** WAITING: free courts the viewer could pick instead. */
+  alternatives: SlotAlternative[];
+  /** Server clock when answered, for countdowns. */
+  serverNow: IsoDateTime;
+}
+
+/** Personal socket payload: the viewer's hold changed. */
+export interface SlotHoldUpdatedEvent {
+  hold: SlotHoldView | null;
+  /** PROMOTED: it is the viewer's turn now; TAKEN: someone booked the court. */
+  reason: "PROMOTED" | "TAKEN" | "RELEASED";
+  alternatives: SlotAlternative[];
 }

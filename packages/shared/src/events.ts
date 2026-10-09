@@ -10,6 +10,10 @@ export const SOCKET_EVENTS = {
   tournamentUpdated: "tournament.updated",
   courtsNowUpdated: "courts-now.updated",
   newsUpdated: "news.updated",
+  /** Club-wide: a court started or stopped being kept by a member who is booking it. */
+  slotHoldsChanged: "slot-holds.changed",
+  /** Personal: the viewer's own hold or place in line changed (their turn, or the court was booked). */
+  slotHoldUpdated: "slot-hold.updated",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
@@ -68,4 +72,14 @@ export interface CourtsNowUpdatedEvent {
 /** A Mural post was published, edited or removed. */
 export interface NewsUpdatedEvent {
   postId: string;
+}
+
+/** Who keeps a court right now while booking it. */
+export interface SlotHoldInfo {
+  userId: string;
+  until: string;
+}
+
+export interface SlotHoldsChangedEvent extends ScheduleCellRef {
+  hold: SlotHoldInfo | null;
 }

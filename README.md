@@ -15,7 +15,8 @@ Brazilian Portuguese.
 ## What the app does
 
 - **Members** (`/app`): dashboard with their Elo, bookings and invitations; court calendar with
-  live updates, booking with partners, favourite slots and the booking-opening countdown; "Courts
+  live updates, booking with partners (a tapped court is kept for the member while they pick a
+  partner; others wait in line and get it if they give up), favourite slots and the booking-opening countdown; "Courts
   now" for free-play days (check-in, digital queue); match reports with opponent approval and Elo;
   ranking, head-to-head and profiles; guest passes with QR; tournaments and circuits; the club's
   news board ("Mural").
@@ -136,10 +137,11 @@ To run a script in one package only: `pnpm --filter @ficc/api test`.
 - **API end to end** (`pnpm test:e2e`): every module through HTTP against a real PostgreSQL
   (database `DATABASE_URL_TEST`, or the dev database name with `_test` appended, created and
   migrated automatically), including concurrency (two members on one slot, 150 simultaneous
-  booking attempts at opening time) and tenant isolation.
+  booking attempts at opening time, simultaneous taps on one court) and tenant isolation.
 - **Browser journeys** (`pnpm test:browser`, Playwright in `apps/web/e2e`): login for each role,
   booking with a partner, a coach cancelling a lesson and a member booking the freed slot,
-  reporting a match → opponent approval → Elo, and the gate scanning a guest pass QR through a
+  reporting a match → opponent approval → Elo, a court kept on tap handed to the member waiting
+  for it, and the gate scanning a guest pass QR through a
   fake camera. They run against the production builds and **reseed the development database**:
 
   ```bash

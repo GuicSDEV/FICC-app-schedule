@@ -81,6 +81,11 @@ export const clubSettingsSchema = z.object({
   dayModes: z.partialRecord(weekdaySchema, courtModeSchema),
   /** When bookings for a day open; null = as soon as the day is inside the booking window. */
   bookingOpening: bookingOpeningSchema.nullable(),
+  /**
+   * Tapping a free court keeps it for that member while they pick their partners; others who tap
+   * it wait in line and get it if the first one gives up. Seconds the court is kept.
+   */
+  slotHoldSeconds: z.number().int().min(30).max(600),
   /** Bookings one member may hold on the same day. */
   maxBookingsPerDay: z.number().int().min(1).max(10),
   freePlay: freePlaySettingsSchema,
@@ -119,6 +124,7 @@ export const DEFAULT_CLUB_SETTINGS: ClubSettings = {
   dayModes: {},
   bookingOpening: null,
   maxBookingsPerDay: 1,
+  slotHoldSeconds: 120,
   freePlay: { queueEnabled: true, claimMinutes: 5, sessionMinutes: 75 },
   signupRequiresApproval: true,
   dependentsEnabled: false,
