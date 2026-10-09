@@ -3,16 +3,15 @@ import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
-import { Env } from "./config/env";
+import { configureApp } from "./configure-app";
+import type { Env } from "./config/env";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
-  const config = app.get<ConfigService<Env, true>>(ConfigService);
-
-  app.setGlobalPrefix("api");
-  app.enableCors({ origin: config.get("WEB_ORIGIN", { infer: true }), credentials: true });
+  configureApp(app);
   app.enableShutdownHooks();
 
+  const config = app.get<ConfigService<Env, true>>(ConfigService);
   const port = config.get("API_PORT", { infer: true });
   await app.listen(port);
   Logger.log(`API ready on http://localhost:${port}/api`, "Bootstrap");

@@ -3,12 +3,20 @@
   "ui": "stream",
   "globalDependencies": [".env"],
   "globalEnv": [
-    "NODE_ENV",
-    "DATABASE_URL",
+    "ACCESS_TOKEN_TTL_MINUTES",
     "API_PORT",
-    "WEB_ORIGIN",
+    "COOKIE_DOMAIN",
+    "COOKIE_SECURE",
+    "DATABASE_URL",
+    "DATABASE_URL_TEST",
+    "GUEST_PASS_SECRET",
+    "JOBS_ENABLED",
+    "JWT_ACCESS_SECRET",
     "NEXT_PUBLIC_API_URL",
-    "SEED_PASSWORD"
+    "NODE_ENV",
+    "REFRESH_TOKEN_TTL_DAYS",
+    "SEED_PASSWORD",
+    "WEB_ORIGIN"
   ],
   "tasks": {
     "build": {
@@ -37,6 +45,10 @@
       "cache": false
     },
     "db:seed": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test:e2e": {
       "dependsOn": ["^build"],
       "cache": false
     }

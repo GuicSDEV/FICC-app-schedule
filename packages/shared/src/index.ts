@@ -9,3 +9,4 @@ export * from "./membership";
 export * from "./schemas";
 export * from "./score";
 export * from "./slots";
+export * from "./types";

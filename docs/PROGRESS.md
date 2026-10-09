@@ -10,7 +10,7 @@ and what still needs a human to check.
 | 0     | Monorepo setup                        | Done        | `9128b7f`       |
 | 1     | Database                              | Done        | `9501ffb`       |
 | 2     | Shared package                        | Done        | `feat(phase-2)` |
-| 3     | API core: auth, schedule, bookings    | Not started |                 |
+| 3     | API core: auth, schedule, bookings    | Done        | `feat(phase-3)` |
 | 4     | API: coaches, lessons, maintenance    | Not started |                 |
 | 5     | API: matches, Elo, ranking, guests    | Not started |                 |
 | 6     | Frontend foundation (design + motion) | Not started |                 |
@@ -50,6 +50,22 @@ and what still needs a human to check.
 - **Guest documents:** CPF is validated with its check digits; RG formats vary by state, so RG
   only needs 5–14 letters/digits.
 - **Lesson series:** a weekly repeat must include the weekday of its first lesson.
+- **Auth cookies:** `ficc_at` (httpOnly access JWT, 15 min), `ficc_rt` (httpOnly rotating refresh
+  token, 30 days, path `/api/auth`) and `ficc_role` (readable role hint for web routing only).
+  The API also accepts `Authorization: Bearer` (tests, future Capacitor). Reusing a rotated refresh
+  token revokes the whole family. The web app calls the API directly with credentials; both must
+  share a site (localhost, or sibling subdomains with `COOKIE_DOMAIN`).
+- **The 2-active-bookings limit applies to every tagged player**, not just the creator, so it
+  cannot be bypassed by having friends book.
+- **Pending bookings expire** at `min(created + 2 h, slot start)`; any decline cancels the booking.
+- **Any player of a booking can cancel it** before the slot starts.
+- **Schedule cell precedence:** frozen > lesson > booking > free; the underlying lesson/booking is
+  still returned on frozen cells so admins can see what a freeze affects. Lesson student names and
+  notes are only returned to that lesson's coach and admins.
+- **Booking rules run in SERIALIZABLE transactions** with retry; concurrent requests for the same
+  slot are covered by an e2e test (exactly one wins).
+- **e2e tests** run against a separate `ficc_test` database with a fake clock fixed on
+  Monday 2030-03-04 09:00 (club time); scheduled jobs are disabled and called directly.
 - **shadcn/ui was initialized by hand** because the sandbox blocks `ui.shadcn.com`; the files
   match what the CLI generates.
 
