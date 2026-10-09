@@ -20,6 +20,7 @@
     "db:migrate": "pnpm --filter @ficc/db db:migrate",
     "db:migrate:deploy": "pnpm --filter @ficc/db db:migrate:deploy",
     "db:seed": "turbo run db:seed --filter=@ficc/db",
+    "db:bootstrap": "pnpm --filter @ficc/db db:bootstrap",
     "db:studio": "pnpm --filter @ficc/db db:studio",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "test:e2e": "turbo run test:e2e",

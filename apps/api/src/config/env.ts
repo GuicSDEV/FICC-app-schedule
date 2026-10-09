@@ -20,7 +20,9 @@ const booleanFlag = z
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-    API_PORT: z.coerce.number().int().positive().default(4000),
+    /** Port to listen on; hosting platforms (Railway) set PORT instead. */
+    API_PORT: z.coerce.number().int().positive().optional(),
+    PORT: z.coerce.number().int().positive().optional(),
     WEB_ORIGIN: z.url().default("http://localhost:3000"),
     DATABASE_URL: z.url().optional(),
     JWT_ACCESS_SECRET: z.string().min(32).optional(),
@@ -71,6 +73,7 @@ const envSchema = z
     if (ctx.issues.length > 0) return z.NEVER;
     return {
       ...env,
+      API_PORT: env.API_PORT ?? env.PORT ?? 4000,
       DATABASE_URL: env.DATABASE_URL ?? DEV_DATABASE_URL,
       JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET ?? DEV_SECRET,
       GUEST_PASS_SECRET: env.GUEST_PASS_SECRET ?? `${DEV_SECRET}-guest`,

@@ -434,6 +434,20 @@ Phases 11 and 12.
   `pnpm audit` passes with the two upstream-unpatched tooling advisories ignored by id;
   supply-chain settings (`blockExoticSubdeps`, `trustPolicy: no-downgrade` with two reviewed
   exceptions, `minimumReleaseAge: 1440`) and weekly Dependabot PRs.
+- **Deploy (Railway, `docs/DEPLOY.md`):** in production the browser talks to one origin: the web
+  app proxies `/api/v1` and `/socket.io` (websocket included) to the API's private address
+  (`API_INTERNAL_URL`, read at build; `NEXT_PUBLIC_API_URL` empty). Separate `*.up.railway.app`
+  hosts would otherwise break the login cookies (that suffix is a public suffix, so the hosts are
+  different sites and `ficc_role`/`ficc_at` would never reach the web app). Dockerfiles for the API
+  (whole workspace, so migrations/bootstrap/seed run in the container) and the web app (Next
+  standalone), `apps/*/railway.json` (pre-deploy migrations, health checks), the API listens on
+  `PORT` when `API_PORT` is unset. `pnpm db:bootstrap` sets up the real club on an empty database
+  (fills the empty FICC row the migrations create; never deletes; refuses a club that has data).
+  The seed runs with `NODE_ENV=production` only with `SEED_ALLOW_WIPE=yes` and its own
+  `SEED_PASSWORD` (demo deployment). Verified here by running both apps exactly as the images do
+  (standalone server + production API with real secrets): 15/15 browser journeys pass through the
+  proxy. The images themselves were not built here (the sandbox has no apt access); first build
+  happens on Railway.
 - **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
   id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
   server-rendered (no `useSearchParams` bailout).

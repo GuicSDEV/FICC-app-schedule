@@ -4,6 +4,7 @@
   "globalDependencies": [".env"],
   "globalEnv": [
     "ACCESS_TOKEN_TTL_MINUTES",
+    "API_INTERNAL_URL",
     "API_PORT",
     "COOKIE_DOMAIN",
     "COOKIE_SECURE",
@@ -14,12 +15,15 @@
     "GUEST_PASS_SECRET",
     "JOBS_ENABLED",
     "JWT_ACCESS_SECRET",
+    "NEXT_OUTPUT",
     "NEXT_PUBLIC_API_URL",
     "NEXT_PUBLIC_SHOW_DEV_PAGES",
     "NODE_ENV",
+    "PORT",
     "QUEUE_PREFIX",
     "REDIS_URL",
     "REFRESH_TOKEN_TTL_DAYS",
+    "SEED_ALLOW_WIPE",
     "SEED_PASSWORD",
     "WEB_ORIGIN"
   ],
