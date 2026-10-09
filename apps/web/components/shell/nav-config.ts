@@ -129,7 +129,7 @@ export const ADMIN_NAV: NavItem[] = [
     permissions: ["SETTINGS_MANAGE", "COURTS_MANAGE"],
   },
   { href: "/admin/staff", label: "staff", icon: ShieldCheck, permissions: ["STAFF_MANAGE"] },
-  { href: "/gate", label: "gate", icon: ScanLine },
+  { href: "/admin/gate", label: "gate", icon: ScanLine },
 ];
 
 /** Admin items this person may open. */
