@@ -37,6 +37,8 @@ docker-compose.yml      local PostgreSQL
 
 ## Conventions
 
+- **Language:** the UI is in Brazilian Portuguese (pt-BR). Code, comments, commit messages and
+  logs are in English. Notifications store data; the web app renders the pt-BR text.
 - **pnpm only.** Add dependencies with `pnpm --filter <package> add <dep>`. Internal packages are
   named `@ficc/*` and referenced as `workspace:*`.
 - **TypeScript strict** everywhere (including `noUncheckedIndexedAccess`). Extend the shared
@@ -45,8 +47,11 @@ docker-compose.yml      local PostgreSQL
 - **One source of truth for domain logic.** Zod schemas, the Elo function, score validation and
   the slot grid live in `packages/shared` and are used by both web and API. Never duplicate them.
 - **Database access only through `@ficc/db`.** The Prisma client is generated into
-  `packages/db/generated`. Never import `@prisma/client` directly. Slot collisions are enforced
-  by a DB unique constraint shared by bookings and lessons, inside a transaction.
+  `packages/db/generated`. Never import `@prisma/client` directly. Schema changes go through
+  `pnpm db:migrate`; CHECK constraints live in the migration SQL (see `schema.prisma` comments).
+- **Slot collisions:** every PENDING/CONFIRMED booking and SCHEDULED lesson owns one
+  `SlotOccupancy` row (primary key court + date + slot), created in the same transaction as the
+  booking or lesson and deleted when it is cancelled. Never claim or free a slot any other way.
 - **API:** one Nest module per domain (module, controller, service, DTOs). New environment
   variables go in `apps/api/src/config/env.ts`, `.env.example` and `turbo.json` (`globalEnv`).
   The API keeps runtime class imports (no `import type` for injected classes) because Nest's
@@ -54,13 +59,16 @@ docker-compose.yml      local PostgreSQL
 - **Web:** Server Components by default; `"use client"` only for interactivity and motion.
   shadcn components live in `components/ui` (`pnpm dlx shadcn@latest add <name>` from
   `apps/web`). Use the `@/` alias and `cn()` from `lib/utils`.
-- **Time:** store UTC; compute and display in `America/Sao_Paulo` (`CLUB_TIMEZONE` from
+- **Time:** instants are stored as UTC `timestamptz`; calendar days are `@db.Date` columns holding
+  the club-local date. Compute and display in `America/Sao_Paulo` (`CLUB_TIMEZONE` from
   `@ficc/shared`) with `date-fns-tz`. Slots are the fixed 75-minute grid, never hourly.
 - **Design and motion:** colors, type and spacing come from the "Night Session" tokens in the
   spec. Durations, easings and springs come only from `apps/web/lib/motion.ts` (no ad-hoc values).
   Animate only `transform` and `opacity`, and honor `prefers-reduced-motion`. Lime (`--ball`) is
   the only accent in the member area; violet (`--lesson`) is the coach accent.
 - **Environment:** one root `.env` (copy `.env.example`) read by every app and package.
+- **Seed:** `pnpm db:seed` wipes every table and reloads deterministic data (real courts, slots,
+  coaches and lesson template; fictional members and matches), then runs integrity checks.
 - **Before finishing a task**, run `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
 
 <!-- BEGIN:turborepo-agent-rules -->

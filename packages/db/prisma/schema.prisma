@@ -1,5 +1,12 @@
-// Prisma schema for the FICC tennis club.
-// Models are added in the data-model phase (see docs/SPEC.md, "DATA MODEL").
+// Prisma schema for the FICC tennis club (see docs/SPEC.md, "DATA MODEL").
+//
+// Conventions
+// - Instants are timestamptz (UTC). Calendar days are `@db.Date` and always mean the club-local
+//   date in America/Sao_Paulo; the slot's start time comes from TimeSlot.
+// - Rows that carry history (lessons, bookings, matches, ratings, scans) are never hard-deleted
+//   through their parents: those relations use `Restrict` or `SetNull`.
+// - CHECK constraints that Prisma cannot express live in the migration SQL and are listed in the
+//   comment of each model they protect.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +18,691 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  MEMBER
+  COACH
+  ADMIN
+  GATE
+}
+
+enum Category {
+  CLASS_A
+  CLASS_B
+  CLASS_C
+  WOMENS
+  SENIORS
+}
+
+enum Surface {
+  HARTRU
+  SAIBRO
+}
+
+enum CourtStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Weekday {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum LessonStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+enum LessonAuditAction {
+  CREATED
+  UPDATED
+  CANCELLED
+  RESTORED
+  SERIES_CREATED
+  SERIES_UPDATED
+  SERIES_ENDED
+}
+
+enum BookingType {
+  SINGLES
+  DOUBLES
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingPlayerStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
+enum BookingCancelReason {
+  DECLINED
+  EXPIRED
+  CANCELLED_BY_PLAYER
+  COURT_FROZEN
+  CANCELLED_BY_ADMIN
+}
+
+enum FreezeReason {
+  RAIN
+  MAINTENANCE
+}
+
+enum FreezeScope {
+  COURT
+  SURFACE
+  ALL
+}
+
+enum MatchType {
+  SINGLES
+  DOUBLES
+}
+
+enum MatchStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  VOIDED
+}
+
+enum MatchConfirmation {
+  OPPONENT_APPROVED
+  AUTO_APPROVED
+  ADMIN_RESOLVED
+}
+
+enum TeamSide {
+  A
+  B
+}
+
+enum GuestDocumentType {
+  CPF
+  RG
+}
+
+enum GuestPassStatus {
+  ACTIVE
+  USED
+  CANCELLED
+}
+
+enum GateScanMethod {
+  QR
+  MANUAL
+}
+
+enum GateScanResult {
+  ACCEPTED
+  INVALID_TOKEN
+  WRONG_DATE
+  ALREADY_USED
+  PASS_CANCELLED
+  DOCUMENT_BLOCKED
+  HOST_SUSPENDED
+  NOT_FOUND
+}
+
+enum NotificationType {
+  BOOKING_INVITE
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  SLOT_OPENED
+  LESSON_CANCELLED
+  MATCH_REPORTED
+  MATCH_CONFIRMED
+  MATCH_DISPUTED
+  DISPUTE_RESOLVED
+  COURT_FROZEN
+  COURT_UNFROZEN
+  GUEST_CHECKED_IN
+}
+
+// ─── People & access ────────────────────────────────────────────────────────
+
+/// Any account: member, coach, admin or gate staff.
+/// CHECK: members must have a membershipId; every user has a login (membershipId or email).
+model User {
+  id                         String     @id @default(cuid())
+  role                       Role       @default(MEMBER)
+  /// Matrícula, digits only. Members log in with it.
+  membershipId               String?    @unique
+  /// Login for staff accounts (coach, admin, gate).
+  email                      String?    @unique
+  passwordHash               String
+  name                       String
+  photoUrl                   String?
+  categories                 Category[]
+  /// Current rating; always equals the `after` of the user's latest EloHistory row.
+  elo                        Int        @default(1200)
+  isActive                   Boolean    @default(true)
+  /// Set by an admin to stop this member from creating guest passes.
+  guestPassesSuspendedAt     DateTime?  @db.Timestamptz(3)
+  guestPassesSuspendedReason String?
+  createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime   @updatedAt @db.Timestamptz(3)
+
+  membership         ValidMembershipId? @relation(fields: [membershipId], references: [membershipId], onDelete: Restrict, onUpdate: Cascade)
+  coach              Coach?
+  refreshTokens      RefreshToken[]
+  bookingsCreated    Booking[]          @relation("BookingCreatedBy")
+  bookingPlayers     BookingPlayer[]
+  slotFavorites      SlotFavorite[]
+  matchPlayers       MatchPlayer[]
+  matchesReported    Match[]            @relation("MatchReportedBy")
+  matchesResponded   Match[]            @relation("MatchRespondedBy")
+  matchesResolved    Match[]            @relation("MatchResolvedBy")
+  eloHistory         EloHistory[]
+  guestPasses        GuestPass[]
+  guestBlocksCreated GuestBlock[]       @relation("GuestBlockBlockedBy")
+  guestBlocksLifted  GuestBlock[]       @relation("GuestBlockLiftedBy")
+  gateScans          GateScanLog[]
+  freezesCreated     CourtFreeze[]      @relation("FreezeCreatedBy")
+  freezesLifted      CourtFreeze[]      @relation("FreezeLiftedBy")
+  lessonAuditLogs    LessonAuditLog[]
+  notifications      Notification[]
+
+  @@index([role, elo])
+  @@index([categories], type: Gin)
+}
+
+/// Membership IDs allowed to register (imported by the admin, e.g. from CSV).
+/// User.membershipId references this table, so an account can only use a listed ID.
+model ValidMembershipId {
+  membershipId String   @id
+  /// Name on the club's records, to help members recognise their ID.
+  holderName   String?
+  /// Inactive IDs can no longer be used to register.
+  isActive     Boolean  @default(true)
+  importedAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  user User?
+}
+
+/// Rotating refresh tokens (stored hashed). Reusing a revoked token revokes its whole family.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  familyId  String
+  tokenHash String    @unique
+  userAgent String?
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Coach profile of a COACH user.
+model Coach {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String
+  photoUrl    String?
+  /// Hex color used for the coach's accents in calendars.
+  color       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allowedCourts CoachCourt[]
+  lessonSeries  LessonSeries[]
+  lessons       Lesson[]
+}
+
+/// Courts a coach may schedule lessons on.
+model CoachCourt {
+  coachId String
+  courtId String
+
+  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@id([coachId, courtId])
+  @@index([courtId])
+}
+
+// ─── Courts & schedule grid ─────────────────────────────────────────────────
+
+model Court {
+  id        String      @id @default(cuid())
+  /// "Q1" … "Q6".
+  name      String      @unique
+  surface   Surface
+  status    CourtStatus @default(ACTIVE)
+  sortOrder Int
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime    @updatedAt @db.Timestamptz(3)
+
+  coachCourts  CoachCourt[]
+  lessonSeries LessonSeries[]
+  lessons      Lesson[]
+  bookings     Booking[]
+  occupancies  SlotOccupancy[]
+  favorites    SlotFavorite[]
+  freezes      CourtFreezeCourt[]
+  matches      Match[]
+}
+
+/// One slot of the daily grid (admin-editable; seeded from DEFAULT_SLOT_GRID in @ficc/shared).
+/// Retire a slot with isActive = false: past bookings and lessons keep pointing at it.
+/// CHECK: startTime is "HH:mm" and durationMinutes > 0.
+model TimeSlot {
+  id              String   @id @default(cuid())
+  /// "HH:mm", club local time.
+  startTime       String   @unique @db.VarChar(5)
+  durationMinutes Int      @default(75)
+  sortOrder       Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  lessonSeries LessonSeries[]
+  lessons      Lesson[]
+  bookings     Booking[]
+  occupancies  SlotOccupancy[]
+  favorites    SlotFavorite[]
+}
+
+// ─── Slot occupancy: the single double-booking guard ────────────────────────
+//
+// Every live use of a court on a date and slot (a PENDING or CONFIRMED booking, or a SCHEDULED
+// lesson) owns exactly one SlotOccupancy row, inserted in the same transaction that creates the
+// booking or lesson. The primary key is (courtId, date, timeSlotId), so a second claim on the
+// same cell fails with a unique violation (Prisma P2002) no matter which table it comes from:
+// a lesson and a booking can never hold the same court + date + slot, even under concurrent
+// requests. Cancelling deletes the row (the booking or lesson stays as history), which frees the
+// slot immediately; moving a lesson deletes the old row and inserts a new one.
+//
+// CHECK: exactly one of bookingId / lessonId is set.
+
+model SlotOccupancy {
+  courtId    String
+  date       DateTime @db.Date
+  timeSlotId String
+  bookingId  String?  @unique
+  lessonId   String?  @unique
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  court    Court    @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  lesson   Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([courtId, date, timeSlotId])
+  @@index([date])
+}
+
+// ─── Lessons ────────────────────────────────────────────────────────────────
+
+/// Recurring lesson rule. Calendars never read series directly: a scheduled job materialises
+/// Lesson occurrences for a rolling 8-week window and records how far it got in generatedUntil.
+/// CHECK: at least one weekday; endDate (inclusive), when set, is not before startDate.
+model LessonSeries {
+  id             String    @id @default(cuid())
+  coachId        String
+  courtId        String
+  timeSlotId     String
+  weekdays       Weekday[]
+  startDate      DateTime  @db.Date
+  /// Last date (inclusive). Null = open-ended. "Cancel this and all future" sets it.
+  endDate        DateTime? @db.Date
+  /// Default for generated occurrences.
+  studentNames   String?
+  note           String?
+  /// Last date for which occurrences have been generated.
+  generatedUntil DateTime? @db.Date
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+
+  coach     Coach            @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  court     Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot  TimeSlot         @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  lessons   Lesson[]
+  auditLogs LessonAuditLog[]
+
+  @@index([coachId])
+  @@index([courtId, timeSlotId])
+}
+
+/// A concrete lesson on one date: generated from a series, or one-off (seriesId = null).
+/// A SCHEDULED lesson holds a SlotOccupancy row; cancelling deletes it and keeps this row, which
+/// also stops the series job from re-creating the occurrence (unique seriesId + date).
+model Lesson {
+  id           String       @id @default(cuid())
+  seriesId     String?
+  coachId      String
+  courtId      String
+  timeSlotId   String
+  date         DateTime     @db.Date
+  status       LessonStatus @default(SCHEDULED)
+  studentNames String?
+  note         String?
+  cancelledAt  DateTime?    @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
+
+  series    LessonSeries?    @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+  coach     Coach            @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  court     Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot  TimeSlot         @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  occupancy SlotOccupancy?
+  auditLogs LessonAuditLog[]
+
+  @@unique([seriesId, date])
+  @@index([date, courtId])
+  @@index([coachId, date])
+}
+
+/// Who changed which lesson or series, and how. Survives deletion of the lesson or series.
+model LessonAuditLog {
+  id        String            @id @default(cuid())
+  lessonId  String?
+  seriesId  String?
+  actorId   String
+  action    LessonAuditAction
+  /// Before/after values or other context for the change.
+  details   Json?
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+
+  lesson Lesson?       @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  series LessonSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  actor  User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([lessonId])
+  @@index([seriesId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// ─── Bookings ───────────────────────────────────────────────────────────────
+
+/// Member court booking. PENDING until every tagged player confirms; any decline, or no answer
+/// by expiresAt (2 h), cancels it and frees the slot. PENDING and CONFIRMED bookings hold a
+/// SlotOccupancy row.
+model Booking {
+  id           String               @id @default(cuid())
+  type         BookingType
+  status       BookingStatus        @default(PENDING)
+  courtId      String
+  timeSlotId   String
+  date         DateTime             @db.Date
+  createdById  String
+  /// Pending bookings are cancelled by the scheduled job after this instant.
+  expiresAt    DateTime             @db.Timestamptz(3)
+  confirmedAt  DateTime?            @db.Timestamptz(3)
+  cancelledAt  DateTime?            @db.Timestamptz(3)
+  cancelReason BookingCancelReason?
+  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
+
+  court       Court           @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot    TimeSlot        @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  createdBy   User            @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  players     BookingPlayer[]
+  occupancy   SlotOccupancy?
+  matches     Match[]
+  guestPasses GuestPass[]
+
+  @@index([date, courtId])
+  @@index([status, expiresAt])
+  @@index([createdById])
+}
+
+/// A tagged player (2 for singles, 4 for doubles, creator included) and their answer.
+model BookingPlayer {
+  bookingId   String
+  userId      String
+  status      BookingPlayerStatus @default(PENDING)
+  respondedAt DateTime?           @db.Timestamptz(3)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([bookingId, userId])
+  @@index([userId, status])
+}
+
+/// Court + slot a member watches; they are notified whenever it opens up on any date.
+model SlotFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  courtId    String
+  timeSlotId String
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  court    Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courtId, timeSlotId])
+  @@index([courtId, timeSlotId])
+}
+
+// ─── Court freezes (rain / maintenance) ─────────────────────────────────────
+
+/// One freeze event (one court, a whole surface, or all courts). Active while
+/// startsAt <= now < endsAt (or endsAt is null) and liftedAt is null.
+/// CHECK: surface is set exactly when scope = SURFACE; endsAt, when set, is after startsAt.
+model CourtFreeze {
+  id          String       @id @default(cuid())
+  reason      FreezeReason
+  scope       FreezeScope
+  surface     Surface?
+  startsAt    DateTime     @db.Timestamptz(3)
+  /// Null = until an admin lifts it.
+  endsAt      DateTime?    @db.Timestamptz(3)
+  liftedAt    DateTime?    @db.Timestamptz(3)
+  note        String?
+  createdById String
+  liftedById  String?
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+
+  courts    CourtFreezeCourt[]
+  createdBy User               @relation("FreezeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  liftedBy  User?              @relation("FreezeLiftedBy", fields: [liftedById], references: [id], onDelete: SetNull)
+
+  @@index([startsAt])
+  @@index([liftedAt, endsAt])
+}
+
+/// Courts covered by a freeze event.
+model CourtFreezeCourt {
+  freezeId String
+  courtId  String
+
+  freeze CourtFreeze @relation(fields: [freezeId], references: [id], onDelete: Cascade)
+  court  Court       @relation(fields: [courtId], references: [id], onDelete: Restrict)
+
+  @@id([freezeId, courtId])
+  @@index([courtId])
+}
+
+// ─── Matches & rating ───────────────────────────────────────────────────────
+
+/// Reported result. PENDING until an opponent approves (CONFIRMED) or disputes (DISPUTED);
+/// unanswered reports are auto-approved at approvalDeadline (48 h). Elo is applied only on
+/// confirmation. The booking link is optional.
+model Match {
+  id               String             @id @default(cuid())
+  type             MatchType
+  status           MatchStatus        @default(PENDING)
+  /// Club-local date the match was played.
+  playedOn         DateTime           @db.Date
+  /// Needed for the Har-Tru vs Saibro head-to-head split, even without a court.
+  surface          Surface
+  courtId          String?
+  bookingId        String?
+  /// Winner implied by the sets; stored to keep win/loss queries simple.
+  winnerSide       TeamSide
+  reportedById     String
+  reportedAt       DateTime           @default(now()) @db.Timestamptz(3)
+  approvalDeadline DateTime           @db.Timestamptz(3)
+  respondedById    String?
+  respondedAt      DateTime?          @db.Timestamptz(3)
+  disputeComment   String?
+  confirmation     MatchConfirmation?
+  confirmedAt      DateTime?          @db.Timestamptz(3)
+  resolvedById     String?
+  resolvedAt       DateTime?          @db.Timestamptz(3)
+  resolutionNote   String?
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
+
+  court       Court?        @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  reportedBy  User          @relation("MatchReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
+  respondedBy User?         @relation("MatchRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+  resolvedBy  User?         @relation("MatchResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  players     MatchPlayer[]
+  sets        MatchSet[]
+  eloHistory  EloHistory[]
+
+  @@index([status, approvalDeadline])
+  @@index([playedOn])
+  @@index([bookingId])
+}
+
+/// Player and team side (A or B). Singles has one player per side, doubles two.
+model MatchPlayer {
+  matchId String
+  userId  String
+  side    TeamSide
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([matchId, userId])
+  @@index([userId])
+}
+
+/// One set of a best-of-3 match. A deciding match tie-break stores points (e.g. 10-8).
+/// CHECK: setNumber is 1–3 and scores are non-negative.
+model MatchSet {
+  matchId         String
+  setNumber       Int
+  sideAGames      Int
+  sideBGames      Int
+  isMatchTiebreak Boolean @default(false)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, setNumber])
+}
+
+/// Rating change for one player in one confirmed match.
+/// CHECK: after = before + delta.
+model EloHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  matchId   String
+  before    Int
+  after     Int
+  delta     Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, matchId])
+  @@index([userId, createdAt])
+  @@index([matchId])
+}
+
+// ─── Guests & gate ──────────────────────────────────────────────────────────
+
+/// Single-entry day pass for one visit date. The QR holds a signed token referencing this row,
+/// never personal data. Entry flips status ACTIVE → USED atomically.
+model GuestPass {
+  id             String            @id @default(cuid())
+  hostId         String
+  guestName      String
+  documentType   GuestDocumentType
+  /// Normalized document number. Lists mask it; only the gate view shows it in full.
+  documentNumber String
+  visitDate      DateTime          @db.Date
+  /// Optional link to one of the host's bookings on visitDate.
+  bookingId      String?
+  status         GuestPassStatus   @default(ACTIVE)
+  usedAt         DateTime?         @db.Timestamptz(3)
+  cancelledAt    DateTime?         @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+
+  host    User          @relation(fields: [hostId], references: [id], onDelete: Restrict)
+  booking Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  scans   GateScanLog[]
+
+  @@index([hostId, visitDate])
+  @@index([documentType, documentNumber])
+  @@index([visitDate, status])
+}
+
+/// Guest document barred from entry. Lifting keeps the row (liftedAt) for accountability.
+model GuestBlock {
+  id             String            @id @default(cuid())
+  documentType   GuestDocumentType
+  documentNumber String
+  reason         String?
+  blockedById    String
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  liftedAt       DateTime?         @db.Timestamptz(3)
+  liftedById     String?
+
+  blockedBy User  @relation("GuestBlockBlockedBy", fields: [blockedById], references: [id], onDelete: Restrict)
+  liftedBy  User? @relation("GuestBlockLiftedBy", fields: [liftedById], references: [id], onDelete: SetNull)
+
+  @@index([documentType, documentNumber])
+}
+
+/// Every gate scan, accepted or not.
+model GateScanLog {
+  id          String         @id @default(cuid())
+  /// Null when the token could not be matched to a pass.
+  guestPassId String?
+  scannedById String
+  method      GateScanMethod
+  result      GateScanResult
+  scannedAt   DateTime       @default(now()) @db.Timestamptz(3)
+
+  guestPass GuestPass? @relation(fields: [guestPassId], references: [id], onDelete: SetNull)
+  scannedBy User       @relation(fields: [scannedById], references: [id], onDelete: Restrict)
+
+  @@index([guestPassId])
+  @@index([scannedAt])
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+/// In-app notification. `payload` carries the data; the web app renders the pt-BR text.
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  payload   Json             @default("{}")
+  readAt    DateTime?        @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

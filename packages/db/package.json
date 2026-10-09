@@ -16,12 +16,12 @@
     "generated"
   ],
   "scripts": {
-    "generate": "prisma generate",
+    "db:generate": "prisma generate",
     "build": "prisma generate && tsc -p tsconfig.build.json",
-    "migrate": "dotenv -e ../../.env -- prisma migrate dev",
-    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
-    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "studio": "dotenv -e ../../.env -- prisma studio",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "db:seed": "prisma generate && dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "db:studio": "dotenv -e ../../.env -- prisma studio",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit",
     "clean": "rm -rf dist generated .turbo"
@@ -31,8 +31,12 @@
   },
   "devDependencies": {
     "@ficc/eslint-config": "workspace:*",
+    "@ficc/shared": "workspace:*",
     "@ficc/typescript-config": "workspace:*",
     "@types/node": "^22.20.5",
+    "argon2": "^0.44.0",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv-cli": "^10.0.0",
     "eslint": "^9.39.5",
     "prisma": "~6.19.3",

@@ -53,6 +53,28 @@ Run from the repo root.
 
 To run a script in one package only: `pnpm --filter @ficc/api test`.
 
+## Seed data
+
+`pnpm db:seed` wipes every table and loads deterministic development data, dated relative to
+today (club time), then prints a summary and integrity checks:
+
+- **Real club setup:** courts Q1–Q4 (Har-Tru) and Q5–Q6 (Saibro), the 8 slots of 75 minutes,
+  coaches Alan (Q5), Phelipe (Q6) and Professor do Clube (Q1, Q6), and the weekday lesson
+  template from the spec as lesson series with occurrences for the next 8 weeks.
+- **Fictional data:** 30 members across categories, 10 unused membership IDs for trying sign-up,
+  and 40 confirmed matches over the last four months with consistent Elo history.
+
+Every seeded account uses the password `ficc1234` (or `SEED_PASSWORD`). Members log in with
+their matrícula (for example `104218`, Rafael Almeida); staff and coaches with their email:
+
+| Account            | Login                 | Role  |
+| ------------------ | --------------------- | ----- |
+| Administração FICC | `admin@ficc.test`     | ADMIN |
+| Portaria FICC      | `portaria@ficc.test`  | GATE  |
+| Alan               | `alan@ficc.test`      | COACH |
+| Phelipe            | `phelipe@ficc.test`   | COACH |
+| Professor do Clube | `professor@ficc.test` | COACH |
+
 ## Project structure
 
 ```
@@ -79,6 +101,7 @@ All apps read the single root `.env`. See `.env.example` for the full list.
 | `API_PORT`            | API     | Port the API listens on (default 4000)                   |
 | `WEB_ORIGIN`          | API     | Origin allowed by CORS (default `http://localhost:3000`) |
 | `NEXT_PUBLIC_API_URL` | Web     | Base URL of the API (default `http://localhost:4000`)    |
+| `SEED_PASSWORD`       | db seed | Password for every seeded account (default `ficc1234`)   |
 
 In development the API and web fall back to these defaults when `.env` is missing, so
 `pnpm dev` works out of the box. The `db:*` scripts need `.env`.

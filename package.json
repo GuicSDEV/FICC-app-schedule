@@ -16,11 +16,11 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:generate": "pnpm --filter @ficc/db generate",
-    "db:migrate": "pnpm --filter @ficc/db migrate",
-    "db:migrate:deploy": "pnpm --filter @ficc/db migrate:deploy",
-    "db:seed": "pnpm --filter @ficc/db seed",
-    "db:studio": "pnpm --filter @ficc/db studio",
+    "db:generate": "pnpm --filter @ficc/db db:generate",
+    "db:migrate": "pnpm --filter @ficc/db db:migrate",
+    "db:migrate:deploy": "pnpm --filter @ficc/db db:migrate:deploy",
+    "db:seed": "turbo run db:seed --filter=@ficc/db",
+    "db:studio": "pnpm --filter @ficc/db db:studio",
     "clean": "turbo run clean && rm -rf node_modules .turbo"
   },
   "devDependencies": {

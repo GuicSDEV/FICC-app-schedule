@@ -2,7 +2,14 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
   "globalDependencies": [".env"],
-  "globalEnv": ["NODE_ENV", "DATABASE_URL", "API_PORT", "WEB_ORIGIN", "NEXT_PUBLIC_API_URL"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "API_PORT",
+    "WEB_ORIGIN",
+    "NEXT_PUBLIC_API_URL",
+    "SEED_PASSWORD"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -27,6 +34,10 @@
       "outputs": []
     },
     "clean": {
+      "cache": false
+    },
+    "db:seed": {
+      "dependsOn": ["^build"],
       "cache": false
     }
   }
