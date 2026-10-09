@@ -9,8 +9,8 @@ export type Tx = Omit<
 >;
 
 /**
- * Runs `work` in a SERIALIZABLE transaction and retries on serialization conflicts (P2034), so
- * rules checked by reading (player busy, booking limit) hold under concurrent requests.
+ * Runs `work` in a SERIALIZABLE transaction and retries on serialization conflicts and deadlocks,
+ * so rules checked by reading (player busy, booking limit) hold under concurrent requests.
  */
 export async function serializable<T>(
   prisma: TenantPrismaClient,
@@ -26,15 +26,28 @@ export async function serializable<T>(
         timeout: 15_000,
       });
     } catch (error) {
-      const retryable =
-        error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
-      if (!retryable || attempt >= attempts) throw error;
+      if (!isRetryableConflict(error) || attempt >= attempts) throw error;
       // Jittered backoff so the retries of a rush do not collide again.
       await new Promise((resolve) =>
         setTimeout(resolve, 15 * attempt + Math.random() * 40 * attempt),
       );
     }
   }
+}
+
+/**
+ * P2034 is Prisma's write conflict; a Postgres deadlock (40P01) or serialization failure (40001)
+ * raised mid-statement can also arrive as an unknown request error carrying only the SQLSTATE.
+ */
+function isRetryableConflict(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return true;
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError
+  ) {
+    return /\b(40P01|40001)\b/.test(error.message);
+  }
+  return false;
 }
 
 /** True for a unique-constraint violation, optionally on a given set of columns. */
