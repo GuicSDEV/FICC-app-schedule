@@ -11,7 +11,13 @@ import { TennisBall } from "./tennis-ball";
  * Pull down at the top of the page to refresh. A tennis ball follows the pull and spins while
  * refreshing. Touch-only; mouse and keyboard users refresh through the page's own controls.
  */
-export function PullToRefresh({ onRefresh, children }: { onRefresh: () => Promise<unknown>; children: ReactNode }) {
+export function PullToRefresh({
+  onRefresh,
+  children,
+}: {
+  onRefresh: () => Promise<unknown>;
+  children: ReactNode;
+}) {
   const pull = useMotionValue(0);
   const [refreshing, setRefreshing] = useState(false);
   const start = useRef<number | null>(null);
@@ -50,7 +56,12 @@ export function PullToRefresh({ onRefresh, children }: { onRefresh: () => Promis
   }
 
   return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={() => void onTouchEnd()} className="relative">
+    <div
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={() => void onTouchEnd()}
+      className="relative"
+    >
       <motion.div
         aria-hidden
         style={{ y: ballY, opacity: ballOpacity, rotate: refreshing ? undefined : ballRotate }}
@@ -58,7 +69,11 @@ export function PullToRefresh({ onRefresh, children }: { onRefresh: () => Promis
       >
         <TennisBall spinning={refreshing} className="size-9 drop-shadow" />
       </motion.div>
-      {refreshing ? <span className="sr-only" role="status">Atualizando…</span> : null}
+      {refreshing ? (
+        <span className="sr-only" role="status">
+          Atualizando…
+        </span>
+      ) : null}
       <motion.div style={{ y: contentY }}>{children}</motion.div>
     </div>
   );

@@ -52,3 +52,13 @@ export interface CoachAdminItem extends CoachSummary {
   activeSeries: number;
   upcomingLessons: number;
 }
+
+/** What members see when they tap a lesson: who teaches and when they are on court. */
+export interface CoachProfile {
+  coach: CoachSummary;
+  courts: CourtSummary[];
+  /** Scheduled lessons in the next 7 days (today included). */
+  lessonsThisWeek: number;
+  /** Next scheduled lessons, soonest first (at most 6). */
+  upcoming: { date: IsoDate; court: CourtSummary; slot: SlotSummary }[];
+}

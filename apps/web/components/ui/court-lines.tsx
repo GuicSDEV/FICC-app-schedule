@@ -7,7 +7,10 @@ export function CourtLines({ className }: { className?: string }) {
       viewBox="0 0 400 820"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden
-      className={cn("pointer-events-none absolute inset-0 h-full w-full text-foreground", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0 h-full w-full text-foreground",
+        className,
+      )}
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"

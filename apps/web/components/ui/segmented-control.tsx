@@ -22,7 +22,11 @@ export function SegmentedControl<T extends string>({
 }) {
   const id = useId();
   return (
-    <div role="radiogroup" aria-label={label} className={cn("flex rounded-full border border-border bg-surface-2 p-1", className)}>
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("flex rounded-full border border-border bg-surface-2 p-1", className)}
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (

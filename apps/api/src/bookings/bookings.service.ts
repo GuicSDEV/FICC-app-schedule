@@ -9,6 +9,7 @@ import {
 } from "@ficc/db";
 import {
   addDays,
+  BOOKING_WINDOW_DAYS,
   type BookingDetail,
   clubToday,
   type CreateBookingInput,
@@ -100,6 +101,12 @@ export class BookingsService {
       if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "Horário não encontrado.");
       if (isSlotPast(input.date, slot, now)) {
         throw unprocessable("SLOT_IN_PAST", "Esse horário já passou.");
+      }
+      if (input.date > addDays(clubToday(now), BOOKING_WINDOW_DAYS - 1)) {
+        throw unprocessable(
+          "BEYOND_BOOKING_WINDOW",
+          `Reservas abrem com até ${BOOKING_WINDOW_DAYS} dias de antecedência.`,
+        );
       }
 
       const startsAt = slotStartsAt(input.date, slot);

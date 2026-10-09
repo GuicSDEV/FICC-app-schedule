@@ -83,6 +83,34 @@ Read SPEC sections Court Booking and the signature moments. Use only Phase 6 com
 - Lesson chip → coach profile sheet
   Done when: the full booking flow works at 390px, two windows show live updates, and there's no layout shift while loading.
 
+## Phase 7.5 — Multi-club-ready foundation
+
+Strategy: v1 is built ONLY for our club, **FICC**. Don't build any multi-club or multi-sport UI or features now, but make the structural decisions that would be expensive to change later, so adding other clubs (padel, beach tennis) later is additive work, not a rewrite. The user experience stays exactly as specified for FICC.
+
+Data & tenancy (invisible to users):
+
+- Add `Club` (name "FICC", slug, timezone, locale, logo, brand colors) and `ClubSettings`: move every club rule currently hardcoded into it (slot grid, booking limits, confirmation deadline, result auto-approve hours, Elo K and initial rating, guest rules)
+- Add `clubId` to every club-owned table with composite indexes/uniques (Matrícula unique per club); use cuid/uuid IDs everywhere; migration putting all existing data into FICC
+- Request-scoped tenant context in NestJS + a Prisma client extension that automatically filters and stamps `clubId`. For v1 the club is resolved from an env var (`DEFAULT_CLUB_SLUG=ficc`), so URLs stay as they are; later it can come from a subdomain without changing routes
+- One e2e test with a second club created inside the test only, proving data isolation (not seeded, no UI)
+
+Sport-ready (tennis only):
+
+- `Court.sport` enum with only `TENNIS` for now
+- Ratings move to `PlayerRating` (membershipId/userId, sport, elo, matches); leaderboard and Elo logic read the rating for the match's sport
+- Score validation and match-format rules sit behind a `SportRules` interface in packages/shared, with a single `TennisRules` implementation. No padel or beach tennis code
+- Categories become a per-club table instead of an enum (seeded with FICC's categories)
+- Prepare tournaments (Phase 9.5) in the data model: `Match.type` (FRIENDLY | RANKED | TOURNAMENT) and a nullable `Match.tournamentId`
+
+Code hygiene for later:
+
+- Extract all user-facing strings with next-intl (pt-BR only for now); dates/numbers formatted with the club's locale
+- Move every scheduled job (pending booking expiry, auto-approve, lesson generation…) to BullMQ + Redis, idempotent, plus the Socket.IO Redis adapter
+- LGPD basics: encrypt guest document IDs at rest (key from env) and a retention job that anonymizes guest data after 90 days (configurable in ClubSettings)
+- API prefix `/v1`
+
+Done when: all previous tests pass, the isolation test passes, and the app behaves exactly as before for FICC users.
+
 ## Phase 8 — Member: matches, ranking, H2H, guests
 
 Read SPEC sections Elo & Competitive Ranking, Guest Day Pass and the signature moments.
@@ -104,6 +132,72 @@ Read SPEC sections Coach Portal, Guest Day Pass (gate), Court Maintenance.
 - Admin: freeze panel (court or group, reason, window, affected list, bulk cancel), coach accounts + allowed courts, lesson oversight + audit log, dispute queue, guest history with block/suspend, membership ID CSV import
   Done when: a coach cancels a lesson and a member books that slot right after; a reused QR is rejected; a freeze shows the banner to impacted users.
 
+## Phase 9.5 — Tournaments & circuits
+
+Context: FICC currently runs its tournaments on LetzPlay. This module must fully replace it, so the organizer's workflow matters as much as the players' view. Known pain points to solve: results left pending for months, and players missing tournaments because notifications didn't arrive.
+
+Roles: ADMIN can do everything; a new per-tournament `ORGANIZER` permission can be given to members who help run a tournament.
+
+### Organizer — create & configure
+
+- Tournament: name, cover image, description/rules (rich text), sponsor logos, dates, location (FICC courts), status flow DRAFT → REGISTRATION_OPEN → REGISTRATION_CLOSED → DRAW_PUBLISHED → IN_PROGRESS → FINISHED (or CANCELLED)
+- One or more categories per tournament (each with its own draw): entry type SINGLES/DOUBLES, format SINGLE_ELIMINATION or GROUPS_THEN_KNOCKOUT (group size, how many advance), max entries, score format (best of 3 with match tie-break, pro-set to 8, etc.), whether results count for Elo
+- Registration settings: window, open to members only or also guests/external players (name + phone), optional fee amount (no payment gateway: the organizer marks each entry PAID/UNPAID/EXEMPT), optional approval by the organizer
+- Duplicate a past tournament as a template
+
+### Players — registration
+
+- "Tournaments" tab: Upcoming / Registration open / In progress / Finished, with filters by category
+- Tournament page: info, rules, categories, registered players, draw, schedule, results
+- Register in a category (doubles: invite a partner who must accept), add **time restrictions** ("only after 18:00 on weekdays", unavailable dates) and a note to the organizer; withdraw before the draw; waitlist when full
+- Organizer view of entries: approve/reject, payment status, move between categories, export CSV
+
+### Draw
+
+- Automatic seeding by current Elo (standard seed positions, top seeds apart) or by circuit ranking points; byes for non-power-of-2 draws; manual seed/position adjustments before publishing
+- Groups: snake distribution; round-robin fixtures; standings tiebreakers (wins → head-to-head → sets ratio → games ratio)
+- Publishing the draw notifies every entrant
+
+### Schedule (order of play)
+
+- Organizer schedule board per day: courts × slots grid, drag matches into slots on desktop and tap-to-assign on mobile; "auto-schedule" that respects players' time restrictions, rest time between a player's matches, and existing bookings/lessons
+- Tournament matches block slots exactly like bookings (same collision guarantee) and show on the court calendar with a tournament chip
+- Publish the day's schedule → every affected player gets notified; any later change notifies the players involved with what changed
+- Rain/maintenance: when courts are frozen, affected tournament matches are flagged and the organizer can reschedule them in bulk
+
+### Results (no more pending results)
+
+- Players report with the existing flow; for tournament matches, the opponent's approval OR an organizer confirmation is enough; the organizer can enter/override any result directly from their phone
+- Walkover (W.O.), retirement and DQ support; winners advance automatically; group standings update live
+- Deadlines: if a scheduled match has no result 2h after its slot ends, the organizer gets an alert; a "Pending results" panel shows everything overdue
+
+### Communication
+
+- Organizer announcements to all entrants of a tournament or a category (in-app + notification)
+- Reliable notifications for: registration confirmed, partner invite, draw published, match scheduled/changed, opponent reported result, you advanced/were eliminated, announcement. Each one also shows in the notification center so nothing is missed.
+
+### Circuits (season ranking)
+
+- A `Circuit` groups several tournaments (stages) in a season, per category
+- Points table configurable per circuit (e.g. champion 100, finalist 70, semis 45, quarters 25, R16 15, participation 5)
+- Circuit ranking page with the per-stage points breakdown; it can be used to seed future stages
+- This is separate from the Elo ladder; both coexist
+
+### UI (follow the design and motion system)
+
+- Bracket view: horizontal scroll + pinch-zoom on mobile, rounds as columns, SVG connectors; on a confirmed result the winner's name animates along the connector into the next round
+- Groups view: animated standings + fixtures
+- "My tournaments" card on the member dashboard: next match (time, court, opponent), status
+- Champion screen when a final is confirmed (trophy animation + confetti); titles and results on player profiles (hall of fame)
+- Public read-only link (no login) for each tournament: bracket, schedule, results — easy to share on WhatsApp, with proper Open Graph preview image
+- Printable/PDF export of the draw and the day's order of play for the club's notice board
+
+### Tests
+
+Seeding/bye placement, group tiebreakers, advancement, walkover, auto-schedule respecting time restrictions and collisions with bookings/lessons, Elo applied only when enabled, circuit points calculation, overdue-result alerts.
+
+Done when: a 12-player singles tournament and an 8-team doubles groups-then-knockout tournament can go from creation → registration → draw → scheduling → results → champion, a circuit with 2 stages shows a correct ranking, and the public link and PDF exports work.
+
 ## Phase 10 — PWA, polish, QA
 
 Review the whole app against docs/SPEC.md and fix the gaps.
@@ -114,3 +208,45 @@ Review the whole app against docs/SPEC.md and fix the gaps.
 - Playwright e2e: login per role, booking, coach cancel → member book, report → approve → Elo, guest pass scan
 - Final README: architecture, roles, seeded test accounts, how to run and test
   Finish with the SPEC checklist (done/missing).
+
+## Phase 11 — SaaS extensibility & customer-feature workflow
+
+Business context: this becomes a SaaS for sports clubs (tennis, padel, beach tennis). Our differentiator is close support: we sit with each club's owners and build the features they ask for. The rule that makes this scale: **build for one club, ship for all.** Every customer request becomes a configurable module or setting available to every club. Never fork the code per club, never write `if (club === 'ficc')`, and never put club-specific logic outside ClubSettings, modules or custom fields.
+
+### 1. Module system
+
+- A module registry in packages/shared: each module declares key, name, description, dependencies, its settings schema (Zod), permissions, nav entries and API routes
+- Existing features become modules: BOOKINGS, LESSONS, GUESTS, GATE, RANKING, TOURNAMENTS, CIRCUITS
+- Per-club module enablement + per-club feature flags for gradual rollout (enabled for specific clubs, then for everyone); API guards and UI navigation are driven by the registry
+- Document in `docs/ARCHITECTURE.md` how to create a module, with the existing modules as examples
+
+### 2. Self-service configuration
+
+- Admin "Club settings" area auto-generated from each module's Zod settings schema (grouped forms with validation), so a new setting appears in the UI without building a screen
+- Branding: logo, accent colors, club name, app icon (PWA manifest per club)
+- Custom fields: admins can add extra fields (text, number, select, date, boolean) to members, bookings and tournament registrations; they show in forms, profiles and CSV exports
+
+### 3. Customer feedback loop
+
+- An in-app "Suggest an improvement / Report a problem" button for admins and members (text + screenshot + current page), stored per club
+- A `/platform/feedback` inbox for us (SUPER_ADMIN): status (NEW → PLANNED → IN_PROGRESS → SHIPPED), link to the module/flag that delivered it, reply to the requester
+- In-app "What's new" panel fed by a changelog; when a request is SHIPPED, the requester is notified
+
+### 4. Integrations
+
+- Outgoing webhooks per club (booking created/cancelled, match confirmed, tournament registration…), with signing and retries via the job queue
+- Public read API with per-club API keys (OpenAPI documented), for clubs that want to connect other systems
+
+### 5. Sales & onboarding
+
+- Demo mode: one command creates a demo club with realistic data (members, bookings, matches, a running tournament) for owner meetings, resettable
+- `/platform` dashboard: clubs, active modules per club, usage metrics (active members, bookings/week, tournaments)
+
+### 6. Developer workflow for new features
+
+- Create `.claude/commands/new-feature.md` (a slash command) that always follows: (1) read SPEC, ARCHITECTURE and AGENTS.md; (2) write a short spec in `docs/features/<name>.md` — problem, which club asked, how it generalizes to other clubs, settings, data model, screens; (3) implement as a module or a module extension behind a feature flag; (4) tests; (5) changelog entry; (6) update docs
+- `docs/features/_template.md` with that structure
+- `docs/decisions/` for architecture decision records (short ADRs), starting with one for "build for one, ship for all"
+- Add the rules from this phase to AGENTS.md
+
+Done when: an existing feature can be turned on/off per club from the platform area, a new setting added to a module schema appears in the admin UI automatically, custom fields work end to end, the feedback inbox and changelog work, and running `/new-feature` produces a spec file following the template.

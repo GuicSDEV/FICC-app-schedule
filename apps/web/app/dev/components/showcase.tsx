@@ -49,7 +49,15 @@ const SWATCHES: { name: string; className: string }[] = [
   { name: "bronze", className: "bg-bronze" },
 ];
 
-function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+function Section({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <section className={cn("space-y-3", className)}>
       <SectionLabel>{title}</SectionLabel>
@@ -70,7 +78,10 @@ export function Showcase() {
   const [areaCoach, setAreaCoach] = useState(false);
 
   return (
-    <div data-area={areaCoach ? "coach" : undefined} className="mx-auto w-full max-w-lg space-y-10 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-24">
+    <div
+      data-area={areaCoach ? "coach" : undefined}
+      className="mx-auto w-full max-w-lg space-y-10 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-24"
+    >
       <header className="flex items-center justify-between gap-2">
         <div>
           <h1 className="font-display text-headline font-bold">Componentes</h1>
@@ -104,7 +115,9 @@ export function Showcase() {
             <p className="text-title font-semibold">Title 20</p>
             <p className="text-body">Body 16 · Geist Sans para a interface.</p>
             <p className="text-small text-muted-foreground">Small 14 · texto secundário</p>
-            <p className="num text-caption text-muted-foreground">Caption 12 · 18:30 · 6-4, 3-6, [10-8]</p>
+            <p className="num text-caption text-muted-foreground">
+              Caption 12 · 18:30 · 6-4, 3-6, [10-8]
+            </p>
           </CardContent>
         </Card>
       </Section>
@@ -184,10 +197,19 @@ export function Showcase() {
               <NumberTicker value={elo} from={1200} className="font-display text-hero font-bold" />
             </div>
             <div className="flex gap-2">
-              <Button variant="dangerSoft" size="icon" aria-label="Perder 12" onClick={() => setElo((value) => value - 12)}>
+              <Button
+                variant="dangerSoft"
+                size="icon"
+                aria-label="Perder 12"
+                onClick={() => setElo((value) => value - 12)}
+              >
                 {formatDelta(-12)}
               </Button>
-              <Button size="icon" aria-label="Ganhar 18" onClick={() => setElo((value) => value + 18)}>
+              <Button
+                size="icon"
+                aria-label="Ganhar 18"
+                onClick={() => setElo((value) => value + 18)}
+              >
                 {formatDelta(18)}
               </Button>
             </div>
@@ -198,19 +220,65 @@ export function Showcase() {
       <Section title="Chips de horário">
         <div className="grid grid-cols-3 gap-2">
           <SlotChip courtName="Q1" surface="HARTRU" state="free" onPress={() => undefined} />
-          <SlotChip courtName="Q5" surface="SAIBRO" state="free" favorite onPress={() => undefined} />
-          <SlotChip courtName="Q5" surface="SAIBRO" state="lesson" coach={ALAN} onPress={() => undefined} />
-          <SlotChip courtName="Q2" surface="HARTRU" state="booking" bookingStatus="PENDING" players={[{ ...PLAYERS[0]!, pending: false }, { ...PLAYERS[1]!, pending: true }]} />
-          <SlotChip courtName="Q3" surface="HARTRU" state="booking" bookingStatus="CONFIRMED" mine players={PLAYERS.slice(0, 2)} />
-          <SlotChip courtName="Q6" surface="SAIBRO" state="booking" bookingStatus="CONFIRMED" players={PLAYERS.slice(1, 5)} />
+          <SlotChip
+            courtName="Q5"
+            surface="SAIBRO"
+            state="free"
+            favorite
+            onPress={() => undefined}
+          />
+          <SlotChip
+            courtName="Q5"
+            surface="SAIBRO"
+            state="lesson"
+            coach={ALAN}
+            onPress={() => undefined}
+          />
+          <SlotChip
+            courtName="Q2"
+            surface="HARTRU"
+            state="booking"
+            bookingStatus="PENDING"
+            players={[
+              { ...PLAYERS[0]!, pending: false },
+              { ...PLAYERS[1]!, pending: true },
+            ]}
+          />
+          <SlotChip
+            courtName="Q3"
+            surface="HARTRU"
+            state="booking"
+            bookingStatus="CONFIRMED"
+            mine
+            players={PLAYERS.slice(0, 2)}
+          />
+          <SlotChip
+            courtName="Q6"
+            surface="SAIBRO"
+            state="booking"
+            bookingStatus="CONFIRMED"
+            players={PLAYERS.slice(1, 5)}
+          />
           <SlotChip courtName="Q5" surface="SAIBRO" state="frozen" freezeReason="RAIN" />
           <SlotChip courtName="Q4" surface="HARTRU" state="frozen" freezeReason="MAINTENANCE" />
           <SlotChip courtName="Q1" surface="HARTRU" state="free" past />
         </div>
         <p className="text-small text-muted-foreground">Largura de grade (desktop):</p>
         <div className="grid grid-cols-2 gap-2">
-          <SlotChip courtName="Q5" surface="SAIBRO" state="lesson" coach={ALAN} onPress={() => undefined} />
-          <SlotChip courtName="Q3" surface="HARTRU" state="booking" bookingStatus="CONFIRMED" players={PLAYERS.slice(0, 4)} />
+          <SlotChip
+            courtName="Q5"
+            surface="SAIBRO"
+            state="lesson"
+            coach={ALAN}
+            onPress={() => undefined}
+          />
+          <SlotChip
+            courtName="Q3"
+            surface="HARTRU"
+            state="booking"
+            bookingStatus="CONFIRMED"
+            players={PLAYERS.slice(0, 4)}
+          />
           <SlotChip courtName="Q2" surface="HARTRU" state="free" onPress={() => undefined} />
           <SlotChip courtName="Q6" surface="SAIBRO" state="frozen" freezeReason="RAIN" />
         </div>
@@ -229,10 +297,28 @@ export function Showcase() {
                 celebrate={celebrate}
                 onPress={() => undefined}
               />
-              <SlotChip courtName="Q6" surface="SAIBRO" state={liveState} coach={ALAN} players={PLAYERS.slice(0, 2)} bookingStatus="CONFIRMED" highlightKey={highlight} celebrate={celebrate} className="flex-[2]" onPress={() => undefined} />
+              <SlotChip
+                courtName="Q6"
+                surface="SAIBRO"
+                state={liveState}
+                coach={ALAN}
+                players={PLAYERS.slice(0, 2)}
+                bookingStatus="CONFIRMED"
+                highlightKey={highlight}
+                celebrate={celebrate}
+                className="flex-[2]"
+                onPress={() => undefined}
+              />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" onClick={() => { setLiveState(liveState === "lesson" ? "free" : "lesson"); setHighlight((value) => value + 1); }}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setLiveState(liveState === "lesson" ? "free" : "lesson");
+                  setHighlight((value) => value + 1);
+                }}
+              >
                 {liveState === "lesson" ? "Cancelar aula" : "Recriar aula"}
               </Button>
               <Button
@@ -252,7 +338,10 @@ export function Showcase() {
 
       <Section title="Convites (deslize)">
         {invites.length === 0 ? (
-          <EmptyState title="Sem convites pendentes" description="Quando te marcarem numa reserva, aparece aqui." />
+          <EmptyState
+            title="Sem convites pendentes"
+            description="Quando te marcarem numa reserva, aparece aqui."
+          />
         ) : (
           invites.map((id) => (
             <SwipeCard
@@ -297,7 +386,12 @@ export function Showcase() {
       </Section>
 
       <Section title="Avisos">
-        <AlertBanner show={banner} tone="rain" title="Chuva · Q5, Q6 interditadas" onDismiss={() => setBanner(false)}>
+        <AlertBanner
+          show={banner}
+          tone="rain"
+          title="Chuva · Q5, Q6 interditadas"
+          onDismiss={() => setBanner(false)}
+        >
           Previsão de liberação às 16:00.
         </AlertBanner>
         <AlertBanner show tone="maintenance" title="Manutenção · Q2 interditada">
@@ -313,24 +407,36 @@ export function Showcase() {
           <Button variant="secondary" onClick={() => setSheet(true)}>
             Abrir folha
           </Button>
-          <Button variant="secondary" onClick={() => toast.success("Reserva confirmada", { description: "Q3 · 18:30" })}>
+          <Button
+            variant="secondary"
+            onClick={() => toast.success("Reserva confirmada", { description: "Q3 · 18:30" })}
+          >
             Toast
           </Button>
-          <Button variant="secondary" onClick={() => toast.error("Esse horário acabou de ser reservado.")}>
+          <Button
+            variant="secondary"
+            onClick={() => toast.error("Esse horário acabou de ser reservado.")}
+          >
             Erro
           </Button>
         </div>
         <PullToRefresh onRefresh={() => new Promise((resolve) => setTimeout(resolve, 1200))}>
           <Card>
             <CardContent className="flex items-center gap-3 text-small text-muted-foreground">
-              <TennisBall className="size-6" /> No celular, puxe este cartão para baixo no topo da página.
+              <TennisBall className="size-6" /> No celular, puxe este cartão para baixo no topo da
+              página.
             </CardContent>
           </Card>
         </PullToRefresh>
       </Section>
 
       <Section title="Estados vazios e erros">
-        <EmptyState icon={CalendarX2} title="Nenhuma reserva" description="Toque no + para marcar uma quadra." action={<Button size="sm">Reservar</Button>} />
+        <EmptyState
+          icon={CalendarX2}
+          title="Nenhuma reserva"
+          description="Toque no + para marcar uma quadra."
+          action={<Button size="sm">Reservar</Button>}
+        />
         <ErrorState onRetry={() => toast("Tentando de novo…")} />
       </Section>
 

@@ -83,7 +83,12 @@ export function CoachShell({ children }: { children: ReactNode }) {
   return (
     <AreaGuard area="/coach">
       <div data-area="coach" className="flex min-h-dvh">
-        <Sidebar group="coach" items={COACH_NAV} header={<Brand subtitle="Área do professor" />} footer={<SidebarFooter />} />
+        <Sidebar
+          group="coach"
+          items={COACH_NAV}
+          header={<Brand subtitle="Área do professor" />}
+          footer={<SidebarFooter />}
+        />
         <main className={cn("min-w-0 flex-1 px-4 md:px-8", MOBILE_BOTTOM)}>
           <div className="mx-auto w-full max-w-5xl">
             <div className="pt-[max(0.75rem,env(safe-area-inset-top))] empty:hidden md:pt-4">
@@ -104,9 +109,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <AreaGuard area="/admin">
       <div className="flex min-h-dvh">
-        <Sidebar group="admin" items={ADMIN_NAV} header={<Brand subtitle="Administração" />} footer={<SidebarFooter />} />
+        <Sidebar
+          group="admin"
+          items={ADMIN_NAV}
+          header={<Brand subtitle="Administração" />}
+          footer={<SidebarFooter />}
+        />
         <main className="min-w-0 flex-1 px-4 pb-12 md:px-8">
-          <nav aria-label="Seções" className="glass sticky top-0 z-40 -mx-4 flex gap-2 overflow-x-auto border-b border-border px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 no-scrollbar md:hidden">
+          <nav
+            aria-label="Seções"
+            className="sticky top-0 z-40 -mx-4 no-scrollbar flex gap-2 overflow-x-auto border-b border-border glass px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden"
+          >
             {ADMIN_NAV.map((item) => {
               const active = isActive(pathname, item);
               return (
@@ -116,7 +129,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-small font-medium transition-tokens",
-                    active ? "bg-primary text-primary-foreground" : "bg-surface-2 text-muted-foreground",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-surface-2 text-muted-foreground",
                   )}
                 >
                   <item.icon className="size-4" />
@@ -138,7 +153,7 @@ export function GateShell({ children }: { children: ReactNode }) {
   return (
     <AreaGuard area="/gate">
       <div className="flex min-h-dvh flex-col">
-        <header className="glass sticky top-0 z-30 border-b border-border pt-safe">
+        <header className="sticky top-0 z-30 border-b border-border glass pt-safe">
           <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
             <Brand subtitle="Portaria" />
             <div className="flex items-center gap-1">
@@ -154,7 +169,9 @@ export function GateShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">{children}</main>
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
+          {children}
+        </main>
       </div>
     </AreaGuard>
   );

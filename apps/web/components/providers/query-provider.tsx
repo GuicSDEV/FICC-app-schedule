@@ -13,7 +13,8 @@ function createClient(): QueryClient {
         refetchOnWindowFocus: true,
         // Retry network and server errors, never 4xx (they will not fix themselves).
         retry: (failureCount, error) =>
-          failureCount < 2 && !(error instanceof ApiError && error.status >= 400 && error.status < 500),
+          failureCount < 2 &&
+          !(error instanceof ApiError && error.status >= 400 && error.status < 500),
       },
       mutations: { retry: false },
     },

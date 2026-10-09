@@ -9,6 +9,7 @@ import type {
   CancelLessonResult,
   Category,
   CoachAdminItem,
+  CoachProfile,
   CopyWeekResult,
   CourtsResponse,
   CreateBookingInput,
@@ -92,7 +93,8 @@ export function refreshSession(): Promise<boolean> {
 function buildUrl(path: string, query?: Query): string {
   const url = new URL(`${API_URL}/api${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
+    if (value !== undefined && value !== null && value !== "")
+      url.searchParams.set(key, String(value));
   }
   return url.toString();
 }
@@ -130,24 +132,29 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return data as T;
 }
 
-const post = <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body ?? {} });
+const post = <T>(path: string, body?: unknown) =>
+  request<T>(path, { method: "POST", body: body ?? {} });
 const patch = <T>(path: string, body: unknown) => request<T>(path, { method: "PATCH", body });
 
 /** One function per endpoint, typed with the shared DTOs. */
 export const api = {
   auth: {
     me: () => request<AuthUser>("/auth/me"),
-    login: (input: LoginInput) => request<AuthUser>("/auth/login", { method: "POST", body: input, noRefresh: true }),
+    login: (input: LoginInput) =>
+      request<AuthUser>("/auth/login", { method: "POST", body: input, noRefresh: true }),
     register: (input: RegisterInput) =>
       request<AuthUser>("/auth/register", { method: "POST", body: input, noRefresh: true }),
     logout: () => request<void>("/auth/logout", { method: "POST", noRefresh: true }),
   },
   courts: () => request<CourtsResponse>("/courts"),
-  schedule: (date: string, surface?: Surface) => request<ScheduleDay>("/schedule", { query: { date, surface } }),
+  schedule: (date: string, surface?: Surface) =>
+    request<ScheduleDay>("/schedule", { query: { date, surface } }),
   freezes: { active: () => request<ActiveFreeze[]>("/freezes/active") },
+  coaches: { profile: (id: string) => request<CoachProfile>(`/coaches/${id}`) },
   members: { search: (q: string) => request<PlayerSummary[]>("/members/search", { query: { q } }) },
   bookings: {
     mine: () => request<MyBookingsResponse>("/bookings/mine"),
+    get: (id: string) => request<BookingDetail>(`/bookings/${id}`),
     create: (input: CreateBookingInput) => post<BookingDetail>("/bookings", input),
     confirm: (id: string) => post<BookingDetail>(`/bookings/${id}/confirm`),
     decline: (id: string) => post<BookingDetail>(`/bookings/${id}/decline`),
@@ -156,7 +163,8 @@ export const api = {
   favorites: {
     list: () => request<SlotFavoriteItem[]>("/favorites"),
     add: (input: SlotFavoriteInput) => post<SlotFavoriteItem>("/favorites", input),
-    remove: (input: SlotFavoriteInput) => request<void>("/favorites", { method: "DELETE", body: input }),
+    remove: (input: SlotFavoriteInput) =>
+      request<void>("/favorites", { method: "DELETE", body: input }),
   },
   notifications: {
     list: () => request<NotificationsResponse>("/notifications"),
@@ -168,10 +176,12 @@ export const api = {
     get: (id: string) => request<MatchDetail>(`/matches/${id}`),
     report: (input: ReportMatchRequest) => post<MatchDetail>("/matches", input),
     approve: (id: string) => post<MatchDetail>(`/matches/${id}/approve`),
-    dispute: (id: string, comment?: string) => post<MatchDetail>(`/matches/${id}/dispute`, { comment }),
+    dispute: (id: string, comment?: string) =>
+      post<MatchDetail>(`/matches/${id}/dispute`, { comment }),
   },
   ranking: {
-    leaderboard: (category?: Category) => request<LeaderboardResponse>("/leaderboard", { query: { category } }),
+    leaderboard: (category?: Category) =>
+      request<LeaderboardResponse>("/leaderboard", { query: { category } }),
     profile: (id: string) => request<PlayerProfile>(`/players/${id}`),
     eloHistory: (id: string) => request<EloPoint[]>(`/players/${id}/elo-history`),
     h2h: (a: string, b: string) => request<H2HResponse>("/h2h", { query: { a, b } }),
@@ -195,22 +205,27 @@ export const api = {
   },
   coach: {
     agenda: (date: string) => request<ScheduleDay>("/coach/agenda", { query: { date } }),
-    lessons: (from: string, to: string) => request<LessonDetail[]>("/coach/lessons", { query: { from, to } }),
+    lessons: (from: string, to: string) =>
+      request<LessonDetail[]>("/coach/lessons", { query: { from, to } }),
     createLesson: (input: CreateLessonInput) => post<CreateLessonResult>("/coach/lessons", input),
-    updateLesson: (id: string, input: UpdateLessonInput) => patch<LessonDetail>(`/coach/lessons/${id}`, input),
+    updateLesson: (id: string, input: UpdateLessonInput) =>
+      patch<LessonDetail>(`/coach/lessons/${id}`, input),
     cancelLesson: (id: string, scope: LessonCancelScope) =>
       post<CancelLessonResult>(`/coach/lessons/${id}/cancel`, { scope }),
     restoreLesson: (id: string) => post<LessonDetail>(`/coach/lessons/${id}/restore`),
-    copyWeek: (weekStart: string) => post<CopyWeekResult>("/coach/lessons/copy-week", { weekStart }),
+    copyWeek: (weekStart: string) =>
+      post<CopyWeekResult>("/coach/lessons/copy-week", { weekStart }),
   },
   admin: {
     coaches: () => request<CoachAdminItem[]>("/admin/coaches"),
     createCoach: (input: CreateCoachInput) => post<CoachAdminItem>("/admin/coaches", input),
-    updateCoach: (id: string, input: UpdateCoachInput) => patch<CoachAdminItem>(`/admin/coaches/${id}`, input),
+    updateCoach: (id: string, input: UpdateCoachInput) =>
+      patch<CoachAdminItem>(`/admin/coaches/${id}`, input),
     lessons: (from: string, to: string, coachId?: string) =>
       request<LessonDetail[]>("/admin/lessons", { query: { from, to, coachId } }),
     createLesson: (input: CreateLessonInput) => post<CreateLessonResult>("/admin/lessons", input),
-    updateLesson: (id: string, input: UpdateLessonInput) => patch<LessonDetail>(`/admin/lessons/${id}`, input),
+    updateLesson: (id: string, input: UpdateLessonInput) =>
+      patch<LessonDetail>(`/admin/lessons/${id}`, input),
     cancelLesson: (id: string, scope: LessonCancelScope) =>
       post<CancelLessonResult>(`/admin/lessons/${id}/cancel`, { scope }),
     restoreLesson: (id: string) => post<LessonDetail>(`/admin/lessons/${id}/restore`),
@@ -238,6 +253,7 @@ export const api = {
     unsuspendGuests: (memberId: string) =>
       request<void>(`/admin/guests/suspensions/${memberId}`, { method: "DELETE" }),
     members: (q?: string) => request<AdminMemberItem[]>("/admin/members", { query: { q } }),
-    importMemberships: (csv: string) => post<MembershipImportResult>("/admin/memberships/import", { csv }),
+    importMemberships: (csv: string) =>
+      post<MembershipImportResult>("/admin/memberships/import", { csv }),
   },
 };

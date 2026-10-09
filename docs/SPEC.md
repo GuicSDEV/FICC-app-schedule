@@ -169,6 +169,39 @@ Coaches get their own app area (`/coach`) with a dedicated bottom nav (Agenda, C
 
 ---
 
+## 8. Tournaments & circuits (added later, see PHASES.md Phase 9.5)
+Replaces LetzPlay for FICC's tournaments; the organizer's workflow matters as much as the players' view. Pain points to solve: results left pending for months and players missing tournaments because notifications didn't arrive.
+- ADMIN does everything; a per-tournament `ORGANIZER` permission can be given to members.
+- Tournaments with status flow DRAFT → REGISTRATION_OPEN → REGISTRATION_CLOSED → DRAW_PUBLISHED → IN_PROGRESS → FINISHED (or CANCELLED); categories with their own draw (SINGLES/DOUBLES, SINGLE_ELIMINATION or GROUPS_THEN_KNOCKOUT, score format, Elo on/off); registration window, guests/external players, fee status (PAID/UNPAID/EXEMPT, no gateway), optional approval, waitlist, partner invites, time restrictions; duplicate as template.
+- Draw: seeding by Elo or circuit points, byes, manual adjustments; groups with snake distribution, round-robin and tiebreakers (wins → H2H → sets ratio → games ratio).
+- Order of play: courts × slots board, drag/tap-to-assign, auto-schedule respecting restrictions, rest time and existing bookings/lessons; tournament matches claim slots with the same collision guarantee; publish/change notifications; bulk reschedule on freezes.
+- Results: opponent approval OR organizer confirmation; organizer can enter/override; W.O., retirement, DQ; automatic advancement; overdue alerts 2 h after the slot ends and a "Pending results" panel.
+- Announcements and reliable notifications for every tournament event, all kept in the notification center.
+- Circuits: stages per season and category, configurable points table, circuit ranking (separate from Elo), usable for seeding.
+- UI: bracket (scroll + pinch-zoom, SVG connectors, winner animates into the next round), groups view, dashboard "My tournaments" card, champion screen, hall of fame, public read-only link with Open Graph image, printable/PDF draw and order of play.
+
+---
+
+# MULTI-CLUB STRATEGY (added later, see PHASES.md Phase 7.5)
+v1 is built **only for FICC**: no multi-club or multi-sport UI or features. The structure is ready for more clubs and sports (padel, beach tennis) so adding them later is additive work, not a rewrite:
+- Every club-owned table carries `clubId`; a request-scoped tenant context plus a Prisma extension filter and stamp it. v1 resolves the club from `DEFAULT_CLUB_SLUG=ficc` (later: subdomain), so URLs don't change.
+- Club rules (slot grid, booking limits, deadlines, Elo K and initial rating, guest rules, retention) live in `ClubSettings`, not in code.
+- Courts have a `sport` (only `TENNIS`); ratings live in `PlayerRating` per sport; score/format rules sit behind `SportRules` with one `TennisRules` implementation; categories are a per-club table.
+- User-facing strings go through next-intl (pt-BR only); jobs run on BullMQ + Redis; guest document IDs are encrypted at rest and anonymized after a retention period; the API is versioned under `/v1`.
+
+---
+
+# SAAS EXTENSIBILITY (added later, see PHASES.md Phase 11)
+The product becomes a SaaS for sports clubs. Rule: **build for one club, ship for all.** Every customer request becomes a configurable module or setting available to every club; never fork per club, never `if (club === 'ficc')`, never club-specific logic outside ClubSettings, modules or custom fields.
+- Module registry in packages/shared (key, name, description, dependencies, Zod settings schema, permissions, nav entries, API routes); BOOKINGS, LESSONS, GUESTS, GATE, RANKING, TOURNAMENTS, CIRCUITS are modules; per-club enablement and feature flags drive API guards and navigation.
+- Admin "Club settings" generated from module schemas; branding (logo, colors, name, per-club PWA manifest); custom fields on members, bookings and tournament registrations.
+- Feedback button (text + screenshot + page) → `/platform/feedback` inbox for SUPER_ADMIN (NEW → PLANNED → IN_PROGRESS → SHIPPED) with replies; "What's new" changelog panel; requesters notified on SHIPPED.
+- Signed outgoing webhooks with retries; public read API with per-club API keys (OpenAPI).
+- Demo club command (resettable); `/platform` dashboard with clubs, modules and usage metrics.
+- Feature workflow: `/new-feature` command, `docs/features/_template.md`, ADRs in `docs/decisions/`.
+
+---
+
 # DATA MODEL (Prisma)
 At minimum: `User` (role), `ValidMembershipId`, `Coach`, `CoachCourt` (allowed courts), `Court` (name, surface `HARTRU|SAIBRO`, status), `TimeSlot` (start time, duration 75, order), `LessonSeries`, `Lesson`, `LessonAuditLog`, `Booking` (+ `BookingPlayer` join with confirmation status), `SlotFavorite`, `CourtFreeze`, `Match` (+ `MatchPlayer` with team side, + `MatchSet`), `EloHistory` (user, match, before, after, delta), `GuestPass` (+ `GuestBlock`, `GateScanLog`), `Notification`.
 Use enums, proper indexes, unique constraints for slot collisions (shared between bookings and lessons) and explicit `onDelete` rules.

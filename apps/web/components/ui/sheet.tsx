@@ -37,17 +37,28 @@ export function Sheet({
             className,
           )}
         >
-          <div aria-hidden className="mx-auto mt-3 h-1.5 w-11 shrink-0 rounded-full bg-border-strong" />
+          <div
+            aria-hidden
+            className="mx-auto mt-3 h-1.5 w-11 shrink-0 rounded-full bg-border-strong"
+          />
           <div className="px-5 pt-4 pb-2">
             <Drawer.Title className="font-display text-title font-semibold">{title}</Drawer.Title>
             {description ? (
-              <Drawer.Description className="mt-1 text-small text-muted-foreground">{description}</Drawer.Description>
+              <Drawer.Description className="mt-1 text-small text-muted-foreground">
+                {description}
+              </Drawer.Description>
             ) : (
               <Drawer.Description className="sr-only">{title}</Drawer.Description>
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
-          {footer ? <div className="border-t border-border px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div> : <div className="pb-[max(1rem,env(safe-area-inset-bottom))]" />}
+          {footer ? (
+            <div className="border-t border-border px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {footer}
+            </div>
+          ) : (
+            <div className="pb-[max(1rem,env(safe-area-inset-bottom))]" />
+          )}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

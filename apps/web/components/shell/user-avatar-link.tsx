@@ -12,9 +12,17 @@ export function UserAvatarLink({ href }: { href: string }) {
   const { user } = useSession();
   if (!user) return null;
   return (
-    <Link href={href} aria-label="Meu perfil" className="inline-flex size-11 items-center justify-center rounded-full">
+    <Link
+      href={href}
+      aria-label="Meu perfil"
+      className="inline-flex size-11 items-center justify-center rounded-full"
+    >
       <motion.span layoutId="avatar-me" whileTap={tap} className="rounded-full">
-        <Avatar name={user.coach?.displayName ?? user.name} src={user.coach?.photoUrl ?? user.photoUrl} size="sm" />
+        <Avatar
+          name={user.coach?.displayName ?? user.name}
+          src={user.coach?.photoUrl ?? user.photoUrl}
+          size="sm"
+        />
       </motion.span>
     </Link>
   );

@@ -33,7 +33,10 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const client = useQueryClient();
   const router = useRouter();
-  const { data, isLoading } = useQuery({ queryKey: queryKeys.notifications, queryFn: api.notifications.list });
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: api.notifications.list,
+  });
   const unread = data?.unreadCount ?? 0;
 
   useSocketEvent("notification.created", (notification: NotificationItem) => {
@@ -82,7 +85,7 @@ export function NotificationBell() {
               initial="hidden"
               animate="show"
               exit="exit"
-              className="num absolute top-1.5 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground ring-2 ring-background"
+              className="absolute top-1.5 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 num text-[11px] font-bold text-primary-foreground ring-2 ring-background"
             >
               {unread > 9 ? "9+" : unread}
             </motion.span>
@@ -96,7 +99,12 @@ export function NotificationBell() {
         title="Notificações"
         footer={
           unread > 0 ? (
-            <Button variant="secondary" block onClick={() => readAll.mutate()} loading={readAll.isPending}>
+            <Button
+              variant="secondary"
+              block
+              onClick={() => readAll.mutate()}
+              loading={readAll.isPending}
+            >
               Marcar todas como lidas
             </Button>
           ) : undefined
@@ -109,13 +117,23 @@ export function NotificationBell() {
             ))}
           </div>
         ) : !data || data.items.length === 0 ? (
-          <EmptyState icon={BellOff} title="Tudo em dia" description="Convites, resultados e avisos aparecem aqui." />
+          <EmptyState
+            icon={BellOff}
+            title="Tudo em dia"
+            description="Convites, resultados e avisos aparecem aqui."
+          />
         ) : (
           <ul className="-mx-2 space-y-1">
             {data.items.map((item, index) => {
               const copy = describeNotification(item);
               return (
-                <motion.li key={item.id} custom={index} variants={listItemVariants} initial="hidden" animate="show">
+                <motion.li
+                  key={item.id}
+                  custom={index}
+                  variants={listItemVariants}
+                  initial="hidden"
+                  animate="show"
+                >
                   <button
                     type="button"
                     onClick={() => openItem(item)}
@@ -124,13 +142,22 @@ export function NotificationBell() {
                       !item.readAt && "bg-surface-2/60",
                     )}
                   >
-                    <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", item.readAt ? "bg-transparent" : TONE_DOT[copy.tone])} />
+                    <span
+                      className={cn(
+                        "mt-1.5 size-2 shrink-0 rounded-full",
+                        item.readAt ? "bg-transparent" : TONE_DOT[copy.tone],
+                      )}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="text-small font-semibold">{copy.title}</span>
-                        <span className="shrink-0 text-caption text-muted-foreground">{formatRelative(item.createdAt)}</span>
+                        <span className="shrink-0 text-caption text-muted-foreground">
+                          {formatRelative(item.createdAt)}
+                        </span>
                       </span>
-                      <span className="mt-0.5 block text-small text-muted-foreground">{copy.body}</span>
+                      <span className="mt-0.5 block text-small text-muted-foreground">
+                        {copy.body}
+                      </span>
                     </span>
                   </button>
                 </motion.li>

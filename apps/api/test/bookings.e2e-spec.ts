@@ -226,13 +226,25 @@ describe("Bookings", () => {
         .expect(201);
     });
 
-    it("refuses past slots and frozen courts", async () => {
+    it("refuses past slots, dates beyond the booking window and frozen courts", async () => {
       const agent = await ctx.loginMember(ana.membershipId!);
       const past = await agent
         .post("/api/bookings")
         .send(singles(bruno.id, { date: "2030-03-04", timeSlotId: club.slots["08:30"]!.id }))
         .expect(422);
       expect(past.body.code).toBe("SLOT_IN_PAST");
+
+      // Today + 13 days is the last bookable date.
+      const tooFar = await agent
+        .post("/api/bookings")
+        .send(singles(bruno.id, { date: "2030-03-18" }))
+        .expect(422);
+      expect(tooFar.body.code).toBe("BEYOND_BOOKING_WINDOW");
+      const lastDay = await agent
+        .post("/api/bookings")
+        .send(singles(bruno.id, { date: "2030-03-17" }))
+        .expect(201);
+      await agent.post(`/api/bookings/${lastDay.body.id}/cancel`).expect(200);
 
       const admin = await createStaff(ctx.prisma, Role.ADMIN, "admin@ficc.test");
       await ctx.prisma.courtFreeze.create({

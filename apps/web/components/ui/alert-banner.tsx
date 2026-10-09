@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 
 type Tone = "rain" | "maintenance" | "danger" | "info";
 
-const ICONS: Record<Tone, typeof Info> = { rain: CloudRain, maintenance: Wrench, danger: AlertTriangle, info: Info };
+const ICONS: Record<Tone, typeof Info> = {
+  rain: CloudRain,
+  maintenance: Wrench,
+  danger: AlertTriangle,
+  info: Info,
+};
 const STYLES: Record<Tone, string> = {
   rain: "border-warning/40 bg-warning-soft text-foreground",
   maintenance: "border-warning/40 bg-warning-soft text-foreground",
@@ -44,12 +49,21 @@ export function AlertBanner({
           initial="hidden"
           animate="show"
           exit="exit"
-          className={cn("flex items-start gap-3 rounded-lg border px-4 py-3 shadow-card", STYLES[tone], className)}
+          className={cn(
+            "flex items-start gap-3 rounded-lg border px-4 py-3 shadow-card",
+            STYLES[tone],
+            className,
+          )}
         >
           <span className="relative mt-0.5 shrink-0 text-warning-ink">
-            <Icon className={cn("size-5", tone !== "rain" && tone !== "maintenance" && "text-current")} />
+            <Icon
+              className={cn("size-5", tone !== "rain" && tone !== "maintenance" && "text-current")}
+            />
             {tone === "rain" ? (
-              <span aria-hidden className="absolute -bottom-1.5 left-1/2 flex -translate-x-1/2 gap-0.5">
+              <span
+                aria-hidden
+                className="absolute -bottom-1.5 left-1/2 flex -translate-x-1/2 gap-0.5"
+              >
                 {[0, 1, 2].map((drop) => (
                   <span
                     key={drop}
@@ -62,7 +76,9 @@ export function AlertBanner({
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-small font-semibold">{title}</p>
-            {children ? <div className="mt-0.5 text-small text-muted-foreground">{children}</div> : null}
+            {children ? (
+              <div className="mt-0.5 text-small text-muted-foreground">{children}</div>
+            ) : null}
           </div>
           {onDismiss ? (
             <motion.button

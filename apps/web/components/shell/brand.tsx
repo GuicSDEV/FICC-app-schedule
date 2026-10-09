@@ -8,7 +8,9 @@ export function Brand({ subtitle, className }: { subtitle?: string; className?: 
       <TennisBall className="size-8" />
       <span className="leading-none">
         <span className="block font-display text-title font-bold tracking-tight">FICC Tênis</span>
-        {subtitle ? <span className="mt-0.5 block text-caption text-muted-foreground">{subtitle}</span> : null}
+        {subtitle ? (
+          <span className="mt-0.5 block text-caption text-muted-foreground">{subtitle}</span>
+        ) : null}
       </span>
     </span>
   );

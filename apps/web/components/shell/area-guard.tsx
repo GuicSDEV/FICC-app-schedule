@@ -8,7 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AREA_BY_ROLE, AREA_ROLES } from "@/lib/roles";
 
 /** Client-side safety net behind the middleware: signed-in users with the right role only. */
-export function AreaGuard({ area, children }: { area: keyof typeof AREA_ROLES; children: ReactNode }) {
+export function AreaGuard({
+  area,
+  children,
+}: {
+  area: keyof typeof AREA_ROLES;
+  children: ReactNode;
+}) {
   const { user, isLoading } = useSession();
   const router = useRouter();
   const pathname = usePathname();

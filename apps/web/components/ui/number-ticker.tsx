@@ -23,7 +23,10 @@ export function NumberTicker({
   className?: string;
 }) {
   const reduce = useReducedMotion();
-  const springValue = useSpring(from ?? value, { stiffness: spring.gentle.stiffness, damping: spring.gentle.damping });
+  const springValue = useSpring(from ?? value, {
+    stiffness: spring.gentle.stiffness,
+    damping: spring.gentle.damping,
+  });
   const display = useTransform(springValue, (latest) => format(Math.round(latest)));
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export function NumberTicker({
   }, [value, reduce, springValue]);
 
   return (
-    <span className={cn("num inline-block", className)}>
+    <span className={cn("inline-block num", className)}>
       <motion.span aria-hidden>{display}</motion.span>
       <span className="sr-only">{format(value)}</span>
     </span>

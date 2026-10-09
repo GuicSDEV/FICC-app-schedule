@@ -30,7 +30,8 @@ export function RegisterForm() {
     const parsed = registerSchema.safeParse({ membershipId, name, password });
     if (!parsed.success) {
       const next: Errors = {};
-      for (const issue of parsed.error.issues) next[issue.path[0] as keyof Errors] ??= issue.message;
+      for (const issue of parsed.error.issues)
+        next[issue.path[0] as keyof Errors] ??= issue.message;
       setErrors(next);
       void animate(scope.current, shakeAnimation);
       return;
@@ -43,20 +44,32 @@ export function RegisterForm() {
       client.setQueryData(queryKeys.me, user);
       router.replace("/app");
     } catch (caught) {
-      const message = caught instanceof ApiError ? caught.message : "Não foi possível criar a conta.";
-      setErrors(caught instanceof ApiError && caught.code.startsWith("MEMBERSHIP") ? { membershipId: message } : { form: message });
+      const message =
+        caught instanceof ApiError ? caught.message : "Não foi possível criar a conta.";
+      setErrors(
+        caught instanceof ApiError && caught.code.startsWith("MEMBERSHIP")
+          ? { membershipId: message }
+          : { form: message },
+      );
       void animate(scope.current, shakeAnimation);
       setPending(false);
     }
   }
 
   return (
-    <motion.div variants={sheetVariants} initial="hidden" animate="show" className="w-full max-w-sm">
+    <motion.div
+      variants={sheetVariants}
+      initial="hidden"
+      animate="show"
+      className="w-full max-w-sm"
+    >
       <div className="mb-8 space-y-3">
-        <h1 className="font-display text-display font-bold leading-[1.05]">
+        <h1 className="font-display text-display leading-[1.05] font-bold">
           Primeiro <span className="text-accent-ink">saque.</span>
         </h1>
-        <p className="text-body text-muted-foreground">Use a matrícula do clube para criar seu acesso.</p>
+        <p className="text-body text-muted-foreground">
+          Use a matrícula do clube para criar seu acesso.
+        </p>
       </div>
       <form
         ref={scope}
@@ -71,7 +84,9 @@ export function RegisterForm() {
             autoComplete="username"
             placeholder="000.000"
             value={membershipId}
-            onChange={(event) => setMembershipId(formatMembershipId(event.target.value).slice(0, 13))}
+            onChange={(event) =>
+              setMembershipId(formatMembershipId(event.target.value).slice(0, 13))
+            }
             aria-invalid={Boolean(errors.membershipId) || undefined}
             className="num text-title tracking-wider"
             autoFocus
@@ -86,7 +101,12 @@ export function RegisterForm() {
             aria-invalid={Boolean(errors.name) || undefined}
           />
         </Field>
-        <Field label="Senha" htmlFor="password" error={errors.password ?? errors.form} hint="Pelo menos 8 caracteres.">
+        <Field
+          label="Senha"
+          htmlFor="password"
+          error={errors.password ?? errors.form}
+          hint="Pelo menos 8 caracteres."
+        >
           <Input
             id="password"
             type="password"
@@ -102,7 +122,10 @@ export function RegisterForm() {
       </form>
       <p className="mt-5 text-center text-small text-muted-foreground">
         Já tem conta?{" "}
-        <Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline"
+        >
           Entrar
         </Link>
       </p>

@@ -8,6 +8,8 @@ export const queryKeys = {
     date ? (["schedule", date, surface ?? "ALL"] as const) : (["schedule"] as const),
   freezesActive: ["freezes", "active"] as const,
   bookingsMine: ["bookings", "mine"] as const,
+  booking: (id: string) => ["bookings", id] as const,
+  coach: (id: string) => ["coaches", id] as const,
   favorites: ["favorites"] as const,
   notifications: ["notifications"] as const,
   matchesMine: ["matches", "mine"] as const,
@@ -19,13 +21,15 @@ export const queryKeys = {
   h2h: (a: string, b: string) => ["h2h", a, b] as const,
   memberSearch: (q: string) => ["members", "search", q] as const,
   guestPasses: ["guest-passes"] as const,
-  coachAgenda: (date?: string) => (date ? (["coach", "agenda", date] as const) : (["coach", "agenda"] as const)),
+  coachAgenda: (date?: string) =>
+    date ? (["coach", "agenda", date] as const) : (["coach", "agenda"] as const),
   coachLessons: (from?: string, to?: string) =>
     from ? (["coach", "lessons", from, to] as const) : (["coach", "lessons"] as const),
   admin: {
     root: ["admin"] as const,
     coaches: ["admin", "coaches"] as const,
-    lessons: (from: string, to: string, coachId?: string) => ["admin", "lessons", from, to, coachId ?? "all"] as const,
+    lessons: (from: string, to: string, coachId?: string) =>
+      ["admin", "lessons", from, to, coachId ?? "all"] as const,
     audit: ["admin", "audit"] as const,
     freezes: ["admin", "freezes"] as const,
     disputes: ["admin", "disputes"] as const,

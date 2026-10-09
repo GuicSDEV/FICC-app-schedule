@@ -14,7 +14,8 @@ export function Toaster() {
       mobileOffset={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
       toastOptions={{
         classNames: {
-          toast: "!rounded-lg !border !border-border !bg-surface-2 !text-foreground !shadow-raised !font-sans",
+          toast:
+            "!rounded-lg !border !border-border !bg-surface-2 !text-foreground !shadow-raised !font-sans",
           description: "!text-muted-foreground",
           actionButton: "!rounded-full !bg-primary !text-primary-foreground !font-medium",
         },

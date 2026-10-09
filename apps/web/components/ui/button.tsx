@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 /** Every size keeps the touch target at 44px or more. */
 const buttonVariants = cva(
-  "relative inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-tokens outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
+  "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-tokens outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
   {
     variants: {
       variant: {
@@ -55,8 +55,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       className={cn(buttonVariants({ variant, size, block }), className)}
       {...props}
     >
-      {loading ? <span aria-hidden className="absolute inset-0 m-auto size-5 animate-ball-spin rounded-full border-2 border-current border-r-transparent" /> : null}
-      <span className={cn("inline-flex items-center gap-2", loading && "opacity-0")}>{children}</span>
+      {loading ? (
+        <span
+          aria-hidden
+          className="absolute inset-0 m-auto size-5 animate-ball-spin rounded-full border-2 border-current border-r-transparent"
+        />
+      ) : null}
+      <span className={cn("inline-flex items-center gap-2", loading && "opacity-0")}>
+        {children}
+      </span>
     </motion.button>
   );
 });

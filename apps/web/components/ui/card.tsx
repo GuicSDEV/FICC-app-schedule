@@ -7,14 +7,22 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
-      className={cn("rounded-lg border border-border bg-card text-card-foreground shadow-card", className)}
+      className={cn(
+        "rounded-lg border border-border bg-card text-card-foreground shadow-card",
+        className,
+      )}
       {...props}
     />
   );
 }
 
 export function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex items-center justify-between gap-3 px-5 pt-5", className)} {...props} />;
+  return (
+    <div
+      className={cn("flex items-center justify-between gap-3 px-5 pt-5", className)}
+      {...props}
+    />
+  );
 }
 
 export function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
@@ -29,7 +37,10 @@ export function CardContent({ className, ...props }: React.ComponentProps<"div">
 export function SectionLabel({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
-      className={cn("text-caption font-medium uppercase tracking-[0.12em] text-muted-foreground", className)}
+      className={cn(
+        "text-caption font-medium tracking-[0.12em] text-muted-foreground uppercase",
+        className,
+      )}
       {...props}
     />
   );

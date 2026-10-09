@@ -18,11 +18,18 @@ export function AvatarStack({
   const overlap = size === "xs" ? "-ml-1" : size === "sm" ? "-ml-2" : "-ml-2.5";
   const extra = people.length - shown.length;
   return (
-    <div className={cn("flex items-center", className)} aria-label={people.map((person) => person.name).join(", ")}>
+    <div
+      className={cn("flex items-center", className)}
+      aria-label={people.map((person) => person.name).join(", ")}
+    >
       {shown.map((person, index) => (
         <span
           key={person.id}
-          className={cn("rounded-full ring-2 ring-card", index > 0 && overlap, person.pending && "opacity-55")}
+          className={cn(
+            "rounded-full ring-2 ring-card",
+            index > 0 && overlap,
+            person.pending && "opacity-55",
+          )}
         >
           <Avatar name={person.name} src={person.photoUrl} size={size} />
         </span>
@@ -32,7 +39,11 @@ export function AvatarStack({
           className={cn(
             "inline-flex items-center justify-center rounded-full bg-surface-3 font-semibold ring-2 ring-card",
             overlap,
-            size === "xs" ? "size-6 text-[10px]" : size === "sm" ? "size-8 text-caption" : "size-10 text-small",
+            size === "xs"
+              ? "size-6 text-[10px]"
+              : size === "sm"
+                ? "size-8 text-caption"
+                : "size-10 text-small",
           )}
         >
           +{extra}

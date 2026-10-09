@@ -17,7 +17,7 @@ function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className="relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring rounded-2xl"
+      className="relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
       <motion.span whileTap={tap} className="relative flex h-8 w-14 items-center justify-center">
         {active ? (
@@ -27,9 +27,19 @@ function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group
             className="absolute inset-0 rounded-full bg-primary/15"
           />
         ) : null}
-        <Icon className={cn("relative size-[22px] transition-tokens", active ? "text-accent-ink" : "text-muted-foreground")} />
+        <Icon
+          className={cn(
+            "relative size-[22px] transition-tokens",
+            active ? "text-accent-ink" : "text-muted-foreground",
+          )}
+        />
       </motion.span>
-      <span className={cn("text-[11px] font-medium leading-none transition-tokens", active ? "text-foreground" : "text-muted-foreground")}>
+      <span
+        className={cn(
+          "text-[11px] leading-none font-medium transition-tokens",
+          active ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
         {item.label}
       </span>
     </Link>
@@ -57,7 +67,7 @@ export function BottomNav({
   return (
     <nav
       aria-label="Navegação principal"
-      className="glass fixed inset-x-0 bottom-0 z-40 border-t border-border pb-safe md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass pb-safe md:hidden"
     >
       <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1 pb-1">
         {left.map((item) => (

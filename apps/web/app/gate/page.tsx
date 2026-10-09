@@ -9,7 +9,7 @@ export default function AreaHome() {
   const { user } = useSession();
   return (
     <>
-      <PageHeader title="Portaria" subtitle="Leitura de QR dos convidados"  />
+      <PageHeader title="Portaria" subtitle="Leitura de QR dos convidados" />
       <Card className="mt-6">
         <CardContent>
           <p className="font-display text-title font-semibold">Olá, {user?.name.split(" ")[0]}</p>

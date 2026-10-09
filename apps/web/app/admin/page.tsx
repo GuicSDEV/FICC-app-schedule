@@ -9,7 +9,7 @@ export default function AreaHome() {
   const { user } = useSession();
   return (
     <>
-      <PageHeader title="Interdições" subtitle="Administração"  />
+      <PageHeader title="Interdições" subtitle="Administração" />
       <Card className="mt-6">
         <CardContent>
           <p className="font-display text-title font-semibold">Olá, {user?.name.split(" ")[0]}</p>

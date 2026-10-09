@@ -18,7 +18,10 @@ export function ThemeToggle({ className }: { className?: string }) {
       whileTap={tap}
       onClick={() => setTheme(dark ? "light" : "dark")}
       aria-label={dark ? "Usar tema claro" : "Usar tema escuro"}
-      className={className ?? "inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground"}
+      className={
+        className ??
+        "inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+      }
     >
       {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
     </motion.button>

@@ -11,7 +11,9 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const redirect = (to: string) => NextResponse.redirect(new URL(to, request.url));
 
-  const area = Object.keys(AREA_ROLES).find((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const area = Object.keys(AREA_ROLES).find(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
   if (area) {
     if (!isRole(role)) return redirect(`/login?next=${encodeURIComponent(pathname + search)}`);
     if (!AREA_ROLES[area]!.includes(role)) return redirect(AREA_BY_ROLE[role]);
@@ -25,5 +27,13 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/register", "/app/:path*", "/coach/:path*", "/admin/:path*", "/gate/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/register",
+    "/app/:path*",
+    "/coach/:path*",
+    "/admin/:path*",
+    "/gate/:path*",
+  ],
 };

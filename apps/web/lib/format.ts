@@ -37,6 +37,18 @@ export function formatLongDay(date: IsoDate): string {
   return longDayFormatter.format(new Date(`${date}T00:00:00Z`));
 }
 
+const upperFirst = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+/** "Qui, 8 out": formatDay for the start of a line. */
+export function formatDayTitle(date: IsoDate): string {
+  return upperFirst(formatDay(date));
+}
+
+/** "Quinta-feira, 8 de outubro": formatLongDay for the start of a line. */
+export function formatLongDayTitle(date: IsoDate): string {
+  return upperFirst(formatLongDay(date));
+}
+
 /** Club-time "18:30" for an instant. */
 export function formatTime(iso: string): string {
   return timeFormatter.format(new Date(iso));
@@ -61,6 +73,16 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   return formatDateTime(iso);
 }
 
+/** "em 5 min", "em 3 h", "em 2 dias" for a future instant ("agora" once it passed). */
+export function formatUntil(iso: string, now: Date = new Date()): string {
+  const minutes = Math.round((new Date(iso).getTime() - now.getTime()) / 60_000);
+  if (minutes <= 0) return "agora";
+  if (minutes < 60) return `em ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `em ${hours} h`;
+  return `em ${Math.round(hours / 24)} dias`;
+}
+
 /** "+18" / "−12" / "0" with a real minus sign. */
 export function formatDelta(delta: number): string {
   if (delta > 0) return `+${delta}`;
@@ -72,8 +94,12 @@ export function formatDelta(delta: number): string {
 export function dayParts(date: IsoDate): { weekday: string; day: string; month: string } {
   const value = new Date(`${date}T00:00:00Z`);
   return {
-    weekday: clean(new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" }).format(value)),
+    weekday: clean(
+      new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" }).format(value),
+    ),
     day: String(value.getUTCDate()),
-    month: clean(new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(value)),
+    month: clean(
+      new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(value),
+    ),
   };
 }

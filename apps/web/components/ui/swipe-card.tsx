@@ -52,7 +52,8 @@ export function SwipeCard({
 
   function onDragEnd(_event: unknown, info: PanInfo) {
     if (info.offset.x > SWIPE_THRESHOLD || info.velocity.x > SWIPE_VELOCITY) void commit("confirm");
-    else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -SWIPE_VELOCITY) void commit("decline");
+    else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -SWIPE_VELOCITY)
+      void commit("decline");
     else void animate(x, 0, spring.gentle);
   }
 

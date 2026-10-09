@@ -6,6 +6,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { AdminModule } from "./admin/admin.module";
 import { AuthModule } from "./auth/auth.module";
 import { BookingsModule } from "./bookings/bookings.module";
+import { CoachesModule } from "./coaches/coaches.module";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { CommonModule } from "./common/common.module";
 import { validateEnv } from "./config/env";
@@ -41,6 +42,7 @@ import { UsersModule } from "./users/users.module";
     ClubScheduleModule,
     BookingsModule,
     LessonsModule,
+    CoachesModule,
     FreezesModule,
     AdminModule,
     MatchesModule,

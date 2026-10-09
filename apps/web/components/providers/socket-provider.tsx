@@ -39,7 +39,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
-    const connection = io(API_URL, { withCredentials: true, transports: ["websocket"], reconnectionDelayMax: 8000 });
+    const connection = io(API_URL, {
+      withCredentials: true,
+      transports: ["websocket"],
+      reconnectionDelayMax: 8000,
+    });
 
     connection.on(SOCKET_EVENTS.scheduleUpdated, () => {
       void client.invalidateQueries({ queryKey: queryKeys.schedule() });
@@ -92,7 +96,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 }
 
 /** Subscribes to one socket event while the component is mounted. */
-export function useSocketEvent<E extends keyof SocketEvents>(event: E, listener: Listener<E>): void {
+export function useSocketEvent<E extends keyof SocketEvents>(
+  event: E,
+  listener: Listener<E>,
+): void {
   const socket = useContext(SocketContext);
   const latest = useRef(listener);
   useEffect(() => {

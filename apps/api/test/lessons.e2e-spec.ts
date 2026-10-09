@@ -5,6 +5,7 @@ import { createTestApp, type TestContext } from "./support/app";
 import {
   type Club,
   createCoach,
+  createLesson,
   createMember,
   createStaff,
   resetDatabase,
@@ -365,6 +366,37 @@ describe("Coach portal and lessons", () => {
     ).toBe("Turma juvenil");
     const list = await coach.get("/api/coach/lessons?from=2030-03-04&to=2030-03-10").expect(200);
     expect(list.body).toHaveLength(1);
+  });
+
+  it("shows members a coach profile with courts and the week's upcoming lessons", async () => {
+    // Today 08:30 already started (09:00 now): it counts for the week but is not upcoming.
+    for (const [date, time] of [
+      ["2030-03-04", "08:30"],
+      [WED, "18:30"],
+      ["2030-03-10", "10:00"],
+      ["2030-03-11", "10:00"],
+    ] as const) {
+      await createLesson(ctx.prisma, {
+        coachId: phelipe.coach.id,
+        courtId: club.courts.Q6.id,
+        timeSlotId: club.slots[time]!.id,
+        date,
+      });
+    }
+    const member = await ctx.loginMember(ana.membershipId!);
+    const { body } = await member.get(`/api/coaches/${phelipe.coach.id}`).expect(200);
+    expect(body).toMatchObject({
+      coach: { id: phelipe.coach.id, displayName: "Phelipe" },
+      courts: [{ name: "Q5" }, { name: "Q6" }],
+      lessonsThisWeek: 3,
+      upcoming: [
+        { date: WED, court: { name: "Q6" }, slot: { startTime: "18:30" } },
+        { date: "2030-03-10", slot: { startTime: "10:00" } },
+      ],
+    });
+
+    await ctx.prisma.coach.update({ where: { id: alan.coach.id }, data: { isActive: false } });
+    await member.get(`/api/coaches/${alan.coach.id}`).expect(404);
   });
 
   describe("series generation job", () => {

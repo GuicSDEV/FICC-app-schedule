@@ -14,10 +14,13 @@ and what still needs a human to check.
 | 4     | API: coaches, lessons, maintenance    | Done        | `feat(phase-4)` |
 | 5     | API: matches, Elo, ranking, guests    | Done        | `feat(phase-5)` |
 | 6     | Frontend foundation (design + motion) | Done        | `feat(phase-6)` |
-| 7     | Member: dashboard, calendar, booking  | Not started |                 |
+| 7     | Member: dashboard, calendar, booking  | Done        | `feat(phase-7)` |
+| 7.5   | Multi-club-ready foundation           | Not started |                 |
 | 8     | Member: matches, ranking, H2H, guests | Not started |                 |
 | 9     | Coach, gate, admin screens            | Not started |                 |
+| 9.5   | Tournaments & circuits                | Not started |                 |
 | 10    | PWA, polish, QA                       | Not started |                 |
+| 11    | SaaS extensibility & feature workflow | Not started |                 |
 
 ## Decisions
 
@@ -119,6 +122,24 @@ and what still needs a human to check.
 - **`/dev/components`** (living component showcase) is hidden in production builds unless
   `NEXT_PUBLIC_SHOW_DEV_PAGES=true`.
 
+- **Phases 7.5, 9.5 and 11 were added by the product owner mid-run** (multi-club foundation,
+  tournaments, SaaS extensibility). Order: 7 → 7.5 → 8 → 9 → 9.5 → 10 → 11. Phase 7 was finished
+  first because it was in progress; Phase 7.5 then moves its strings to next-intl too.
+- **Booking window: 14 days** (`BOOKING_WINDOW_DAYS` in shared). The spec gives none; the calendar
+  day strip shows the same window and the API refuses later dates (`BEYOND_BOOKING_WINDOW`).
+- **Coach profile for members:** `GET /coaches/:id` (active coaches only) returns courts, lessons in
+  the next 7 days and the next 6 lessons that have not started. The lesson chip opens it.
+- **The calendar loads the whole day once and filters by surface on the client,** so the
+  All / Har-Tru / Saibro filter animates instantly without a request.
+- **Favorites are toggled from the slot sheets** (free, lesson and booking): a favorite watches a
+  court + time slot on every day, which is what `SLOT_OPENED` notifies about.
+- **The "booking confirmed" moment:** the sheet shows the drawn check and the ticket; the cell's
+  surface-color fill plays as the sheet closes so it is actually visible.
+- **Dashboard invites** are swipe cards (right confirms, left declines, buttons too); result
+  approvals can be approved right there, disputes go through the match page (Phase 8).
+- **Narrow slot chips** (6 courts at 390 px) stack avatar over court name; wider chips (surface
+  filter, desktop grid) show coach names and up to 4 player avatars.
+
 ## Known issues
 
 - None open.
@@ -128,3 +149,5 @@ and what still needs a human to check.
 - Feel of gestures (swipe cards, pull-to-refresh, bottom sheets) and haptics on a real phone;
   verified here only with Playwright touch emulation at 390 px.
 - iOS safe areas (notch / home indicator) on a real device.
+- Live calendar updates between two real phones (verified here with two Playwright browser
+  contexts: a booking in one appears in the other without reload).

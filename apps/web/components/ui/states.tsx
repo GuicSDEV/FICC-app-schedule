@@ -23,7 +23,12 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-strong px-6 py-10 text-center", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-strong px-6 py-10 text-center",
+        className,
+      )}
+    >
       {Icon ? (
         <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
           <Icon className="size-6" />
@@ -51,7 +56,13 @@ export function ErrorState({
   className?: string;
 }) {
   return (
-    <div role="alert" className={cn("flex flex-col items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft px-6 py-8 text-center", className)}>
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft px-6 py-8 text-center",
+        className,
+      )}
+    >
       <AlertTriangle className="size-6 text-danger-ink" />
       <p className="text-small text-foreground">{message}</p>
       {onRetry ? (

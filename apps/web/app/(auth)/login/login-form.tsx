@@ -19,7 +19,9 @@ import { AREA_BY_ROLE, AREA_ROLES } from "@/lib/roles";
 type Kind = "member" | "staff";
 
 function destination(role: Role, next: string | null): string {
-  const area = next ? Object.keys(AREA_ROLES).find((prefix) => next === prefix || next.startsWith(`${prefix}/`)) : undefined;
+  const area = next
+    ? Object.keys(AREA_ROLES).find((prefix) => next === prefix || next.startsWith(`${prefix}/`))
+    : undefined;
   return next && area && AREA_ROLES[area]!.includes(role) ? next : AREA_BY_ROLE[role];
 }
 
@@ -61,14 +63,21 @@ export function LoginForm() {
   }
 
   return (
-    <motion.div variants={sheetVariants} initial="hidden" animate="show" className="w-full max-w-sm">
+    <motion.div
+      variants={sheetVariants}
+      initial="hidden"
+      animate="show"
+      className="w-full max-w-sm"
+    >
       <div className="mb-8 space-y-3">
-        <h1 className="font-display text-display font-bold leading-[1.05] sm:text-hero">
+        <h1 className="font-display text-display leading-[1.05] font-bold sm:text-hero">
           A quadra
           <br />
           <span className="text-accent-ink">te espera.</span>
         </h1>
-        <p className="text-body text-muted-foreground">Reserve, jogue e suba no ranking do clube.</p>
+        <p className="text-body text-muted-foreground">
+          Reserve, jogue e suba no ranking do clube.
+        </p>
       </div>
 
       <form
@@ -98,7 +107,9 @@ export function LoginForm() {
               autoComplete="username"
               placeholder="000.000"
               value={membershipId}
-              onChange={(event) => setMembershipId(formatMembershipId(event.target.value).slice(0, 13))}
+              onChange={(event) =>
+                setMembershipId(formatMembershipId(event.target.value).slice(0, 13))
+              }
               aria-invalid={Boolean(error) || undefined}
               className="num text-title tracking-wider"
               autoFocus
@@ -149,7 +160,10 @@ export function LoginForm() {
       {kind === "member" ? (
         <p className="mt-5 text-center text-small text-muted-foreground">
           Primeiro acesso?{" "}
-          <Link href="/register" className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline">
+          <Link
+            href="/register"
+            className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline"
+          >
             Criar conta com a matrícula
           </Link>
         </p>

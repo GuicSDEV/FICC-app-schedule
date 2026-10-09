@@ -54,7 +54,12 @@ export function Sidebar({
         collapsed ? "w-[76px]" : "w-64",
       )}
     >
-      <div className={cn("mb-6 flex items-center gap-2 px-1", collapsed ? "flex-col" : "justify-between")}>
+      <div
+        className={cn(
+          "mb-6 flex items-center gap-2 px-1",
+          collapsed ? "flex-col" : "justify-between",
+        )}
+      >
         <div className={cn("min-w-0", collapsed && "sr-only")}>{header}</div>
         <motion.button
           type="button"
@@ -77,12 +82,16 @@ export function Sidebar({
               aria-current={active ? "page" : undefined}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "relative flex h-11 items-center gap-3 rounded-full px-3.5 text-small font-medium outline-none transition-tokens focus-visible:ring-[3px] focus-visible:ring-ring",
+                "relative flex h-11 items-center gap-3 rounded-full px-3.5 text-small font-medium transition-tokens outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {active ? (
-                <motion.span layoutId={`side-pill-${group}`} transition={spring.snappy} className="absolute inset-0 rounded-full bg-primary/15" />
+                <motion.span
+                  layoutId={`side-pill-${group}`}
+                  transition={spring.snappy}
+                  className="absolute inset-0 rounded-full bg-primary/15"
+                />
               ) : null}
               <Icon className={cn("relative size-5 shrink-0", active && "text-accent-ink")} />
               <span className={cn("relative truncate", collapsed && "sr-only")}>{item.label}</span>
@@ -90,7 +99,9 @@ export function Sidebar({
           );
         })}
       </nav>
-      {footer ? <div className={cn("mt-4", collapsed && "flex flex-col items-center")}>{footer}</div> : null}
+      {footer ? (
+        <div className={cn("mt-4", collapsed && "flex flex-col items-center")}>{footer}</div>
+      ) : null}
     </aside>
   );
 }
