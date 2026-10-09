@@ -4,17 +4,22 @@ import type { BookingDetail } from "@ficc/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Hourglass } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { TicketCard } from "@/components/booking/ticket-card";
 import { SwipeCard } from "@/components/ui/swipe-card";
-import { api, ApiError } from "@/lib/api";
-import { formatTime } from "@/lib/format";
+import { api } from "@/lib/api";
 import { listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { useErrorMessage } from "@/lib/use-error-message";
+import { useFormat } from "@/lib/use-format";
 
 /** Pending invitations: swipe right to confirm, left to decline (buttons do the same). */
 export function InviteList({ invites }: { invites: BookingDetail[] }) {
+  const t = useTranslations("dashboard.invite");
+  const format = useFormat();
+  const errorMessage = useErrorMessage();
   const client = useQueryClient();
   const answer = useMutation({
     mutationFn: ({ id, accept }: { id: string; accept: boolean }) =>
@@ -28,16 +33,16 @@ export function InviteList({ invites }: { invites: BookingDetail[] }) {
             ? { ...current, invites: current.invites.filter((invite) => invite.id !== booking.id) }
             : current,
       );
-      toast.success(accept ? "Presença confirmada" : "Convite recusado", {
+      toast.success(accept ? t("confirmed") : t("declined"), {
         description: accept
           ? booking.status === "CONFIRMED"
-            ? "Todos confirmaram. A quadra é de vocês!"
-            : "Falta a confirmação dos outros jogadores."
-          : "Avisamos quem te convidou.",
+            ? t("confirmedAll")
+            : t("confirmedWaiting")
+          : t("declinedDescription"),
       });
     },
     onError: (failure) => {
-      toast.error(failure instanceof ApiError ? failure.message : "Não foi possível responder.");
+      toast.error(errorMessage(failure, t("failed")));
     },
     onSettled: () => {
       void client.invalidateQueries({ queryKey: queryKeys.bookingsMine });
@@ -51,7 +56,7 @@ export function InviteList({ invites }: { invites: BookingDetail[] }) {
         {invites.map((invite, index) => {
           const inviter =
             invite.players.find((player) => player.user.id === invite.createdById)?.user.name ??
-            "Um sócio";
+            t("someone");
           return (
             <motion.li
               key={invite.id}
@@ -69,12 +74,19 @@ export function InviteList({ invites }: { invites: BookingDetail[] }) {
                 <div className="space-y-3 p-4 pb-3">
                   <div className="flex items-center justify-between gap-2 text-small">
                     <p>
-                      <span className="font-semibold">{inviter.split(" ")[0]}</span> te chamou para
-                      jogar
+                      {t.rich("from", {
+                        name: inviter.split(" ")[0] ?? inviter,
+                        b: (chunks) => <span className="font-semibold">{chunks}</span>,
+                      })}
                     </p>
                     <span className="flex shrink-0 items-center gap-1 text-caption text-warning-ink">
-                      <Hourglass aria-hidden className="size-3.5" /> até{" "}
-                      <span className="num">{formatTime(invite.expiresAt)}</span>
+                      <Hourglass aria-hidden className="size-3.5" />
+                      <span>
+                        {t.rich("until", {
+                          time: format.time(invite.expiresAt),
+                          num: (chunks) => <span className="num">{chunks}</span>,
+                        })}
+                      </span>
                     </span>
                   </div>
                   <TicketCard booking={invite} status={false} className="shadow-none" />

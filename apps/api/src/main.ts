@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
+import { API_PREFIX } from "./api-prefix";
 import { configureApp } from "./configure-app";
 import type { Env } from "./config/env";
 
@@ -14,7 +15,7 @@ async function bootstrap(): Promise<void> {
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   const port = config.get("API_PORT", { infer: true });
   await app.listen(port);
-  Logger.log(`API ready on http://localhost:${port}/api`, "Bootstrap");
+  Logger.log(`API ready on http://localhost:${port}/${API_PREFIX}`, "Bootstrap");
 }
 
 void bootstrap();

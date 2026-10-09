@@ -1,9 +1,3 @@
-/** K-factor applied to every rated match. */
-export const ELO_K_FACTOR = 32;
-
-/** Rating every member starts with. */
-export const ELO_INITIAL_RATING = 1200;
-
 export type EloSide = "A" | "B";
 
 export interface EloMatchInput {
@@ -12,8 +6,8 @@ export interface EloMatchInput {
   /** Current ratings of side B, same size as side A. */
   sideB: readonly number[];
   winner: EloSide;
-  /** Override for the K-factor (defaults to {@link ELO_K_FACTOR}). */
-  k?: number;
+  /** K-factor from the club's settings (`ClubSettings.eloKFactor`, 32 for FICC). */
+  k: number;
 }
 
 export interface EloMatchResult {
@@ -36,7 +30,7 @@ export function updateRating(
   rating: number,
   opponentRating: number,
   score: 0 | 0.5 | 1,
-  k: number = ELO_K_FACTOR,
+  k: number,
 ): number {
   return Math.round(rating + k * (score - expectedScore(rating, opponentRating)));
 }
@@ -56,12 +50,7 @@ export function teamRating(ratings: readonly number[]): number {
  * match is zero-sum. In doubles, each side is rated as the average of its two players and
  * every player receives the team's delta.
  */
-export function calculateMatchElo({
-  sideA,
-  sideB,
-  winner,
-  k = ELO_K_FACTOR,
-}: EloMatchInput): EloMatchResult {
+export function calculateMatchElo({ sideA, sideB, winner, k }: EloMatchInput): EloMatchResult {
   const teamSize = sideA.length;
   if ((teamSize !== 1 && teamSize !== 2) || sideB.length !== teamSize) {
     throw new RangeError("Elo needs 1 vs 1 (singles) or 2 vs 2 (doubles)");

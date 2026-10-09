@@ -1,16 +1,19 @@
 "use client";
 
-import { FREEZE_REASON_LABELS } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { api } from "@/lib/api";
-import { formatDateTime, formatTime } from "@/lib/format";
 import { queryKeys } from "@/lib/query-keys";
+import { useFormat } from "@/lib/use-format";
 
 /** Global rain/maintenance banner while a freeze is active or about to start. */
 export function FreezeBanner() {
+  const t = useTranslations("shell.freeze");
+  const labels = useTranslations("labels.freezeReason");
+  const format = useFormat();
   const { data } = useQuery({
     queryKey: queryKeys.freezesActive,
     queryFn: api.freezes.active,
@@ -26,7 +29,11 @@ export function FreezeBanner() {
       tone={freeze?.reason === "MAINTENANCE" ? "maintenance" : "rain"}
       title={
         freeze
-          ? `${FREEZE_REASON_LABELS[freeze.reason]} · ${freeze.courtNames.join(", ")} ${freeze.active ? "interditadas" : "serão interditadas"}`
+          ? t("title", {
+              reason: labels(freeze.reason),
+              courts: freeze.courtNames.join(", "),
+              active: String(freeze.active),
+            })
           : ""
       }
       onDismiss={() => setDismissed(key)}
@@ -34,9 +41,9 @@ export function FreezeBanner() {
       {freeze
         ? freeze.active
           ? freeze.endsAt
-            ? `Previsão de liberação às ${formatTime(freeze.endsAt)}.`
-            : "Sem previsão de liberação."
-          : `A partir de ${formatDateTime(freeze.startsAt)}.`
+            ? t("until", { time: format.time(freeze.endsAt) })
+            : t("noEnd")
+          : t("from", { dateTime: format.dateTime(freeze.startsAt) })
         : null}
     </AlertBanner>
   );

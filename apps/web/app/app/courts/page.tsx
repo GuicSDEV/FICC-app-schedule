@@ -2,7 +2,6 @@
 
 import {
   addDays,
-  BOOKING_WINDOW_DAYS,
   type BookingDetail,
   clubToday,
   type ScheduleCell,
@@ -10,6 +9,7 @@ import {
 } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type BookingInfoTarget, BookingInfoSheet } from "@/components/booking/booking-info-sheet";
@@ -22,6 +22,7 @@ import {
   type SurfaceFilter,
 } from "@/components/calendar/court-calendar";
 import { DayStrip } from "@/components/calendar/day-strip";
+import { useClub } from "@/components/providers/club-provider";
 import { useSession } from "@/components/providers/session-provider";
 import { useSocketEvent } from "@/components/providers/socket-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
@@ -30,30 +31,35 @@ import { UserAvatarLink } from "@/components/shell/user-avatar-link";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { formatLongDayTitle } from "@/lib/format";
 import { fadeVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { cellKey } from "@/lib/schedule-cache";
+import { useFormat } from "@/lib/use-format";
 import { useNow } from "@/lib/use-now";
-
-const FILTERS = [
-  { value: "ALL", label: "Todas" },
-  { value: "HARTRU", label: "Har-Tru" },
-  { value: "SAIBRO", label: "Saibro" },
-] as const;
 
 /** How long the "booking confirmed" fill stays on the cell. */
 const CELEBRATE_MS = 2400;
 
 export default function CourtsPage() {
+  const t = useTranslations();
+  const format = useFormat();
+  const club = useClub();
   const { user } = useSession();
   const now = useNow();
-  const today = clubToday(now);
+  // The club's calendar day (its zone), and its booking window for the day strip.
+  const today = club ? clubToday(now, club.timezone) : null;
+  const windowDays = club?.settings.bookingWindowDays ?? 0;
   const days = useMemo(
-    () => Array.from({ length: BOOKING_WINDOW_DAYS }, (_, index) => addDays(today, index)),
-    [today],
+    () => (today ? Array.from({ length: windowDays }, (_, index) => addDays(today, index)) : []),
+    [today, windowDays],
   );
-  const [date, setDate] = useState(today);
+  const [chosenDate, setDate] = useState<string | null>(null);
+  const date = chosenDate ?? today ?? "";
+  const filters = [
+    { value: "ALL", label: t("calendar.all") },
+    { value: "HARTRU", label: t("labels.surface.HARTRU") },
+    { value: "SAIBRO", label: t("labels.surface.SAIBRO") },
+  ] as const;
   const [filter, setFilter] = useState<SurfaceFilter>("ALL");
   const [highlights, setHighlights] = useState<Record<string, number>>({});
   const [celebrate, setCelebrate] = useState<string | null>(null);
@@ -70,6 +76,7 @@ export default function CourtsPage() {
   const schedule = useQuery({
     queryKey: queryKeys.schedule(date),
     queryFn: () => api.schedule(date),
+    enabled: date !== "",
     placeholderData: (previous) => (previous?.date === date ? previous : undefined),
   });
 
@@ -136,8 +143,8 @@ export default function CourtsPage() {
   return (
     <>
       <PageHeader
-        title="Quadras"
-        subtitle={formatLongDayTitle(date)}
+        title={t("calendar.title")}
+        subtitle={date ? format.longDayTitle(date) : " "}
         actions={
           <>
             <NotificationBell />
@@ -145,17 +152,25 @@ export default function CourtsPage() {
           </>
         }
       >
-        <DayStrip days={days} today={today} value={date} onChange={setDate} />
+        {today ? (
+          <DayStrip days={days} today={today} value={date} onChange={setDate} />
+        ) : (
+          <div aria-hidden className="h-[4.75rem]" />
+        )}
         <SegmentedControl
-          label="Piso"
-          options={FILTERS}
+          label={t("calendar.surfaceLabel")}
+          options={filters}
           value={filter}
           onChange={setFilter}
           className="mb-3 md:max-w-sm"
         />
       </PageHeader>
 
-      <section aria-label="Horários" aria-busy={schedule.isLoading} className="mt-4 space-y-5">
+      <section
+        aria-label={t("calendar.slots")}
+        aria-busy={schedule.isLoading}
+        className="mt-4 space-y-5"
+      >
         <AnimatePresence mode="wait" initial={false}>
           {schedule.isError ? (
             <motion.div
@@ -166,7 +181,7 @@ export default function CourtsPage() {
               exit="exit"
             >
               <ErrorState
-                message="Não foi possível carregar a agenda."
+                message={t("calendar.loadFailed")}
                 onRetry={() => void schedule.refetch()}
               />
             </motion.div>

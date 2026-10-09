@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export function EmptyState({
 
 /** Designed error state with a retry. */
 export function ErrorState({
-  message = "Não foi possível carregar.",
+  message,
   onRetry,
   className,
 }: {
@@ -55,6 +56,7 @@ export function ErrorState({
   onRetry?: () => void;
   className?: string;
 }) {
+  const t = useTranslations("states");
   return (
     <div
       role="alert"
@@ -64,10 +66,10 @@ export function ErrorState({
       )}
     >
       <AlertTriangle className="size-6 text-danger-ink" />
-      <p className="text-small text-foreground">{message}</p>
+      <p className="text-small text-foreground">{message ?? t("loadFailed")}</p>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          Tentar de novo
+          {t("retry")}
         </Button>
       ) : null}
     </div>

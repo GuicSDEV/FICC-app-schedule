@@ -22,8 +22,8 @@ describe("Schedule", () => {
 
   beforeEach(async () => {
     ctx.clock.reset();
-    await resetDatabase(ctx.prisma);
-    club = await seedClub(ctx.prisma);
+    await resetDatabase(ctx);
+    club = await seedClub(ctx);
   });
 
   it("returns every court × slot with lesson, booking, frozen and free states", async () => {
@@ -43,7 +43,7 @@ describe("Schedule", () => {
     });
     const agent = await ctx.loginMember(member.membershipId!);
     await agent
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send({
         courtId: club.courts.Q2.id,
         timeSlotId: club.slots["16:00"]!.id,
@@ -63,7 +63,7 @@ describe("Schedule", () => {
       },
     });
 
-    const { body } = await agent.get(`/api/schedule?date=${date}`).expect(200);
+    const { body } = await agent.get(`/api/v1/schedule?date=${date}`).expect(200);
     expect(body.courts.map((court: { name: string }) => court.name)).toEqual([
       "Q1",
       "Q2",
@@ -113,7 +113,7 @@ describe("Schedule", () => {
   it("filters by surface", async () => {
     const member = await createMember(ctx.prisma);
     const agent = await ctx.loginMember(member.membershipId!);
-    const { body } = await agent.get("/api/schedule?date=2030-03-05&surface=SAIBRO").expect(200);
+    const { body } = await agent.get("/api/v1/schedule?date=2030-03-05&surface=SAIBRO").expect(200);
     expect(body.courts.map((court: { name: string }) => court.name)).toEqual(["Q5", "Q6"]);
     expect(body.cells).toHaveLength(16);
   });
@@ -121,14 +121,14 @@ describe("Schedule", () => {
   it("validates the query", async () => {
     const member = await createMember(ctx.prisma);
     const agent = await ctx.loginMember(member.membershipId!);
-    await agent.get("/api/schedule?date=2030-02-30").expect(400);
-    await agent.get("/api/schedule?date=2030-03-05&surface=GRASS").expect(400);
+    await agent.get("/api/v1/schedule?date=2030-02-30").expect(400);
+    await agent.get("/api/v1/schedule?date=2030-03-05&surface=GRASS").expect(400);
   });
 
   it("lists courts, slots and today's club date", async () => {
     const member = await createMember(ctx.prisma);
     const agent = await ctx.loginMember(member.membershipId!);
-    const { body } = await agent.get("/api/courts").expect(200);
+    const { body } = await agent.get("/api/v1/courts").expect(200);
     expect(body.today).toBe("2030-03-04");
     expect(body.courts).toHaveLength(6);
     expect(body.slots.at(-1)).toMatchObject({
@@ -142,12 +142,12 @@ describe("Schedule", () => {
     const member = await createMember(ctx.prisma, { name: "Ana Lima", membershipId: "104218" });
     await createMember(ctx.prisma, { name: "Bruno Lima", membershipId: "205300" });
     const agent = await ctx.loginMember(member.membershipId!);
-    const byName = await agent.get("/api/members/search?q=lima").expect(200);
+    const byName = await agent.get("/api/v1/members/search?q=lima").expect(200);
     expect(byName.body.map((player: { name: string }) => player.name)).toEqual([
       "Bruno Lima",
       "Ana Lima",
     ]);
-    const byId = await agent.get("/api/members/search?q=205.3").expect(200);
+    const byId = await agent.get("/api/v1/members/search?q=205.3").expect(200);
     expect(byId.body.map((player: { name: string }) => player.name)).toEqual(["Bruno Lima"]);
   });
 });

@@ -7,7 +7,8 @@ import type {
   BookingDetail,
   CancelAffectedRequest,
   CancelLessonResult,
-  Category,
+  CategoryItem,
+  ClubInfo,
   CoachAdminItem,
   CoachProfile,
   CopyWeekResult,
@@ -53,7 +54,10 @@ import type {
 /** Base URL of the API (the web app calls it directly with cookies). */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-/** Error thrown for non-2xx responses; `message` is pt-BR and safe to show. */
+/** Versioned path prefix of every API route. */
+export const API_PREFIX = "/api/v1";
+
+/** Error thrown for non-2xx responses; `message` is in the club's language and safe to show. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -81,7 +85,10 @@ let refreshing: Promise<boolean> | null = null;
 
 /** Exchanges the refresh cookie for new tokens once, even if many requests 401 together. */
 export function refreshSession(): Promise<boolean> {
-  refreshing ??= fetch(`${API_URL}/api/auth/refresh`, { method: "POST", credentials: "include" })
+  refreshing ??= fetch(`${API_URL}${API_PREFIX}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
     .then((response) => response.ok)
     .catch(() => false)
     .finally(() => {
@@ -91,7 +98,7 @@ export function refreshSession(): Promise<boolean> {
 }
 
 function buildUrl(path: string, query?: Query): string {
-  const url = new URL(`${API_URL}/api${path}`);
+  const url = new URL(`${API_URL}${API_PREFIX}${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null && value !== "")
       url.searchParams.set(key, String(value));
@@ -111,7 +118,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     });
 
   let response = await send().catch(() => {
-    throw new ApiError(0, "NETWORK_ERROR", "Sem conexão com o servidor. Verifique sua internet.");
+    // The UI shows its own (translated) text for this code.
+    throw new ApiError(0, "NETWORK_ERROR", "");
   });
   if (response.status === 401 && !options.noRefresh && (await refreshSession())) {
     response = await send();
@@ -122,12 +130,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const data: unknown = text ? JSON.parse(text) : undefined;
   if (!response.ok) {
     const body = (data ?? {}) as Partial<ApiErrorBody>;
-    throw new ApiError(
-      response.status,
-      body.code ?? "ERROR",
-      body.message ?? "Algo deu errado. Tente novamente.",
-      body.details,
-    );
+    throw new ApiError(response.status, body.code ?? "ERROR", body.message ?? "", body.details);
   }
   return data as T;
 }
@@ -146,6 +149,8 @@ export const api = {
       request<AuthUser>("/auth/register", { method: "POST", body: input, noRefresh: true }),
     logout: () => request<void>("/auth/logout", { method: "POST", noRefresh: true }),
   },
+  club: () => request<ClubInfo>("/club", { noRefresh: true }),
+  categories: () => request<CategoryItem[]>("/categories"),
   courts: () => request<CourtsResponse>("/courts"),
   schedule: (date: string, surface?: Surface) =>
     request<ScheduleDay>("/schedule", { query: { date, surface } }),
@@ -180,7 +185,7 @@ export const api = {
       post<MatchDetail>(`/matches/${id}/dispute`, { comment }),
   },
   ranking: {
-    leaderboard: (category?: Category) =>
+    leaderboard: (category?: string) =>
       request<LeaderboardResponse>("/leaderboard", { query: { category } }),
     profile: (id: string) => request<PlayerProfile>(`/players/${id}`),
     eloHistory: (id: string) => request<EloPoint[]>(`/players/${id}/elo-history`),

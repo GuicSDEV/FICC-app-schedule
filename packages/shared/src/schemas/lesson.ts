@@ -19,7 +19,7 @@ export const createLessonSchema = z
     coachId: idSchema.optional(),
     repeat: z
       .object({
-        weekdays: z.array(weekdaySchema).min(1, { message: "Escolha ao menos um dia" }).max(7),
+        weekdays: z.array(weekdaySchema).min(1, { message: "validation.pickWeekday" }).max(7),
         /** Last date (inclusive); open-ended when omitted. */
         endDate: isoDateSchema.optional(),
       })
@@ -29,20 +29,24 @@ export const createLessonSchema = z
   .superRefine((value, ctx) => {
     if (!value.repeat) return;
     if (new Set(value.repeat.weekdays).size !== value.repeat.weekdays.length) {
-      ctx.addIssue({ code: "custom", path: ["repeat", "weekdays"], message: "Dia repetido" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["repeat", "weekdays"],
+        message: "validation.repeatedWeekday",
+      });
     }
     if (!value.repeat.weekdays.includes(weekdayOf(value.date))) {
       ctx.addIssue({
         code: "custom",
         path: ["repeat", "weekdays"],
-        message: "Inclua o dia da semana da primeira aula",
+        message: "validation.includeFirstWeekday",
       });
     }
     if (value.repeat.endDate && value.repeat.endDate < value.date) {
       ctx.addIssue({
         code: "custom",
         path: ["repeat", "endDate"],
-        message: "A data final não pode ser antes da primeira aula",
+        message: "validation.seriesEndBeforeStart",
       });
     }
   });
@@ -66,13 +70,13 @@ export const updateLessonSchema = z
     note: z.string().trim().max(300).nullable().optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
-    message: "Nada para alterar",
+    message: "validation.nothingToChange",
   });
 export type UpdateLessonInput = z.infer<typeof updateLessonSchema>;
 
 export const copyWeekSchema = z.object({
   weekStart: isoDateSchema.refine((date) => weekdayOf(date) === "MON", {
-    message: "A semana começa na segunda-feira",
+    message: "validation.weekStartsMonday",
   }),
 });
 export type CopyWeekInput = z.infer<typeof copyWeekSchema>;
@@ -83,9 +87,9 @@ export type AgendaQuery = z.infer<typeof agendaQuerySchema>;
 /** Lessons between two dates (max ~9 weeks), optionally for one coach (admins). */
 export const lessonsQuerySchema = z
   .object({ from: isoDateSchema, to: isoDateSchema, coachId: idSchema.optional() })
-  .refine((value) => value.to >= value.from, { message: "Intervalo inválido", path: ["to"] })
+  .refine((value) => value.to >= value.from, { message: "validation.invalidRange", path: ["to"] })
   .refine((value) => Date.parse(value.to) - Date.parse(value.from) <= 62 * 86_400_000, {
-    message: "Intervalo máximo de 9 semanas",
+    message: "validation.rangeTooLong",
     path: ["to"],
   });
 export type LessonsQuery = z.infer<typeof lessonsQuerySchema>;

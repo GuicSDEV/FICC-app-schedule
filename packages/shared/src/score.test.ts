@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
+import { translateIssue } from "./i18n";
 import {
   formatScore,
   matchScoreSchema,
@@ -16,7 +17,7 @@ const set = (a: number, b: number, tiebreak = false) => ({ a, b, tiebreak });
 function errorOf(text: string): string {
   const result = scoreTextSchema.safeParse(text);
   expect(result.success).toBe(false);
-  return result.error!.issues.map((issue) => issue.message).join(" | ");
+  return result.error!.issues.map((issue) => translateIssue(issue)).join(" | ");
 }
 
 describe("regularSetWinner", () => {

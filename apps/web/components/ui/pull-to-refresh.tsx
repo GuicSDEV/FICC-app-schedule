@@ -1,6 +1,7 @@
 "use client";
 
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useRef, useState } from "react";
 
 import { haptic, PULL_THRESHOLD, spring } from "@/lib/motion";
@@ -18,6 +19,7 @@ export function PullToRefresh({
   onRefresh: () => Promise<unknown>;
   children: ReactNode;
 }) {
+  const t = useTranslations("shell");
   const pull = useMotionValue(0);
   const [refreshing, setRefreshing] = useState(false);
   const start = useRef<number | null>(null);
@@ -71,7 +73,7 @@ export function PullToRefresh({
       </motion.div>
       {refreshing ? (
         <span className="sr-only" role="status">
-          Atualizando…
+          {t("refreshing")}
         </span>
       ) : null}
       <motion.div style={{ y: contentY }}>{children}</motion.div>

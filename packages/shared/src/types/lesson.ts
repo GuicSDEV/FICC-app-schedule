@@ -27,10 +27,13 @@ export interface CancelLessonResult {
   lessons: LessonDetail[];
 }
 
+/** Why a slot could not take a lesson (labels in the catalogue under labels.slotBlockReason). */
+export type SlotBlockReason = "SLOT_PAST" | "COURT_FROZEN" | "LESSON" | "BOOKING" | "COACH_BUSY";
+
 export interface CopyWeekResult {
   created: LessonDetail[];
   /** Dates (next week) that were already taken. */
-  skipped: { date: IsoDate; courtName: string; startTime: string; reason: string }[];
+  skipped: { date: IsoDate; courtName: string; startTime: string; reason: SlotBlockReason }[];
 }
 
 export interface LessonAuditItem {

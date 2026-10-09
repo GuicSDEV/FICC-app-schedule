@@ -3,6 +3,7 @@
 import type { Surface } from "@ficc/shared";
 import { CloudRain, Lock, Plus, Star, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import { duration, ease, spring, tap, transitions } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -48,18 +49,27 @@ const SURFACE_STYLES: Record<Surface, { free: string; booked: string; fill: stri
     },
   };
 
-function describe(props: SlotChipProps): string {
-  const base = `Quadra ${props.courtName}`;
-  if (props.past) return `${base}, horário encerrado`;
+type Translate = ReturnType<typeof useTranslations<"slot">>;
+
+/** What a screen reader announces for the chip. */
+function describe(props: SlotChipProps, t: Translate): string {
+  const court = t("court", { court: props.courtName });
+  if (props.past) return t("past", { court });
   switch (props.state) {
     case "free":
-      return `${base}, livre${props.favorite ? ", favorita" : ""}. Toque para reservar`;
+      return props.favorite ? t("freeFavorite", { court }) : t("free", { court });
     case "lesson":
-      return `${base}, aula com ${props.coach?.displayName ?? "professor"}`;
-    case "booking":
-      return `${base}, reservada${props.bookingStatus === "PENDING" ? " (aguardando confirmação)" : ""} por ${props.players?.map((player) => player.name).join(", ") ?? ""}`;
+      return props.coach
+        ? t("lesson", { court, coach: props.coach.displayName })
+        : t("lessonUnknown", { court });
+    case "booking": {
+      const players = props.players?.map((player) => player.name).join(", ") ?? "";
+      return props.bookingStatus === "PENDING"
+        ? t("bookingPending", { court, players })
+        : t("booking", { court, players });
+    }
     case "frozen":
-      return `${base}, interditada por ${props.freezeReason === "RAIN" ? "chuva" : "manutenção"}`;
+      return t("frozen", { court, reason: props.freezeReason ?? "MAINTENANCE" });
   }
 }
 
@@ -68,6 +78,7 @@ function describe(props: SlotChipProps): string {
  * the mobile slot rows, richer cells in the desktop grid.
  */
 export function SlotChip(props: SlotChipProps) {
+  const t = useTranslations("slot");
   const {
     courtName,
     surface,
@@ -92,7 +103,7 @@ export function SlotChip(props: SlotChipProps) {
       type="button"
       onClick={interactive ? onPress : undefined}
       aria-disabled={!interactive}
-      aria-label={describe(props)}
+      aria-label={describe(props, t)}
       whileTap={interactive ? tap : undefined}
       transition={spring.snappy}
       className={cn(
@@ -151,7 +162,7 @@ export function SlotChip(props: SlotChipProps) {
             <>
               <span className="num">{courtName}</span>
               <Plus aria-hidden className="hidden size-3.5 @[5.5rem]:block" />
-              <span className="hidden font-medium @[7.5rem]:inline">Livre</span>
+              <span className="hidden font-medium @[7.5rem]:inline">{t("freeLabel")}</span>
             </>
           ) : null}
 

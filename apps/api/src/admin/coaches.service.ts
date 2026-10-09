@@ -13,6 +13,7 @@ import { Clock } from "../common/clock";
 import { conflict, notFound, unprocessable } from "../common/domain.exception";
 import { toCoachSummary } from "../common/mappers";
 import { PrismaService } from "../prisma/prisma.service";
+import { clubTimeZone } from "../tenancy/tenant-context";
 
 const coachInclude = {
   user: { select: { id: true, name: true, email: true, isActive: true } },
@@ -28,7 +29,7 @@ export class CoachesAdminService {
   ) {}
 
   async list(): Promise<CoachAdminItem[]> {
-    const today = toDbDate(clubToday(this.clock.now()));
+    const today = toDbDate(clubToday(this.clock.now(), clubTimeZone()));
     const coaches = await this.prisma.coach.findMany({
       include: {
         ...coachInclude,
@@ -75,7 +76,7 @@ export class CoachesAdminService {
       return this.get(coach.id);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw conflict("EMAIL_TAKEN", "Já existe uma conta com esse e-mail.");
+        throw conflict("EMAIL_TAKEN", "api.emailTaken");
       }
       throw error;
     }
@@ -83,7 +84,7 @@ export class CoachesAdminService {
 
   async update(coachId: string, input: UpdateCoachInput): Promise<CoachAdminItem> {
     const coach = await this.prisma.coach.findUnique({ where: { id: coachId } });
-    if (!coach) throw notFound("COACH_NOT_FOUND", "Professor não encontrado.");
+    if (!coach) throw notFound("COACH_NOT_FOUND", "api.coachNotFound");
     if (input.courtIds) await this.assertCourtsExist(input.courtIds);
 
     await this.prisma.$transaction(async (tx) => {
@@ -122,13 +123,13 @@ export class CoachesAdminService {
 
   private async get(coachId: string): Promise<CoachAdminItem> {
     const item = (await this.list()).find((coach) => coach.id === coachId);
-    if (!item) throw notFound("COACH_NOT_FOUND", "Professor não encontrado.");
+    if (!item) throw notFound("COACH_NOT_FOUND", "api.coachNotFound");
     return item;
   }
 
   private async assertCourtsExist(courtIds: string[]): Promise<void> {
     const count = await this.prisma.court.count({ where: { id: { in: courtIds } } });
     if (count !== new Set(courtIds).size)
-      throw unprocessable("COURT_NOT_FOUND", "Quadra inválida.");
+      throw unprocessable("COURT_NOT_FOUND", "api.courtInvalid");
   }
 }

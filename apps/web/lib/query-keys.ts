@@ -1,8 +1,10 @@
-import type { Category, Surface } from "@ficc/shared";
+import type { Surface } from "@ficc/shared";
 
 /** Every TanStack Query key in one place, so socket events can invalidate precisely. */
 export const queryKeys = {
   me: ["me"] as const,
+  club: ["club"] as const,
+  categories: ["categories"] as const,
   courts: ["courts"] as const,
   schedule: (date?: string, surface?: Surface) =>
     date ? (["schedule", date, surface ?? "ALL"] as const) : (["schedule"] as const),
@@ -14,7 +16,7 @@ export const queryKeys = {
   notifications: ["notifications"] as const,
   matchesMine: ["matches", "mine"] as const,
   match: (id: string) => ["matches", id] as const,
-  leaderboard: (category?: Category) =>
+  leaderboard: (category?: string) =>
     category === undefined ? (["leaderboard"] as const) : (["leaderboard", category] as const),
   player: (id: string) => ["players", id] as const,
   eloHistory: (id: string) => ["players", id, "elo-history"] as const,

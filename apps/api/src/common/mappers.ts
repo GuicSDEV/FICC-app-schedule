@@ -7,16 +7,23 @@ import {
   slotEndTime,
 } from "@ficc/shared";
 
-export function toPlayerSummary(
-  user: Pick<User, "id" | "name" | "membershipId" | "photoUrl" | "elo" | "categories">,
-): PlayerSummary {
+import { clubSettings } from "../tenancy/tenant-context";
+
+/** Fields `toPlayerSummary` reads (see {@link playerSelect}). */
+export type PlayerRow = Pick<User, "id" | "name" | "membershipId" | "photoUrl"> & {
+  ratings: { elo: number }[];
+  categories: { category: { key: string } }[];
+};
+
+/** A player as the apps see them; `elo` is the rating in the club's primary sport. */
+export function toPlayerSummary(user: PlayerRow): PlayerSummary {
   return {
     id: user.id,
     name: user.name,
     membershipId: user.membershipId,
     photoUrl: user.photoUrl,
-    elo: user.elo,
-    categories: user.categories,
+    elo: user.ratings[0]?.elo ?? clubSettings().eloInitialRating,
+    categories: user.categories.map((entry) => entry.category.key),
   };
 }
 
@@ -32,9 +39,15 @@ export function toCoachSummary(
 }
 
 export function toCourtSummary(
-  court: Pick<Court, "id" | "name" | "surface" | "sortOrder">,
+  court: Pick<Court, "id" | "name" | "surface" | "sport" | "sortOrder">,
 ): CourtSummary {
-  return { id: court.id, name: court.name, surface: court.surface, sortOrder: court.sortOrder };
+  return {
+    id: court.id,
+    name: court.name,
+    surface: court.surface,
+    sport: court.sport,
+    sortOrder: court.sortOrder,
+  };
 }
 
 export function toSlotSummary(
@@ -49,12 +62,17 @@ export function toSlotSummary(
   };
 }
 
-/** Prisma select for the fields `toPlayerSummary` needs. */
-export const playerSelect = {
-  id: true,
-  name: true,
-  membershipId: true,
-  photoUrl: true,
-  elo: true,
-  categories: true,
-} as const;
+/** Prisma select for the fields `toPlayerSummary` needs (rating in the club's primary sport). */
+export function playerSelect() {
+  return {
+    id: true,
+    name: true,
+    membershipId: true,
+    photoUrl: true,
+    ratings: { where: { sport: clubSettings().primarySport }, select: { elo: true } },
+    categories: {
+      select: { category: { select: { key: true } } },
+      orderBy: { category: { sortOrder: "asc" } },
+    },
+  } as const;
+}

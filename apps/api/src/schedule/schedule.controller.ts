@@ -14,6 +14,7 @@ import { toCourtSummary, toSlotSummary } from "../common/mappers";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { PrismaService } from "../prisma/prisma.service";
 import { ScheduleService } from "./schedule.service";
+import { clubTimeZone } from "../tenancy/tenant-context";
 
 @Controller()
 export class ScheduleController {
@@ -46,7 +47,7 @@ export class ScheduleController {
     return {
       courts: courts.map(toCourtSummary),
       slots: slots.map(toSlotSummary),
-      today: clubToday(this.clock.now()),
+      today: clubToday(this.clock.now(), clubTimeZone()),
     };
   }
 }

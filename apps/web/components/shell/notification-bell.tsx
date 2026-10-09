@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, BellOff } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -14,10 +15,10 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { formatRelative } from "@/lib/format";
 import { listItemVariants, popVariants, tap } from "@/lib/motion";
-import { describeNotification, type NotificationTone } from "@/lib/notifications";
+import { type NotificationTone, useNotificationCopy } from "@/lib/notifications";
 import { queryKeys } from "@/lib/query-keys";
+import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 const TONE_DOT: Record<NotificationTone, string> = {
@@ -30,6 +31,9 @@ const TONE_DOT: Record<NotificationTone, string> = {
 
 /** Bell with an animated unread badge; opens the notification center. Live via socket. */
 export function NotificationBell() {
+  const t = useTranslations("notifications");
+  const describeNotification = useNotificationCopy();
+  const format = useFormat();
   const [open, setOpen] = useState(false);
   const client = useQueryClient();
   const router = useRouter();
@@ -45,7 +49,7 @@ export function NotificationBell() {
     const copy = describeNotification(notification);
     toast(copy.title, {
       description: copy.body,
-      action: copy.href ? { label: "Ver", onClick: () => router.push(copy.href!) } : undefined,
+      action: copy.href ? { label: t("view"), onClick: () => router.push(copy.href!) } : undefined,
     });
   });
 
@@ -73,7 +77,7 @@ export function NotificationBell() {
         type="button"
         whileTap={tap}
         onClick={() => setOpen(true)}
-        aria-label={unread > 0 ? `Notificações, ${unread} não lidas` : "Notificações"}
+        aria-label={t("bellLabel", { count: unread })}
         className="relative inline-flex size-11 items-center justify-center rounded-full text-foreground hover:bg-surface-2"
       >
         <Bell className="size-[22px]" />
@@ -96,7 +100,7 @@ export function NotificationBell() {
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Notificações"
+        title={t("title")}
         footer={
           unread > 0 ? (
             <Button
@@ -105,7 +109,7 @@ export function NotificationBell() {
               onClick={() => readAll.mutate()}
               loading={readAll.isPending}
             >
-              Marcar todas como lidas
+              {t("markAllRead")}
             </Button>
           ) : undefined
         }
@@ -117,11 +121,7 @@ export function NotificationBell() {
             ))}
           </div>
         ) : !data || data.items.length === 0 ? (
-          <EmptyState
-            icon={BellOff}
-            title="Tudo em dia"
-            description="Convites, resultados e avisos aparecem aqui."
-          />
+          <EmptyState icon={BellOff} title={t("emptyTitle")} description={t("emptyDescription")} />
         ) : (
           <ul className="-mx-2 space-y-1">
             {data.items.map((item, index) => {
@@ -152,7 +152,7 @@ export function NotificationBell() {
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="text-small font-semibold">{copy.title}</span>
                         <span className="shrink-0 text-caption text-muted-foreground">
-                          {formatRelative(item.createdAt)}
+                          {format.relative(item.createdAt)}
                         </span>
                       </span>
                       <span className="mt-0.5 block text-small text-muted-foreground">

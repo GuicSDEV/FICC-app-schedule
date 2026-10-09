@@ -4,6 +4,7 @@ import { formatMembershipId, type PlayerSummary } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -35,6 +36,7 @@ export function MemberPicker({
   excludeIds?: string[];
   invalid?: boolean;
 }) {
+  const t = useTranslations("picker");
   const inputId = useId();
   const listId = useId();
   const [term, setTerm] = useState("");
@@ -65,7 +67,7 @@ export function MemberPicker({
         </span>
       </label>
 
-      <ul className="flex min-h-11 flex-wrap gap-2" aria-label="Jogadores escolhidos">
+      <ul className="flex min-h-11 flex-wrap gap-2" aria-label={t("chosen")}>
         <AnimatePresence initial={false} mode="popLayout">
           {selected.map((player) => (
             <motion.li
@@ -86,7 +88,7 @@ export function MemberPicker({
                   type="button"
                   whileTap={tap}
                   onClick={() => onChange(selected.filter((entry) => entry.id !== player.id))}
-                  aria-label={`Remover ${player.name}`}
+                  aria-label={t("remove", { name: player.name })}
                   className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-3 hover:text-foreground"
                 >
                   <X className="size-4" />
@@ -96,9 +98,7 @@ export function MemberPicker({
           ))}
         </AnimatePresence>
         {selected.length === 0 ? (
-          <li className="flex items-center text-small text-muted-foreground">
-            Ninguém escolhido ainda.
-          </li>
+          <li className="flex items-center text-small text-muted-foreground">{t("noneChosen")}</li>
         ) : null}
       </ul>
 
@@ -112,7 +112,7 @@ export function MemberPicker({
             id={inputId}
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Nome ou matrícula"
+            placeholder={t("placeholder")}
             autoComplete="off"
             enterKeyHint="search"
             role="combobox"
@@ -125,7 +125,7 @@ export function MemberPicker({
       )}
 
       {enabled ? (
-        <ul id={listId} role="listbox" aria-label="Resultados" className="space-y-1">
+        <ul id={listId} role="listbox" aria-label={t("results")} className="space-y-1">
           {results.isLoading
             ? [0, 1, 2].map((index) => (
                 <li key={index} className="flex h-14 items-center gap-3 px-2">
@@ -162,7 +162,7 @@ export function MemberPicker({
               ))}
           {!results.isLoading && options.length === 0 ? (
             <li className={cn("px-2 py-3 text-small text-muted-foreground")}>
-              Nenhum sócio encontrado para “{query}”.
+              {t("noResults", { query })}
             </li>
           ) : null}
         </ul>

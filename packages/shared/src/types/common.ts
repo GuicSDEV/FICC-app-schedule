@@ -1,5 +1,5 @@
 import type { IsoDate } from "../dates";
-import type { Category, Role, Surface } from "../enums";
+import type { CategoryKey, Role, Sport, Surface } from "../enums";
 
 /** Instants travel as ISO-8601 strings in JSON. */
 export type IsoDateTime = string;
@@ -18,8 +18,10 @@ export interface PlayerSummary {
   name: string;
   membershipId: string | null;
   photoUrl: string | null;
+  /** Rating in the club's main sport (PlayerRating). */
   elo: number;
-  categories: Category[];
+  /** Keys of the club's categories (see GET /categories for their names). */
+  categories: CategoryKey[];
 }
 
 export interface CoachSummary {
@@ -33,6 +35,7 @@ export interface CourtSummary {
   id: string;
   name: string;
   surface: Surface;
+  sport: Sport;
   sortOrder: number;
 }
 
@@ -48,12 +51,14 @@ export interface SlotSummary {
 
 export interface AuthUser {
   id: string;
+  clubId: string;
   role: Role;
   name: string;
   membershipId: string | null;
   email: string | null;
   photoUrl: string | null;
-  categories: Category[];
+  /** Keys of the club's categories (see GET /categories for their names). */
+  categories: CategoryKey[];
   elo: number;
   guestPassesSuspended: boolean;
   coach: (CoachSummary & { courtIds: string[] }) | null;

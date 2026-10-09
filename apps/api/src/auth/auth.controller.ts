@@ -52,7 +52,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthUser> {
     const token = (request.cookies as Record<string, string>)[REFRESH_COOKIE];
-    if (!token) throw unauthorized("REFRESH_MISSING", "Sua sessão expirou. Entre novamente.");
+    if (!token) throw unauthorized("REFRESH_MISSING", "api.sessionExpired");
     try {
       return this.respond(response, await this.auth.refresh(token, request.headers["user-agent"]));
     } catch (error) {

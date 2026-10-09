@@ -1,5 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { BookingStatus, MatchConfirmation, MatchStatus, Prisma, Role, TeamSide } from "@ficc/db";
+import {
+  BookingStatus,
+  MatchConfirmation,
+  MatchStatus,
+  MatchType,
+  Prisma,
+  Role,
+  type Sport,
+  TeamSide,
+} from "@ficc/db";
 import {
   addDays,
   calculateMatchElo,
@@ -12,6 +21,7 @@ import {
   type ReportMatchInput,
   type ResolveDisputeInput,
   type SetScore,
+  sportRules,
   toDbDate,
 } from "@ficc/shared";
 
@@ -20,28 +30,45 @@ import { Clock } from "../common/clock";
 import { conflict, forbidden, notFound, unprocessable } from "../common/domain.exception";
 import { playerSelect, toCourtSummary, toPlayerSummary } from "../common/mappers";
 import { serializable, type Tx } from "../common/transactions";
+import { validationException } from "../common/zod-validation.pipe";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
+import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
-/** Unanswered reports are auto-approved after 48 h (docs/SPEC.md). */
-export const APPROVAL_WINDOW_MS = 48 * 60 * 60 * 1000;
-/** Results can be reported up to this many days after the match. */
-export const REPORT_WINDOW_DAYS = 30;
+/** Validates sets with the sport's rules; answers 400 VALIDATION_FAILED like the request pipe. */
+function parseScoreFor(sport: Sport, sets: SetScore[]): MatchScore {
+  const result = sportRules(sport).scoreSchema.safeParse(sets);
+  if (!result.success) throw validationException(result.error);
+  return result.data;
+}
+
+/**
+ * Whether confirming this match moves the Elo ladder. Friendlies never do; tournament matches
+ * will follow their category's setting (Phase 9.5).
+ */
+export function countsForRating(match: { type: MatchType }): boolean {
+  return match.type === MatchType.RANKED;
+}
 
 const nameSelect = { select: { id: true, name: true } } as const;
 
-export const matchInclude = {
-  court: true,
-  players: { include: { user: { select: playerSelect } } },
-  sets: { orderBy: { setNumber: "asc" } },
-  eloHistory: true,
-  reportedBy: nameSelect,
-  respondedBy: nameSelect,
-  resolvedBy: nameSelect,
-} satisfies Prisma.MatchInclude;
+/** Built per call: the player select depends on the current club. */
+export function matchInclude() {
+  return {
+    court: true,
+    players: { include: { user: { select: playerSelect() } } },
+    sets: { orderBy: { setNumber: "asc" } },
+    eloHistory: true,
+    reportedBy: nameSelect,
+    respondedBy: nameSelect,
+    resolvedBy: nameSelect,
+  } satisfies Prisma.MatchInclude;
+}
 
-export type MatchWithRelations = Prisma.MatchGetPayload<{ include: typeof matchInclude }>;
+export type MatchWithRelations = Prisma.MatchGetPayload<{
+  include: ReturnType<typeof matchInclude>;
+}>;
 
 const otherSide = (side: TeamSide) => (side === TeamSide.A ? TeamSide.B : TeamSide.A);
 
@@ -65,7 +92,10 @@ export function toMatchDetail(match: MatchWithRelations, viewerId?: string): Mat
   const elo = new Map(match.eloHistory.map((row) => [row.userId, row]));
   return {
     id: match.id,
+    format: match.format,
     type: match.type,
+    sport: match.sport,
+    tournamentId: match.tournamentId,
     status: match.status,
     playedOn: fromDbDate(match.playedOn),
     surface: match.surface,
@@ -106,11 +136,12 @@ export function toMatchDetail(match: MatchWithRelations, viewerId?: string): Mat
   };
 }
 
-/** Overall rank among active members: 1 + members with a strictly higher rating. */
-async function rankOf(tx: Tx, elo: number): Promise<number> {
-  return (
-    1 + (await tx.user.count({ where: { role: Role.MEMBER, isActive: true, elo: { gt: elo } } }))
-  );
+/** Rank in a sport among active members: 1 + members with a strictly higher rating. */
+async function rankOf(tx: Tx, sport: Sport, elo: number): Promise<number> {
+  const higher = await tx.playerRating.count({
+    where: { sport, elo: { gt: elo }, user: { role: Role.MEMBER, isActive: true } },
+  });
+  return 1 + higher;
 }
 
 @Injectable()
@@ -127,29 +158,31 @@ export class MatchesService {
   /** Any player of the match reports it; the other side approves or disputes. */
   async report(reporterId: string, input: ReportMatchInput): Promise<MatchDetail> {
     const now = this.clock.now();
-    const today = clubToday(now);
+    const today = clubToday(now, clubTimeZone());
     const playerIds = [...input.sideA, ...input.sideB];
     if (!playerIds.includes(reporterId)) {
-      throw forbidden("NOT_A_PLAYER", "Só quem jogou pode lançar o resultado.");
+      throw forbidden("NOT_A_PLAYER", "api.onlyPlayersReport");
     }
-    if (input.playedOn > today)
-      throw unprocessable("MATCH_IN_FUTURE", "A partida ainda não aconteceu.");
-    if (input.playedOn < addDays(today, -REPORT_WINDOW_DAYS)) {
-      throw unprocessable(
-        "MATCH_TOO_OLD",
-        `Resultados podem ser lançados até ${REPORT_WINDOW_DAYS} dias depois.`,
-      );
+    if (input.playedOn > today) throw unprocessable("MATCH_IN_FUTURE", "api.matchInFuture");
+    const { matchReportMaxDaysAgo, matchAutoApproveHours, primarySport } = clubSettings();
+    if (input.playedOn < addDays(today, -matchReportMaxDaysAgo)) {
+      throw unprocessable("MATCH_TOO_OLD", {
+        key: "api.matchTooOld",
+        params: { days: matchReportMaxDaysAgo },
+      });
     }
     const players = await this.prisma.user.findMany({
       where: { id: { in: playerIds }, role: Role.MEMBER, isActive: true },
       select: { id: true },
     });
     if (players.length !== playerIds.length) {
-      throw unprocessable("INVALID_PLAYERS", "Algum jogador não é um sócio ativo.");
+      throw unprocessable("INVALID_PLAYERS", "api.invalidPlayers");
     }
 
     let courtId = input.courtId ?? null;
     let surface = input.surface ?? null;
+    // The court decides the sport; without one it is the club's primary sport.
+    let sport: Sport = primarySport;
     if (input.bookingId) {
       const booking = await this.prisma.booking.findUnique({
         where: { id: input.bookingId },
@@ -160,51 +193,55 @@ export class MatchesService {
         },
       });
       if (!booking || booking.status !== BookingStatus.CONFIRMED) {
-        throw unprocessable("INVALID_BOOKING", "Reserva não encontrada ou não confirmada.");
+        throw unprocessable("INVALID_BOOKING", "api.bookingNotConfirmed");
       }
       const bookingPlayers = new Set(booking.players.map((player) => player.userId));
       if (
         bookingPlayers.size !== playerIds.length ||
         !playerIds.every((id) => bookingPlayers.has(id))
       ) {
-        throw unprocessable("INVALID_BOOKING", "Os jogadores não batem com os da reserva.");
+        throw unprocessable("INVALID_BOOKING", "api.bookingPlayersMismatch");
       }
       if (fromDbDate(booking.date) !== input.playedOn) {
-        throw unprocessable("INVALID_BOOKING", "A data não bate com a da reserva.");
+        throw unprocessable("INVALID_BOOKING", "api.bookingDateMismatch");
       }
       if (booking.matches.length > 0) {
-        throw conflict("BOOKING_ALREADY_REPORTED", "Essa reserva já tem resultado lançado.");
+        throw conflict("BOOKING_ALREADY_REPORTED", "api.bookingAlreadyReported");
       }
       courtId = booking.courtId;
       surface = booking.court.surface;
     }
     if (courtId) {
       const court = await this.prisma.court.findUnique({ where: { id: courtId } });
-      if (!court) throw notFound("COURT_NOT_FOUND", "Quadra não encontrada.");
+      if (!court) throw notFound("COURT_NOT_FOUND", "api.courtNotFound");
       surface = court.surface;
+      sport = court.sport;
     }
-    if (!surface) throw unprocessable("SURFACE_REQUIRED", "Informe a superfície.");
+    if (!surface) throw unprocessable("SURFACE_REQUIRED", "api.surfaceRequired");
+    const score = parseScoreFor(sport, input.score);
 
     const match = await this.prisma.match.create({
       data: {
-        type: input.type,
+        format: input.format,
+        type: MatchType.RANKED,
+        sport,
         playedOn: toDbDate(input.playedOn),
         surface,
         courtId,
         bookingId: input.bookingId ?? null,
-        winnerSide: input.score.winner,
+        winnerSide: score.winner,
         reportedById: reporterId,
         reportedAt: now,
-        approvalDeadline: new Date(now.getTime() + APPROVAL_WINDOW_MS),
+        approvalDeadline: new Date(now.getTime() + matchAutoApproveHours * 60 * 60 * 1000),
         players: {
           create: [
             ...input.sideA.map((userId) => ({ userId, side: TeamSide.A })),
             ...input.sideB.map((userId) => ({ userId, side: TeamSide.B })),
           ],
         },
-        sets: { create: this.toSetRows(input.score) },
+        sets: { create: this.toSetRows(score) },
       },
-      include: matchInclude,
+      include: matchInclude(),
     });
 
     const reporterTeam = input.sideA.includes(reporterId) ? input.sideA : input.sideB;
@@ -241,7 +278,7 @@ export class MatchesService {
         respondedAt: this.clock.now(),
         disputeComment: comment ?? null,
       },
-      include: matchInclude,
+      include: matchInclude(),
     });
     const reporterTeam = disputed.players
       .filter((player) => player.side === reporterSide(disputed))
@@ -270,7 +307,7 @@ export class MatchesService {
   async disputes(): Promise<MatchDetail[]> {
     const matches = await this.prisma.match.findMany({
       where: { status: MatchStatus.DISPUTED },
-      include: matchInclude,
+      include: matchInclude(),
       orderBy: { respondedAt: "asc" },
     });
     return matches.map((match) => toMatchDetail(match));
@@ -283,9 +320,9 @@ export class MatchesService {
     input: ResolveDisputeInput,
   ): Promise<MatchDetail> {
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
-    if (!match) throw notFound("MATCH_NOT_FOUND", "Partida não encontrada.");
+    if (!match) throw notFound("MATCH_NOT_FOUND", "api.matchNotFound");
     if (match.status !== MatchStatus.DISPUTED) {
-      throw conflict("MATCH_NOT_DISPUTED", "Essa partida não está em disputa.");
+      throw conflict("MATCH_NOT_DISPUTED", "api.matchNotDisputed");
     }
     const now = this.clock.now();
     const resolution = {
@@ -299,16 +336,21 @@ export class MatchesService {
       const voided = await this.prisma.match.update({
         where: { id: matchId },
         data: { status: MatchStatus.VOIDED, ...resolution },
-        include: matchInclude,
+        include: matchInclude(),
       });
       result = toMatchDetail(voided);
     } else {
       if (input.action === "EDIT") {
+        const { sport } = await this.prisma.match.findUniqueOrThrow({
+          where: { id: matchId },
+          select: { sport: true },
+        });
+        const score = parseScoreFor(sport, input.score);
         await this.prisma.$transaction([
           this.prisma.matchSet.deleteMany({ where: { matchId } }),
           this.prisma.match.update({
             where: { id: matchId },
-            data: { winnerSide: input.score.winner, sets: { create: this.toSetRows(input.score) } },
+            data: { winnerSide: score.winner, sets: { create: this.toSetRows(score) } },
           }),
         ]);
       }
@@ -330,12 +372,12 @@ export class MatchesService {
   async get(viewer: RequestUser, matchId: string): Promise<MatchDetail> {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
-      include: matchInclude,
+      include: matchInclude(),
     });
-    if (!match) throw notFound("MATCH_NOT_FOUND", "Partida não encontrada.");
+    if (!match) throw notFound("MATCH_NOT_FOUND", "api.matchNotFound");
     const isPlayer = match.players.some((player) => player.userId === viewer.id);
     if (!isPlayer && viewer.role !== Role.ADMIN && match.status !== MatchStatus.CONFIRMED) {
-      throw forbidden("NOT_A_PLAYER", "Você não participou dessa partida.");
+      throw forbidden("NOT_A_PLAYER", "api.notMatchPlayer");
     }
     return toMatchDetail(match, viewer.id);
   }
@@ -343,7 +385,7 @@ export class MatchesService {
   async mine(userId: string): Promise<MyMatchesResponse> {
     const matches = await this.prisma.match.findMany({
       where: { players: { some: { userId } }, status: { not: MatchStatus.VOIDED } },
-      include: matchInclude,
+      include: matchInclude(),
       orderBy: [{ playedOn: "desc" }, { reportedAt: "desc" }],
       take: 60,
     });
@@ -358,9 +400,10 @@ export class MatchesService {
   }
 
   /**
-   * Confirms a match and applies Elo for every player in one serializable transaction: current
-   * ratings → shared calculateMatchElo → user ratings + EloHistory rows. Then notifies each player
-   * with their personal change and rank movement, and broadcasts leaderboard.updated.
+   * Confirms a match and, when it counts for the ladder, applies Elo for every player in one
+   * serializable transaction: ratings in the match's sport → shared calculateMatchElo with the
+   * club's K-factor → PlayerRating + EloHistory rows. Then notifies each player with their
+   * personal change and rank movement, and broadcasts leaderboard.updated.
    */
   private async confirm(
     matchId: string,
@@ -372,56 +415,71 @@ export class MatchesService {
     const outcome = await serializable(this.prisma, async (tx) => {
       const match = await tx.match.findUniqueOrThrow({
         where: { id: matchId },
-        include: {
-          players: { include: { user: { select: { id: true, elo: true } } } },
-          sets: true,
-        },
+        include: { players: true, sets: true },
       });
       if (match.status !== MatchStatus.PENDING && match.status !== MatchStatus.DISPUTED) {
-        throw conflict("MATCH_ALREADY_RESOLVED", "Essa partida já foi resolvida.");
+        throw conflict("MATCH_ALREADY_RESOLVED", "api.matchAlreadyResolved");
       }
+      const { eloKFactor, eloInitialRating } = clubSettings();
+      const sport = match.sport;
+      const stored = await tx.playerRating.findMany({
+        where: { sport, userId: { in: match.players.map((player) => player.userId) } },
+      });
+      const ratingOf = (userId: string) =>
+        stored.find((rating) => rating.userId === userId)?.elo ?? eloInitialRating;
+      const rated = countsForRating(match);
       const sideA = match.players.filter((player) => player.side === TeamSide.A);
       const sideB = match.players.filter((player) => player.side === TeamSide.B);
-      const { deltaA, deltaB } = calculateMatchElo({
-        sideA: sideA.map((player) => player.user.elo),
-        sideB: sideB.map((player) => player.user.elo),
-        winner: match.winnerSide,
-      });
+      const { deltaA, deltaB } = rated
+        ? calculateMatchElo({
+            sideA: sideA.map((player) => ratingOf(player.userId)),
+            sideB: sideB.map((player) => ratingOf(player.userId)),
+            winner: match.winnerSide,
+            k: eloKFactor,
+          })
+        : { deltaA: 0, deltaB: 0 };
 
       const changes = [];
       for (const player of match.players) {
         const delta = player.side === TeamSide.A ? deltaA : deltaB;
-        const before = player.user.elo;
+        const before = ratingOf(player.userId);
         changes.push({
           userId: player.userId,
           side: player.side,
           before,
           after: before + delta,
           delta,
-          rankBefore: await rankOf(tx, before),
+          rankBefore: await rankOf(tx, sport, before),
         });
       }
-      for (const change of changes) {
-        await tx.user.update({ where: { id: change.userId }, data: { elo: change.after } });
+      if (rated) {
+        for (const change of changes) {
+          await tx.playerRating.upsert({
+            where: { userId_sport: { userId: change.userId, sport } },
+            update: { elo: change.after, matches: { increment: 1 } },
+            create: { userId: change.userId, sport, elo: change.after, matches: 1 },
+          });
+        }
+        await tx.eloHistory.createMany({
+          data: changes.map(({ userId, before, after, delta }) => ({
+            userId,
+            matchId,
+            sport,
+            before,
+            after,
+            delta,
+            createdAt: now,
+          })),
+        });
       }
-      await tx.eloHistory.createMany({
-        data: changes.map(({ userId, before, after, delta }) => ({
-          userId,
-          matchId,
-          before,
-          after,
-          delta,
-          createdAt: now,
-        })),
-      });
       const confirmed = await tx.match.update({
         where: { id: matchId },
         data: { ...extra, status: MatchStatus.CONFIRMED, confirmation, confirmedAt: now },
-        include: matchInclude,
+        include: matchInclude(),
       });
       const withRanks = [];
       for (const change of changes) {
-        withRanks.push({ ...change, rankAfter: await rankOf(tx, change.after) });
+        withRanks.push({ ...change, rankAfter: await rankOf(tx, sport, change.after) });
       }
       return { confirmed, changes: withRanks };
     });
@@ -450,16 +508,16 @@ export class MatchesService {
   private async loadForResponse(userId: string, matchId: string): Promise<MatchWithRelations> {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
-      include: matchInclude,
+      include: matchInclude(),
     });
-    if (!match) throw notFound("MATCH_NOT_FOUND", "Partida não encontrada.");
+    if (!match) throw notFound("MATCH_NOT_FOUND", "api.matchNotFound");
     const player = match.players.find((entry) => entry.userId === userId);
-    if (!player) throw forbidden("NOT_A_PLAYER", "Você não participou dessa partida.");
+    if (!player) throw forbidden("NOT_A_PLAYER", "api.notMatchPlayer");
     if (match.status !== MatchStatus.PENDING) {
-      throw conflict("MATCH_NOT_PENDING", "Essa partida não está aguardando resposta.");
+      throw conflict("MATCH_NOT_PENDING", "api.matchNotPending");
     }
     if (player.side !== otherSide(reporterSide(match))) {
-      throw forbidden("REPORTER_SIDE", "Quem confirma é o adversário de quem lançou o resultado.");
+      throw forbidden("REPORTER_SIDE", "api.reporterSide");
     }
     return match;
   }

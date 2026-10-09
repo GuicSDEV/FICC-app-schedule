@@ -7,9 +7,20 @@ export const ROLES = ["MEMBER", "COACH", "ADMIN", "GATE"] as const;
 export type Role = (typeof ROLES)[number];
 export const roleSchema = z.enum(ROLES);
 
-export const CATEGORIES = ["CLASS_A", "CLASS_B", "CLASS_C", "WOMENS", "SENIORS"] as const;
-export type Category = (typeof CATEGORIES)[number];
-export const categorySchema = z.enum(CATEGORIES);
+/** Sports a court can host. Only tennis today; new sports add a value and a SportRules entry. */
+export const SPORTS = ["TENNIS"] as const;
+export type Sport = (typeof SPORTS)[number];
+export const sportSchema = z.enum(SPORTS);
+
+/**
+ * Categories are per-club rows (e.g. FICC's "CLASS_A"); APIs exchange their stable key.
+ * Keys are upper-case identifiers so they are safe in URLs and query strings.
+ */
+export type CategoryKey = string;
+export const categoryKeySchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z][A-Z0-9_]{0,31}$/, { message: "validation.invalidOption" });
 
 export const SURFACES = ["HARTRU", "SAIBRO"] as const;
 export type Surface = (typeof SURFACES)[number];
@@ -59,7 +70,13 @@ export const freezeReasonSchema = z.enum(FREEZE_REASONS);
 export const FREEZE_SCOPES = ["COURT", "SURFACE", "ALL"] as const;
 export type FreezeScope = (typeof FREEZE_SCOPES)[number];
 
-export const MATCH_TYPES = ["SINGLES", "DOUBLES"] as const;
+/** Singles (1 vs 1) or doubles (2 vs 2). */
+export const MATCH_FORMATS = ["SINGLES", "DOUBLES"] as const;
+export type MatchFormat = (typeof MATCH_FORMATS)[number];
+export const matchFormatSchema = z.enum(MATCH_FORMATS);
+
+/** What a match counts for: FRIENDLY (no rating), RANKED (Elo ladder), TOURNAMENT (a draw). */
+export const MATCH_TYPES = ["FRIENDLY", "RANKED", "TOURNAMENT"] as const;
 export type MatchType = (typeof MATCH_TYPES)[number];
 export const matchTypeSchema = z.enum(MATCH_TYPES);
 

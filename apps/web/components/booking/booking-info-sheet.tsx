@@ -2,6 +2,7 @@
 
 import type { CourtSummary, ScheduleBookingInfo, SlotSummary } from "@ficc/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,10 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/card";
 import { Sheet } from "@/components/ui/sheet";
-import { api, ApiError } from "@/lib/api";
-import { formatDay, formatTime } from "@/lib/format";
+import { api } from "@/lib/api";
 import { haptic } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { useErrorMessage } from "@/lib/use-error-message";
+import { useFormat } from "@/lib/use-format";
 import { useLastDefined } from "@/lib/use-last-defined";
 
 import { FavoriteToggle } from "./favorite-toggle";
@@ -28,10 +30,10 @@ export interface BookingInfoTarget {
   past: boolean;
 }
 
-const PLAYER_STATUS = {
-  CONFIRMED: { label: "Confirmado", tone: "ballSoft" },
-  PENDING: { label: "Aguardando", tone: "warning" },
-  DECLINED: { label: "Recusou", tone: "danger" },
+const PLAYER_STATUS_TONE = {
+  CONFIRMED: "ballSoft",
+  PENDING: "warning",
+  DECLINED: "danger",
 } as const;
 
 /** A taken slot: who plays, and for the players themselves confirm / decline / cancel. */
@@ -43,6 +45,9 @@ export function BookingInfoSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const target = useLastDefined(requested);
+  const t = useTranslations();
+  const format = useFormat();
+  const errorMessage = useErrorMessage();
   const { user } = useSession();
   const client = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -60,15 +65,14 @@ export function BookingInfoSheet({
       haptic();
       toast.success(
         kind === "confirm"
-          ? "Presença confirmada"
+          ? t("bookingInfo.confirmed")
           : kind === "decline"
-            ? "Convite recusado"
-            : "Reserva cancelada",
+            ? t("bookingInfo.declined")
+            : t("bookingInfo.cancelled"),
       );
       onOpenChange(false);
     },
-    onError: (failure) =>
-      toast.error(failure instanceof ApiError ? failure.message : "Algo deu errado."),
+    onError: (failure) => toast.error(errorMessage(failure)),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: queryKeys.schedule() });
       void client.invalidateQueries({ queryKey: queryKeys.bookingsMine });
@@ -88,7 +92,7 @@ export function BookingInfoSheet({
     <Sheet
       open={requested !== null}
       onOpenChange={close}
-      title={me ? "Sua reserva" : "Quadra reservada"}
+      title={me ? t("bookingInfo.mine") : t("bookingInfo.taken")}
       footer={
         canAnswer ? (
           <div className="flex gap-2">
@@ -99,7 +103,7 @@ export function BookingInfoSheet({
               loading={action.isPending && action.variables === "decline"}
               onClick={() => action.mutate("decline")}
             >
-              Recusar
+              {t("common.decline")}
             </Button>
             <Button
               size="lg"
@@ -107,7 +111,7 @@ export function BookingInfoSheet({
               loading={action.isPending && action.variables === "confirm"}
               onClick={() => action.mutate("confirm")}
             >
-              Confirmar
+              {t("common.confirm")}
             </Button>
           </div>
         ) : canCancel ? (
@@ -119,7 +123,7 @@ export function BookingInfoSheet({
                 className="flex-1"
                 onClick={() => setConfirmCancel(false)}
               >
-                Manter
+                {t("common.keep")}
               </Button>
               <Button
                 variant="danger"
@@ -128,12 +132,12 @@ export function BookingInfoSheet({
                 loading={action.isPending}
                 onClick={() => action.mutate("cancel")}
               >
-                Cancelar reserva
+                {t("bookingInfo.cancel")}
               </Button>
             </div>
           ) : (
             <Button variant="dangerSoft" size="lg" block onClick={() => setConfirmCancel(true)}>
-              Cancelar reserva
+              {t("bookingInfo.cancel")}
             </Button>
           )
         ) : undefined
@@ -144,11 +148,11 @@ export function BookingInfoSheet({
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="font-display text-title font-semibold">
-                {target.court.name} · {formatDay(target.date)}
+                {target.court.name} · {format.day(target.date)}
               </p>
               <p className="num text-small text-muted-foreground">
                 {target.slot.startTime}–{target.slot.endTime} ·{" "}
-                {booking.type === "SINGLES" ? "Simples" : "Duplas"}
+                {booking.type === "SINGLES" ? t("common.singles") : t("common.doubles")}
               </p>
             </div>
             <FavoriteToggle
@@ -160,21 +164,20 @@ export function BookingInfoSheet({
           </div>
           {booking.status === "PENDING" ? (
             <p className="rounded-md bg-warning-soft px-3 py-2 text-small text-warning-ink">
-              Aguardando confirmação
-              {detail.data ? ` até ${formatTime(detail.data.expiresAt)}` : ""}. Sem resposta, o
-              horário é liberado.
+              {detail.data
+                ? t("bookingInfo.waitingUntil", { time: format.time(detail.data.expiresAt) })
+                : t("bookingInfo.waiting")}
             </p>
           ) : null}
           {confirmCancel ? (
             <p className="rounded-md bg-danger-soft px-3 py-2 text-small text-danger-ink">
-              Cancelar libera o horário para outros sócios e avisa os demais jogadores.
+              {t("bookingInfo.cancelWarning")}
             </p>
           ) : null}
           <div className="space-y-2">
-            <SectionLabel>Jogadores</SectionLabel>
+            <SectionLabel>{t("bookingInfo.players")}</SectionLabel>
             <ul className="space-y-1">
               {booking.players.map((player) => {
-                const status = PLAYER_STATUS[player.status];
                 return (
                   <li key={player.user.id} className="flex h-14 items-center gap-3">
                     <Avatar name={player.user.name} src={player.user.photoUrl} size="md" />
@@ -182,14 +185,16 @@ export function BookingInfoSheet({
                       <span className="block truncate font-medium">
                         {player.user.name}
                         {player.user.id === user?.id ? (
-                          <span className="text-muted-foreground"> (você)</span>
+                          <span className="text-muted-foreground"> {t("common.you")}</span>
                         ) : null}
                       </span>
                       <span className="block num text-caption text-muted-foreground">
-                        Elo {player.user.elo}
+                        {t("common.elo", { elo: player.user.elo })}
                       </span>
                     </span>
-                    <Badge tone={status.tone}>{status.label}</Badge>
+                    <Badge tone={PLAYER_STATUS_TONE[player.status]}>
+                      {t(`bookingInfo.status.${player.status}`)}
+                    </Badge>
                   </li>
                 );
               })}

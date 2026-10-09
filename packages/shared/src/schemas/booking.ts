@@ -23,13 +23,11 @@ export const createBookingSchema = z
         code: "custom",
         path: ["playerIds"],
         message:
-          value.type === "SINGLES"
-            ? "Simples: escolha exatamente 1 adversário"
-            : "Duplas: escolha exatamente 3 jogadores",
+          value.type === "SINGLES" ? "validation.singlesPlayers" : "validation.doublesPlayers",
       });
     }
     if (new Set(value.playerIds).size !== value.playerIds.length) {
-      ctx.addIssue({ code: "custom", path: ["playerIds"], message: "Jogador repetido" });
+      ctx.addIssue({ code: "custom", path: ["playerIds"], message: "validation.repeatedPlayer" });
     }
   });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
@@ -44,6 +42,6 @@ export const slotFavoriteSchema = z.object({ courtId: idSchema, timeSlotId: idSc
 export type SlotFavoriteInput = z.infer<typeof slotFavoriteSchema>;
 
 export const memberSearchQuerySchema = z.object({
-  q: z.string().trim().min(1, { message: "Digite um nome ou matrícula" }).max(60),
+  q: z.string().trim().min(1, { message: "validation.searchRequired" }).max(60),
 });
 export type MemberSearchQuery = z.infer<typeof memberSearchQuerySchema>;

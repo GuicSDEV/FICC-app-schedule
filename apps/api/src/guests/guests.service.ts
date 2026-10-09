@@ -20,7 +20,6 @@ import {
   endOfClubDay,
   formatDocument,
   fromDbDate,
-  GATE_SCAN_RESULT_LABELS,
   type GatePassView,
   type GateScanLogItem,
   type GateScanResponse,
@@ -34,22 +33,31 @@ import {
 
 import type { RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
-import { conflict, forbidden, notFound, unprocessable } from "../common/domain.exception";
+import { conflict, forbidden, localize, notFound, unprocessable } from "../common/domain.exception";
 import { playerSelect, toPlayerSummary } from "../common/mappers";
 import type { Env } from "../config/env";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { clubSettings, clubTimeZone, tenant } from "../tenancy/tenant-context";
+import { DocumentCryptoService } from "./document-crypto.service";
 
-/** Passes can be created up to this many days ahead. */
-export const GUEST_PASS_MAX_DAYS_AHEAD = 60;
 const TOKEN_TYPE = "guest_pass";
 
 interface GuestTokenPayload {
   sub: string;
   typ: typeof TOKEN_TYPE;
+  /** Club of the pass; a QR from another club is invalid here. */
+  cid: string;
   iat: number;
   exp: number;
 }
+
+/** Columns that hold a guest's personal data, cleared by anonymization. */
+const ERASED_DOCUMENT = {
+  documentNumber: null,
+  documentCipher: null,
+  documentHash: null,
+} as const;
 
 const passInclude = {
   booking: {
@@ -80,32 +88,27 @@ export class GuestsService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
     private readonly notifications: NotificationsService,
+    private readonly documents: DocumentCryptoService,
   ) {}
 
   // ── Members ────────────────────────────────────────────────────────────────
 
   async create(hostId: string, input: CreateGuestPassInput): Promise<GuestPassItem> {
-    const today = clubToday(this.clock.now());
+    const today = clubToday(this.clock.now(), clubTimeZone());
     const host = await this.prisma.user.findUniqueOrThrow({ where: { id: hostId } });
     if (host.guestPassesSuspendedAt) {
-      throw forbidden(
-        "GUEST_PRIVILEGES_SUSPENDED",
-        "Seus convites estão suspensos. Fale com a secretaria.",
-      );
+      throw forbidden("GUEST_PRIVILEGES_SUSPENDED", "api.guestPrivilegesSuspended");
     }
-    if (input.visitDate < today)
-      throw unprocessable("VISIT_IN_PAST", "Escolha hoje ou uma data futura.");
-    if (input.visitDate > addDays(today, GUEST_PASS_MAX_DAYS_AHEAD)) {
-      throw unprocessable(
-        "VISIT_TOO_FAR",
-        `Convites podem ser criados até ${GUEST_PASS_MAX_DAYS_AHEAD} dias antes.`,
-      );
+    if (input.visitDate < today) throw unprocessable("VISIT_IN_PAST", "api.visitInPast");
+    const { guestPassMaxDaysAhead } = clubSettings();
+    if (input.visitDate > addDays(today, guestPassMaxDaysAhead)) {
+      throw unprocessable("VISIT_TOO_FAR", {
+        key: "api.visitTooFar",
+        params: { days: guestPassMaxDaysAhead },
+      });
     }
     if (await this.isBlocked(input.documentType, input.documentNumber)) {
-      throw unprocessable(
-        "DOCUMENT_BLOCKED",
-        "Esse convidado não pode entrar no clube. Fale com a secretaria.",
-      );
+      throw unprocessable("DOCUMENT_BLOCKED", "api.documentBlocked");
     }
     if (input.bookingId) {
       const booking = await this.prisma.booking.findFirst({
@@ -116,8 +119,7 @@ export class GuestsService {
           players: { some: { userId: hostId, status: { not: BookingPlayerStatus.DECLINED } } },
         },
       });
-      if (!booking)
-        throw unprocessable("INVALID_BOOKING", "Escolha uma das suas reservas nesse dia.");
+      if (!booking) throw unprocessable("INVALID_BOOKING", "api.guestBookingInvalid");
     }
 
     const pass = await this.prisma.guestPass.create({
@@ -125,7 +127,7 @@ export class GuestsService {
         hostId,
         guestName: input.guestName,
         documentType: input.documentType,
-        documentNumber: input.documentNumber,
+        ...this.documents.seal(input.documentType, input.documentNumber),
         visitDate: toDbDate(input.visitDate),
         bookingId: input.bookingId ?? null,
       },
@@ -135,7 +137,7 @@ export class GuestsService {
   }
 
   async mine(hostId: string): Promise<GuestPassItem[]> {
-    const today = clubToday(this.clock.now());
+    const today = clubToday(this.clock.now(), clubTimeZone());
     const passes = await this.prisma.guestPass.findMany({
       where: { hostId, visitDate: { gte: toDbDate(addDays(today, -30)) } },
       include: passInclude,
@@ -153,9 +155,8 @@ export class GuestsService {
       where: { id: passId, hostId },
       include: passInclude,
     });
-    if (!pass) throw notFound("PASS_NOT_FOUND", "Convite não encontrado.");
-    if (updated.count === 0)
-      throw conflict("PASS_NOT_ACTIVE", "Esse convite não pode mais ser cancelado.");
+    if (!pass) throw notFound("PASS_NOT_FOUND", "api.passNotFound");
+    if (updated.count === 0) throw conflict("PASS_NOT_ACTIVE", "api.passNotActive");
     return this.toItem(pass);
   }
 
@@ -170,8 +171,9 @@ export class GuestsService {
         secret: this.config.get("GUEST_PASS_SECRET", { infer: true }),
         clockTimestamp: Math.floor(now.getTime() / 1000),
       });
-      if (payload.typ !== TOKEN_TYPE)
+      if (payload.typ !== TOKEN_TYPE || payload.cid !== tenant().clubId) {
         return this.logScan(gate, null, GateScanMethod.QR, GateScanResult.INVALID_TOKEN);
+      }
       passId = payload.sub;
     } catch (error) {
       if (error instanceof TokenExpiredError) {
@@ -189,16 +191,21 @@ export class GuestsService {
     return this.checkIn(gate, passId, GateScanMethod.QR);
   }
 
-  /** Manual fallback: today's passes whose document contains the typed digits. */
+  /**
+   * Manual fallback: today's passes whose document contains the typed digits. Documents are
+   * encrypted, so the day's passes (a few dozen at most) are decrypted and filtered here.
+   */
   async searchToday(document: string): Promise<GatePassView[]> {
-    const today = clubToday(this.clock.now());
+    const today = clubToday(this.clock.now(), clubTimeZone());
     const passes = await this.prisma.guestPass.findMany({
-      where: { visitDate: toDbDate(today), documentNumber: { contains: document } },
+      where: { visitDate: toDbDate(today), anonymizedAt: null },
       include: passInclude,
       orderBy: { guestName: "asc" },
-      take: 20,
     });
-    return passes.map((pass) => this.toGateView(pass));
+    return passes
+      .filter((pass) => this.documents.reveal(pass)?.includes(document))
+      .slice(0, 20)
+      .map((pass) => this.toGateView(pass));
   }
 
   /** Applies every gate rule and flips ACTIVE → USED atomically (single entry). */
@@ -207,7 +214,7 @@ export class GuestsService {
     passId: string,
     method: GateScanMethod,
   ): Promise<GateScanResponse> {
-    const today = clubToday(this.clock.now());
+    const today = clubToday(this.clock.now(), clubTimeZone());
     const pass = await this.prisma.guestPass.findUnique({
       where: { id: passId },
       include: passInclude,
@@ -218,8 +225,7 @@ export class GuestsService {
     if (pass.status === GuestPassStatus.CANCELLED) result = GateScanResult.PASS_CANCELLED;
     else if (pass.status === GuestPassStatus.USED) result = GateScanResult.ALREADY_USED;
     else if (fromDbDate(pass.visitDate) !== today) result = GateScanResult.WRONG_DATE;
-    else if (await this.isBlocked(pass.documentType, pass.documentNumber))
-      result = GateScanResult.DOCUMENT_BLOCKED;
+    else if (await this.isPassBlocked(pass)) result = GateScanResult.DOCUMENT_BLOCKED;
     else if (pass.host.guestPassesSuspendedAt) result = GateScanResult.HOST_SUSPENDED;
     else {
       const usedAt = this.clock.now();
@@ -234,7 +240,8 @@ export class GuestsService {
     if (result === GateScanResult.ACCEPTED) {
       await this.notifications.notify(pass.hostId, "GUEST_CHECKED_IN", {
         guestPassId: pass.id,
-        guestName: pass.guestName,
+        // A pass checked in today is never anonymized (that happens after the visit).
+        guestName: pass.guestName ?? "",
         at: response.scannedAt,
       });
     }
@@ -267,7 +274,7 @@ export class GuestsService {
     const hosts = await this.prisma.user.findMany({
       where: { role: Role.MEMBER, guestPasses: { some: {} } },
       select: {
-        ...playerSelect,
+        ...playerSelect(),
         guestPassesSuspendedAt: true,
         guestPassesSuspendedReason: true,
         guestPasses: { select: { status: true, visitDate: true } },
@@ -288,19 +295,21 @@ export class GuestsService {
       .sort((a, b) => b.passes - a.passes || a.host.name.localeCompare(b.host.name));
   }
 
+  /** Visits per guest document (grouped by its keyed hash; anonymized passes are left out). */
   async documentStats(): Promise<DocumentGuestStats[]> {
     const [passes, blocks] = await Promise.all([
       this.prisma.guestPass.findMany({
+        where: { anonymizedAt: null },
         include: { host: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.guestBlock.findMany({ where: { liftedAt: null } }),
     ]);
-    const blocked = new Set(blocks.map((block) => `${block.documentType}:${block.documentNumber}`));
+    const blocked = new Set(blocks.map((block) => this.lookupKey(block)));
     const groups = new Map<string, typeof passes>();
     for (const pass of passes) {
-      const key = `${pass.documentType}:${pass.documentNumber}`;
-      groups.set(key, [...(groups.get(key) ?? []), pass]);
+      const key = this.lookupKey(pass);
+      if (key) groups.set(key, [...(groups.get(key) ?? []), pass]);
     }
     return [...groups.entries()]
       .map(([key, group]) => {
@@ -308,8 +317,8 @@ export class GuestsService {
         const visits = group.filter((pass) => pass.status === GuestPassStatus.USED);
         return {
           documentType: latest.documentType,
-          documentMasked: maskDocument(latest.documentType, latest.documentNumber),
-          guestName: latest.guestName,
+          documentMasked: maskDocument(latest.documentType, this.documents.reveal(latest) ?? ""),
+          guestName: latest.guestName ?? "",
           passes: group.length,
           visits: visits.length,
           hosts: [...new Set(group.map((pass) => pass.host.name))].sort(),
@@ -328,8 +337,14 @@ export class GuestsService {
     let documentFilter: Prisma.GuestPassWhereInput = {};
     if (filter.documentOf) {
       const sample = await this.prisma.guestPass.findUnique({ where: { id: filter.documentOf } });
-      if (!sample) throw notFound("PASS_NOT_FOUND", "Convite não encontrado.");
-      documentFilter = { documentType: sample.documentType, documentNumber: sample.documentNumber };
+      const number = sample ? this.documents.reveal(sample) : null;
+      if (!sample || !number) throw notFound("PASS_NOT_FOUND", "api.passNotFound");
+      const documentHash = this.documents.hash(sample.documentType, number);
+      // Legacy rows (not yet encrypted) still match on the plaintext column.
+      documentFilter = {
+        documentType: sample.documentType,
+        OR: [{ documentHash }, { documentNumber: number }],
+      };
     }
     const passes = await this.prisma.guestPass.findMany({
       where: { ...(filter.hostId ? { hostId: filter.hostId } : {}), ...documentFilter },
@@ -357,12 +372,12 @@ export class GuestsService {
 
   async block(admin: RequestUser, input: GuestBlockInput): Promise<GuestBlockItem> {
     if (await this.isBlocked(input.documentType, input.documentNumber)) {
-      throw conflict("ALREADY_BLOCKED", "Esse documento já está bloqueado.");
+      throw conflict("ALREADY_BLOCKED", "api.alreadyBlocked");
     }
     const block = await this.prisma.guestBlock.create({
       data: {
         documentType: input.documentType,
-        documentNumber: input.documentNumber,
+        ...this.documents.seal(input.documentType, input.documentNumber),
         reason: input.reason ?? null,
         blockedById: admin.id,
       },
@@ -378,12 +393,9 @@ export class GuestsService {
     reason?: string,
   ): Promise<GuestBlockItem> {
     const pass = await this.prisma.guestPass.findUnique({ where: { id: passId } });
-    if (!pass) throw notFound("PASS_NOT_FOUND", "Convite não encontrado.");
-    return this.block(admin, {
-      documentType: pass.documentType,
-      documentNumber: pass.documentNumber,
-      reason,
-    });
+    const documentNumber = pass ? this.documents.reveal(pass) : null;
+    if (!pass || !documentNumber) throw notFound("PASS_NOT_FOUND", "api.passNotFound");
+    return this.block(admin, { documentType: pass.documentType, documentNumber, reason });
   }
 
   async liftBlock(admin: RequestUser, blockId: string): Promise<void> {
@@ -391,13 +403,13 @@ export class GuestsService {
       where: { id: blockId, liftedAt: null },
       data: { liftedAt: this.clock.now(), liftedById: admin.id },
     });
-    if (result.count === 0) throw notFound("BLOCK_NOT_FOUND", "Bloqueio não encontrado.");
+    if (result.count === 0) throw notFound("BLOCK_NOT_FOUND", "api.blockNotFound");
   }
 
   async setSuspension(memberId: string, reason: string | null): Promise<void> {
     const member = await this.prisma.user.findUnique({ where: { id: memberId } });
     if (!member || member.role !== Role.MEMBER)
-      throw notFound("MEMBER_NOT_FOUND", "Sócio não encontrado.");
+      throw notFound("MEMBER_NOT_FOUND", "api.memberNotFound");
     await this.prisma.user.update({
       where: { id: memberId },
       data: reason
@@ -406,24 +418,97 @@ export class GuestsService {
     });
   }
 
+  // ── LGPD jobs ──────────────────────────────────────────────────────────────
+
+  /**
+   * Erases guest names and documents once the club's retention period after the visit has
+   * passed (and lifted blocks after the same period). Idempotent: already anonymized rows are
+   * skipped.
+   */
+  async anonymizeExpired(): Promise<{ passes: number; blocks: number }> {
+    const now = this.clock.now();
+    const days = clubSettings().guestDataRetentionDays;
+    const cutoff = addDays(clubToday(now, clubTimeZone()), -days);
+    const passes = await this.prisma.guestPass.updateMany({
+      where: { anonymizedAt: null, visitDate: { lt: toDbDate(cutoff) } },
+      data: { ...ERASED_DOCUMENT, guestName: null, anonymizedAt: now },
+    });
+    const blocks = await this.prisma.guestBlock.updateMany({
+      where: { anonymizedAt: null, liftedAt: { lt: new Date(now.getTime() - days * 86_400_000) } },
+      data: { ...ERASED_DOCUMENT, anonymizedAt: now },
+    });
+    return { passes: passes.count, blocks: blocks.count };
+  }
+
+  /** Moves plaintext documents left from before encryption into ciphertext + hash. Idempotent. */
+  async encryptLegacyDocuments(): Promise<number> {
+    let moved = 0;
+    const passes = await this.prisma.guestPass.findMany({
+      where: { documentNumber: { not: null } },
+      select: { id: true, documentType: true, documentNumber: true },
+    });
+    for (const pass of passes) {
+      await this.prisma.guestPass.update({
+        where: { id: pass.id },
+        data: this.documents.seal(pass.documentType, pass.documentNumber!),
+      });
+      moved += 1;
+    }
+    const blocks = await this.prisma.guestBlock.findMany({
+      where: { documentNumber: { not: null } },
+      select: { id: true, documentType: true, documentNumber: true },
+    });
+    for (const block of blocks) {
+      await this.prisma.guestBlock.update({
+        where: { id: block.id },
+        data: this.documents.seal(block.documentType, block.documentNumber!),
+      });
+      moved += 1;
+    }
+    return moved;
+  }
+
   // ── helpers ────────────────────────────────────────────────────────────────
+
+  /** Grouping/lookup key of a stored document (its keyed hash), or null once anonymized. */
+  private lookupKey(row: {
+    documentType: GuestDocumentType;
+    documentHash: string | null;
+    documentNumber: string | null;
+  }): string | null {
+    if (row.documentHash) return row.documentHash;
+    return row.documentNumber ? this.documents.hash(row.documentType, row.documentNumber) : null;
+  }
 
   private async isBlocked(
     documentType: GuestDocumentType,
     documentNumber: string,
   ): Promise<boolean> {
-    return (
-      (await this.prisma.guestBlock.count({
-        where: { documentType, documentNumber, liftedAt: null },
-      })) > 0
-    );
+    const documentHash = this.documents.hash(documentType, documentNumber);
+    const count = await this.prisma.guestBlock.count({
+      where: { documentType, liftedAt: null, OR: [{ documentHash }, { documentNumber }] },
+    });
+    return count > 0;
+  }
+
+  private async isPassBlocked(pass: PassWithRelations): Promise<boolean> {
+    const number = this.documents.reveal(pass);
+    return number !== null && this.isBlocked(pass.documentType, number);
   }
 
   private signToken(pass: { id: string; visitDate: Date }): string {
     const now = Math.floor(this.clock.now().getTime() / 1000);
-    const exp = Math.floor(endOfClubDay(fromDbDate(pass.visitDate)).getTime() / 1000);
+    const exp = Math.floor(
+      endOfClubDay(fromDbDate(pass.visitDate), clubTimeZone()).getTime() / 1000,
+    );
     return this.jwt.sign(
-      { sub: pass.id, typ: TOKEN_TYPE, iat: now, exp } satisfies GuestTokenPayload,
+      {
+        sub: pass.id,
+        typ: TOKEN_TYPE,
+        cid: tenant().clubId,
+        iat: now,
+        exp,
+      } satisfies GuestTokenPayload,
       {
         secret: this.config.get("GUEST_PASS_SECRET", { infer: true }),
       },
@@ -433,12 +518,14 @@ export class GuestsService {
   private toItem(pass: PassWithRelations): GuestPassItem {
     const usable =
       pass.status === GuestPassStatus.ACTIVE &&
-      fromDbDate(pass.visitDate) >= clubToday(this.clock.now());
+      fromDbDate(pass.visitDate) >= clubToday(this.clock.now(), clubTimeZone());
+    const document = this.documents.reveal(pass);
     return {
       id: pass.id,
       guestName: pass.guestName,
       documentType: pass.documentType,
-      documentMasked: maskDocument(pass.documentType, pass.documentNumber),
+      documentMasked: document ? maskDocument(pass.documentType, document) : null,
+      anonymized: pass.anonymizedAt !== null,
       visitDate: fromDbDate(pass.visitDate),
       status: pass.status,
       usedAt: pass.usedAt?.toISOString() ?? null,
@@ -455,11 +542,12 @@ export class GuestsService {
   }
 
   private toGateView(pass: PassWithRelations): GatePassView {
+    // The gate only sees passes for today, which are never anonymized.
     return {
       id: pass.id,
-      guestName: pass.guestName,
+      guestName: pass.guestName ?? "",
       documentType: pass.documentType,
-      document: formatDocument(pass.documentType, pass.documentNumber),
+      document: formatDocument(pass.documentType, this.documents.reveal(pass) ?? ""),
       visitDate: fromDbDate(pass.visitDate),
       status: pass.status,
       usedAt: pass.usedAt?.toISOString() ?? null,
@@ -478,7 +566,7 @@ export class GuestsService {
     return {
       id: block.id,
       documentType: block.documentType,
-      documentMasked: maskDocument(block.documentType, block.documentNumber),
+      documentMasked: maskDocument(block.documentType, this.documents.reveal(block) ?? ""),
       reason: block.reason,
       blockedBy: block.blockedBy.name,
       createdAt: block.createdAt.toISOString(),
@@ -506,7 +594,7 @@ export class GuestsService {
     return {
       result,
       accepted: result === GateScanResult.ACCEPTED,
-      message: GATE_SCAN_RESULT_LABELS[result],
+      message: localize(`labels.gateScanResult.${result}`),
       scannedAt: log.scannedAt.toISOString(),
       pass: existing ? this.toGateView(existing) : null,
     };

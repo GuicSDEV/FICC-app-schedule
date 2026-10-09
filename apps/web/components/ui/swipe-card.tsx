@@ -2,6 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { animate, motion, type PanInfo, useMotionValue, useTransform } from "motion/react";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { haptic, spring, SWIPE_THRESHOLD, SWIPE_VELOCITY, transitions } from "@/lib/motion";
@@ -16,8 +17,8 @@ export function SwipeCard({
   children,
   onConfirm,
   onDecline,
-  confirmLabel = "Confirmar",
-  declineLabel = "Recusar",
+  confirmLabel: confirmLabelProp,
+  declineLabel: declineLabelProp,
   disabled,
   className,
 }: {
@@ -29,6 +30,9 @@ export function SwipeCard({
   disabled?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("swipe");
+  const confirmLabel = confirmLabelProp ?? t("confirm");
+  const declineLabel = declineLabelProp ?? t("decline");
   const x = useMotionValue(0);
   const [busy, setBusy] = useState(false);
   const confirmOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);

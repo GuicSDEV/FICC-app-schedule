@@ -13,6 +13,7 @@ import { Clock } from "../common/clock";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
+import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
 export interface SlotCell {
   courtId: string;
@@ -25,9 +26,6 @@ const toRef = (cell: SlotCell): ScheduleCellRef => ({
   timeSlotId: cell.timeSlotId,
   date: typeof cell.date === "string" ? cell.date : fromDbDate(cell.date),
 });
-
-/** SLOT_OPENED is only sent for slots within this many days (ending a series frees dozens). */
-const NOTIFY_WITHIN_DAYS = 14;
 
 /** Broadcasts grid changes and tells members watching a freed court + slot that it opened. */
 @Injectable()
@@ -64,13 +62,14 @@ export class SlotEventsService {
   ) {
     this.changed(kind, cells);
     const now = this.clock.now();
-    const lastDate = addDays(clubToday(now), NOTIFY_WITHIN_DAYS);
+    // Only near slots: ending a series frees dozens of far-away dates.
+    const lastDate = addDays(clubToday(now, clubTimeZone()), clubSettings().slotOpenedNotifyDays);
     for (const ref of cells.map(toRef).filter((cell) => cell.date <= lastDate)) {
       const [court, slot] = await Promise.all([
         this.prisma.court.findUnique({ where: { id: ref.courtId } }),
         this.prisma.timeSlot.findUnique({ where: { id: ref.timeSlotId } }),
       ]);
-      if (!court || !slot || isSlotPast(ref.date, slot, now)) continue;
+      if (!court || !slot || isSlotPast(ref.date, slot, now, clubTimeZone())) continue;
       const watchers = await this.prisma.slotFavorite.findMany({
         where: {
           courtId: ref.courtId,

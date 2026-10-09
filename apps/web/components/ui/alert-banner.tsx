@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CloudRain, Info, Wrench, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { dropVariants, tap } from "@/lib/motion";
@@ -38,6 +39,7 @@ export function AlertBanner({
   onDismiss?: () => void;
   className?: string;
 }) {
+  const t = useTranslations("shell");
   const Icon = ICONS[tone];
   return (
     <AnimatePresence initial={false}>
@@ -85,7 +87,7 @@ export function AlertBanner({
               type="button"
               whileTap={tap}
               onClick={onDismiss}
-              aria-label="Fechar aviso"
+              aria-label={t("dismissAlert")}
               className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
             >
               <X className="size-4" />

@@ -9,7 +9,6 @@ import {
 } from "@ficc/db";
 import {
   addDays,
-  BOOKING_WINDOW_DAYS,
   type BookingDetail,
   clubToday,
   type CreateBookingInput,
@@ -29,22 +28,23 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
-
-/** A member may hold at most this many future active bookings (docs/SPEC.md, Court Booking). */
-export const MAX_ACTIVE_BOOKINGS = 2;
-/** Pending bookings expire unless every player confirms within this window. */
-export const CONFIRMATION_WINDOW_MS = 2 * 60 * 60 * 1000;
+import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
 const ACTIVE_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
 
-export const bookingInclude = {
-  court: true,
-  timeSlot: true,
-  players: { include: { user: { select: playerSelect } }, orderBy: { user: { name: "asc" } } },
-  _count: { select: { guestPasses: { where: { status: { not: "CANCELLED" } } } } },
-} satisfies Prisma.BookingInclude;
+/** Built per call: the player select depends on the current club. */
+export function bookingInclude() {
+  return {
+    court: true,
+    timeSlot: true,
+    players: { include: { user: { select: playerSelect() } }, orderBy: { user: { name: "asc" } } },
+    _count: { select: { guestPasses: { where: { status: { not: "CANCELLED" } } } } },
+  } satisfies Prisma.BookingInclude;
+}
 
-export type BookingWithRelations = Prisma.BookingGetPayload<{ include: typeof bookingInclude }>;
+export type BookingWithRelations = Prisma.BookingGetPayload<{
+  include: ReturnType<typeof bookingInclude>;
+}>;
 
 export function toBookingDetail(booking: BookingWithRelations, viewerId?: string): BookingDetail {
   const date = fromDbDate(booking.date);
@@ -59,8 +59,8 @@ export function toBookingDetail(booking: BookingWithRelations, viewerId?: string
     date,
     court: toCourtSummary(booking.court),
     slot: toSlotSummary(booking.timeSlot),
-    startsAt: slotStartsAt(date, booking.timeSlot).toISOString(),
-    endsAt: slotEndsAt(date, booking.timeSlot).toISOString(),
+    startsAt: slotStartsAt(date, booking.timeSlot, clubTimeZone()).toISOString(),
+    endsAt: slotEndsAt(date, booking.timeSlot, clubTimeZone()).toISOString(),
     expiresAt: booking.expiresAt.toISOString(),
     createdById: booking.createdById,
     myStatus: booking.players.find((player) => player.userId === viewerId)?.status ?? null,
@@ -96,35 +96,38 @@ export class BookingsService {
         tx.timeSlot.findUnique({ where: { id: input.timeSlotId } }),
       ]);
       if (!court || court.status !== CourtStatus.ACTIVE) {
-        throw notFound("COURT_NOT_FOUND", "Quadra não encontrada.");
+        throw notFound("COURT_NOT_FOUND", "api.courtNotFound");
       }
-      if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "Horário não encontrado.");
-      if (isSlotPast(input.date, slot, now)) {
-        throw unprocessable("SLOT_IN_PAST", "Esse horário já passou.");
+      if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "api.slotNotFound");
+      if (isSlotPast(input.date, slot, now, clubTimeZone())) {
+        throw unprocessable("SLOT_IN_PAST", "api.slotInPast");
       }
-      if (input.date > addDays(clubToday(now), BOOKING_WINDOW_DAYS - 1)) {
-        throw unprocessable(
-          "BEYOND_BOOKING_WINDOW",
-          `Reservas abrem com até ${BOOKING_WINDOW_DAYS} dias de antecedência.`,
-        );
+      const { bookingWindowDays } = clubSettings();
+      if (input.date > addDays(clubToday(now, clubTimeZone()), bookingWindowDays - 1)) {
+        throw unprocessable("BEYOND_BOOKING_WINDOW", {
+          key: "api.beyondBookingWindow",
+          params: { days: bookingWindowDays },
+        });
       }
 
-      const startsAt = slotStartsAt(input.date, slot);
+      const startsAt = slotStartsAt(input.date, slot, clubTimeZone());
       const frozen = await isCourtFrozen(tx, court.id, input.date, slot);
-      if (frozen) throw conflict("COURT_FROZEN", `A ${court.name} está interditada nesse horário.`);
+      if (frozen) {
+        throw conflict("COURT_FROZEN", { key: "api.courtFrozen", params: { court: court.name } });
+      }
 
       const playerIds = [creatorId, ...input.playerIds];
       if (input.playerIds.includes(creatorId)) {
-        throw unprocessable("INVALID_PLAYERS", "Você já entra na reserva automaticamente.");
+        throw unprocessable("INVALID_PLAYERS", "api.creatorIncluded");
       }
       const players = await tx.user.findMany({
         where: { id: { in: playerIds }, role: Role.MEMBER, isActive: true },
         select: { id: true, name: true },
       });
       if (players.length !== playerIds.length) {
-        throw unprocessable("INVALID_PLAYERS", "Algum jogador não é um sócio ativo.");
+        throw unprocessable("INVALID_PLAYERS", "api.invalidPlayers");
       }
-      const nameOf = (id: string) => players.find((player) => player.id === id)?.name ?? "Jogador";
+      const nameOf = (id: string) => players.find((player) => player.id === id)?.name ?? id;
 
       await this.assertPlayersFree(tx, playerIds, input.date, input.timeSlotId, nameOf);
       await this.assertBookingLimit(tx, playerIds, now, nameOf);
@@ -147,7 +150,13 @@ export class BookingsService {
           timeSlotId: slot.id,
           date: toDbDate(input.date),
           createdById: creatorId,
-          expiresAt: new Date(Math.min(now.getTime() + CONFIRMATION_WINDOW_MS, startsAt.getTime())),
+          // Pending bookings expire unless everyone confirms in time (capped at the slot start).
+          expiresAt: new Date(
+            Math.min(
+              now.getTime() + clubSettings().bookingConfirmationMinutes * 60_000,
+              startsAt.getTime(),
+            ),
+          ),
           players: {
             create: playerIds.map((userId) => ({
               userId,
@@ -157,7 +166,7 @@ export class BookingsService {
             })),
           },
         },
-        include: bookingInclude,
+        include: bookingInclude(),
       });
       await tx.slotOccupancy.create({
         data: { courtId: court.id, date: created.date, timeSlotId: slot.id, bookingId: created.id },
@@ -184,7 +193,7 @@ export class BookingsService {
     const booking = await this.loadForAnswer(userId, bookingId);
     if (booking.expiresAt <= now) {
       await this.cancel(booking.id, BookingCancelReason.EXPIRED, null);
-      throw conflict("BOOKING_EXPIRED", "O prazo para confirmar essa reserva acabou.");
+      throw conflict("BOOKING_EXPIRED", "api.bookingExpired");
     }
 
     const updated = await serializable(this.prisma, async (tx) => {
@@ -198,7 +207,7 @@ export class BookingsService {
       return tx.booking.update({
         where: { id: bookingId },
         data: pending === 0 ? { status: BookingStatus.CONFIRMED, confirmedAt: now } : {},
-        include: bookingInclude,
+        include: bookingInclude(),
       });
     });
 
@@ -227,17 +236,17 @@ export class BookingsService {
   async cancelByPlayer(userId: string, bookingId: string): Promise<BookingDetail> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: bookingInclude,
+      include: bookingInclude(),
     });
-    if (!booking) throw notFound("BOOKING_NOT_FOUND", "Reserva não encontrada.");
+    if (!booking) throw notFound("BOOKING_NOT_FOUND", "api.bookingNotFound");
     if (!booking.players.some((player) => player.userId === userId)) {
-      throw forbidden("NOT_A_PLAYER", "Você não faz parte dessa reserva.");
+      throw forbidden("NOT_A_PLAYER", "api.notBookingPlayer");
     }
     if (!ACTIVE_STATUSES.includes(booking.status)) {
-      throw conflict("BOOKING_NOT_ACTIVE", "Essa reserva já foi cancelada.");
+      throw conflict("BOOKING_NOT_ACTIVE", "api.bookingNotActive");
     }
-    if (isSlotPast(fromDbDate(booking.date), booking.timeSlot, this.clock.now())) {
-      throw unprocessable("SLOT_IN_PAST", "Não dá para cancelar um horário que já começou.");
+    if (isSlotPast(fromDbDate(booking.date), booking.timeSlot, this.clock.now(), clubTimeZone())) {
+      throw unprocessable("SLOT_IN_PAST", "api.slotStartedCancel");
     }
     return this.cancel(bookingId, BookingCancelReason.CANCELLED_BY_PLAYER, userId);
   }
@@ -260,7 +269,7 @@ export class BookingsService {
       await tx.slotOccupancy.deleteMany({ where: { bookingId } });
       const booking = await tx.booking.findUniqueOrThrow({
         where: { id: bookingId },
-        include: bookingInclude,
+        include: bookingInclude(),
       });
       return { booking, changed: changed.count > 0 };
     });
@@ -301,14 +310,14 @@ export class BookingsService {
 
   async mine(userId: string): Promise<MyBookingsResponse> {
     const now = this.clock.now();
-    const today = clubToday(now);
+    const today = clubToday(now, clubTimeZone());
     const bookings = await this.prisma.booking.findMany({
       where: {
         players: { some: { userId, status: { not: BookingPlayerStatus.DECLINED } } },
         date: { gte: toDbDate(addDays(today, -14)) },
         status: { in: ACTIVE_STATUSES },
       },
-      include: bookingInclude,
+      include: bookingInclude(),
       orderBy: [{ date: "asc" }, { timeSlot: { sortOrder: "asc" } }],
     });
     const details = bookings.map((booking) => toBookingDetail(booking, userId));
@@ -332,14 +341,14 @@ export class BookingsService {
   async get(viewerId: string, viewerRole: Role, bookingId: string): Promise<BookingDetail> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: bookingInclude,
+      include: bookingInclude(),
     });
-    if (!booking) throw notFound("BOOKING_NOT_FOUND", "Reserva não encontrada.");
+    if (!booking) throw notFound("BOOKING_NOT_FOUND", "api.bookingNotFound");
     if (
       viewerRole === Role.MEMBER &&
       !booking.players.some((player) => player.userId === viewerId)
     ) {
-      throw forbidden("NOT_A_PLAYER", "Você não faz parte dessa reserva.");
+      throw forbidden("NOT_A_PLAYER", "api.notBookingPlayer");
     }
     return toBookingDetail(booking, viewerId);
   }
@@ -347,16 +356,16 @@ export class BookingsService {
   private async loadForAnswer(userId: string, bookingId: string): Promise<BookingWithRelations> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: bookingInclude,
+      include: bookingInclude(),
     });
-    if (!booking) throw notFound("BOOKING_NOT_FOUND", "Reserva não encontrada.");
+    if (!booking) throw notFound("BOOKING_NOT_FOUND", "api.bookingNotFound");
     const player = booking.players.find((entry) => entry.userId === userId);
-    if (!player) throw forbidden("NOT_A_PLAYER", "Você não faz parte dessa reserva.");
+    if (!player) throw forbidden("NOT_A_PLAYER", "api.notBookingPlayer");
     if (booking.status !== BookingStatus.PENDING) {
-      throw conflict("BOOKING_NOT_PENDING", "Essa reserva não está aguardando confirmação.");
+      throw conflict("BOOKING_NOT_PENDING", "api.bookingNotPending");
     }
     if (player.status !== BookingPlayerStatus.PENDING) {
-      throw conflict("ALREADY_ANSWERED", "Você já respondeu a esse convite.");
+      throw conflict("ALREADY_ANSWERED", "api.alreadyAnswered");
     }
     return booking;
   }
@@ -378,11 +387,14 @@ export class BookingsService {
       select: { userId: true },
     });
     if (busy) {
-      throw conflict("PLAYER_BUSY", `${nameOf(busy.userId)} já tem uma reserva nesse horário.`);
+      throw conflict("PLAYER_BUSY", {
+        key: "api.playerBusy",
+        params: { name: nameOf(busy.userId) },
+      });
     }
   }
 
-  /** Every player may hold at most MAX_ACTIVE_BOOKINGS future active bookings. */
+  /** Every player may hold at most the club's maxActiveBookings future active bookings. */
   private async assertBookingLimit(
     tx: Tx,
     playerIds: string[],
@@ -393,7 +405,10 @@ export class BookingsService {
       where: {
         userId: { in: playerIds },
         status: { not: BookingPlayerStatus.DECLINED },
-        booking: { status: { in: ACTIVE_STATUSES }, date: { gte: toDbDate(clubToday(now)) } },
+        booking: {
+          status: { in: ACTIVE_STATUSES },
+          date: { gte: toDbDate(clubToday(now, clubTimeZone())) },
+        },
       },
       include: { booking: { include: { timeSlot: true } } },
     });
@@ -401,13 +416,14 @@ export class BookingsService {
       const future = rows.filter(
         (row) =>
           row.userId === userId &&
-          !isSlotPast(fromDbDate(row.booking.date), row.booking.timeSlot, now),
+          !isSlotPast(fromDbDate(row.booking.date), row.booking.timeSlot, now, clubTimeZone()),
       );
-      if (future.length >= MAX_ACTIVE_BOOKINGS) {
-        throw unprocessable(
-          "BOOKING_LIMIT",
-          `${nameOf(userId)} já tem ${MAX_ACTIVE_BOOKINGS} reservas ativas. Cancele uma antes de reservar outra.`,
-        );
+      const max = clubSettings().maxActiveBookings;
+      if (future.length >= max) {
+        throw unprocessable("BOOKING_LIMIT", {
+          key: "api.bookingLimit",
+          params: { name: nameOf(userId), max },
+        });
       }
     }
   }
@@ -415,7 +431,7 @@ export class BookingsService {
   private slotTaken(byLesson: boolean) {
     return conflict(
       byLesson ? "SLOT_HAS_LESSON" : "SLOT_TAKEN",
-      byLesson ? "Esse horário tem aula marcada." : "Esse horário acabou de ser reservado.",
+      byLesson ? "api.slotLessonTaken" : "api.slotJustTaken",
     );
   }
 

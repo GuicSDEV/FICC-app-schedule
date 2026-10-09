@@ -7,7 +7,7 @@ import { idSchema, optionalText } from "./common";
 
 const documentFields = {
   documentType: guestDocumentTypeSchema,
-  documentNumber: z.string().trim().min(1, { message: "Informe o documento" }).max(20),
+  documentNumber: z.string().trim().min(1, { message: "validation.documentRequired" }).max(20),
 };
 
 function normalizeAndValidate<T extends { documentType: "CPF" | "RG"; documentNumber: string }>(
@@ -19,7 +19,7 @@ function normalizeAndValidate<T extends { documentType: "CPF" | "RG"; documentNu
     ctx.addIssue({
       code: "custom",
       path: ["documentNumber"],
-      message: value.documentType === "CPF" ? "CPF inválido" : "RG inválido",
+      message: value.documentType === "CPF" ? "validation.invalidCpf" : "validation.invalidRg",
     });
   }
   return { ...value, documentNumber };
@@ -31,9 +31,9 @@ export const createGuestPassSchema = z
     guestName: z
       .string()
       .trim()
-      .min(3, { message: "Informe o nome completo" })
+      .min(3, { message: "validation.fullNameRequired" })
       .max(100)
-      .refine((name) => name.split(/\s+/).length >= 2, { message: "Informe nome e sobrenome" }),
+      .refine((name) => name.split(/\s+/).length >= 2, { message: "validation.firstAndLastName" }),
     ...documentFields,
     visitDate: isoDateSchema,
     /** One of the host's bookings on the visit date. */
@@ -51,7 +51,7 @@ export const gateSearchQuerySchema = z.object({
     .string()
     .trim()
     .transform((value) => value.toUpperCase().replace(/[^0-9A-Z]/g, ""))
-    .refine((value) => value.length >= 3, { message: "Digite ao menos 3 caracteres" }),
+    .refine((value) => value.length >= 3, { message: "validation.searchMin3" }),
 });
 export type GateSearchQuery = z.infer<typeof gateSearchQuerySchema>;
 
@@ -61,7 +61,7 @@ export const guestBlockSchema = z
 export type GuestBlockInput = z.infer<typeof guestBlockSchema>;
 
 export const guestSuspensionSchema = z.object({
-  reason: z.string().trim().min(3, { message: "Informe o motivo" }).max(300),
+  reason: z.string().trim().min(3, { message: "validation.reasonRequired" }).max(300),
 });
 export type GuestSuspensionInput = z.infer<typeof guestSuspensionSchema>;
 

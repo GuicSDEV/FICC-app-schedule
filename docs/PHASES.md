@@ -3,6 +3,9 @@
 Build order for the project. Each phase is implemented completely, verified with its "Done when"
 checks, logged in `docs/PROGRESS.md` and committed as `feat(phase-N): <summary>`.
 
+> **Execution order:** 0 → 7 (done), then 7.5 → 8 → 9 → 9.5 → 9.8 → 10. After Phase 10, stop and
+> report; Phases 11 and 12 are on hold until the club approves them.
+
 ## Phase 1 — Database
 
 Read SPEC sections CLUB COURTS & SCHEDULE, MODULES and DATA MODEL.
@@ -198,6 +201,48 @@ Seeding/bye placement, group tiebreakers, advancement, walkover, auto-schedule r
 
 Done when: a 12-player singles tournament and an 8-team doubles groups-then-knockout tournament can go from creation → registration → draw → scheduling → results → champion, a circuit with 2 stages shows a correct ranking, and the public link and PDF exports work.
 
+## Phase 9.8 — FICC operations adjustments
+
+These come from how FICC actually works today. Every rule below lives in ClubSettings and is editable by staff — never hardcoded.
+
+### Schedules per day
+
+- Slot grids per weekday (weekends can differ from weekdays) + date exceptions (holidays, events) where staff override the grid or close courts for a day
+- Per day or date, a court mode: BOOKING (normal) or FREE_PLAY (no reservations)
+- FREE_PLAY: a live "Courts now" screen showing which courts are in use; players check in to a court when they start and check out when they finish (with auto-checkout after the slot duration); when all courts are busy, an optional digital queue: join, see your position, get a push notification when a court frees up, and have 5 minutes to claim it. Queue on/off per club.
+- Coaches can add lessons on any day, weekends included (already in the Coach Portal)
+
+### Booking opening rules (replaces today's 7am WhatsApp list)
+
+- Configurable opening rule: "bookings for day D open at HH:MM, N days before" (e.g. 07:00 same day, or 22:00 the day before) + max bookings per member per day
+- Countdown screen before opening; opening time enforced by server time only (the phone clock is irrelevant)
+- Built for the opening rush: fair first-come-first-served with DB transactions, rate limiting and a load test simulating 150 members trying to book at the same second; clear feedback when a slot was just taken, with the next free options shown immediately
+
+### Members & registration
+
+- Self sign-up with Matrícula → status PENDING → staff approve or reject (with a reason); approved members get a notification. CSV import stays available.
+- Optional "holder + dependents" mode (setting): a holder's membership can have dependents, each with their own login and rating (e.g. 1234-01, 1234-02). Off by default until the club confirms how it works.
+
+### Staff permissions (several people will run the app)
+
+- Replace the single ADMIN with granular permissions grouped into editable roles. Default roles: **Secretaria** (bookings, courts/rain, announcements, member approvals, guests), **Diretoria** (everything except platform settings: tournaments, ranking, members, settings), **Professor** (own lessons; optionally tournament organizer), **Super admin** (us). A person can have multiple roles. Every staff action is written to an audit log.
+
+### No-shows
+
+- Staff (or a booking's co-players) can mark a no-show; late-cancellation window configurable
+- History per member visible to staff; optional automatic penalty (e.g. N no-shows in 30 days → X days without booking), OFF by default
+
+### Club news board
+
+- "Mural" tab: staff publish posts (title, text, photos, optional event date and pinned flag); push notification to members (optional per post); read counts for staff; members can react with a 👍
+- Shown as a section on the member dashboard with the latest pinned post
+
+### Backlog (do NOT implement now; written in docs/BACKLOG.md)
+
+- Challenge ladder module (if FICC already uses one), light/guest fees, payments (Pix), WhatsApp notifications, padel/beach tennis rules
+
+Done when: weekday and weekend grids differ in the seed, a FREE_PLAY Saturday works with check-in and the queue, the booking opening countdown and the 150-user load test pass, sign-up → approval works, each default role sees only what it should, and the news board sends notifications.
+
 ## Phase 10 — PWA, polish, QA
 
 Review the whole app against docs/SPEC.md and fix the gaps.
@@ -210,6 +255,8 @@ Review the whole app against docs/SPEC.md and fix the gaps.
   Finish with the SPEC checklist (done/missing).
 
 ## Phase 11 — SaaS extensibility & customer-feature workflow
+
+> **On hold — waiting for club approval.** Do not start without the product owner's go.
 
 Business context: this becomes a SaaS for sports clubs (tennis, padel, beach tennis). Our differentiator is close support: we sit with each club's owners and build the features they ask for. The rule that makes this scale: **build for one club, ship for all.** Every customer request becomes a configurable module or setting available to every club. Never fork the code per club, never write `if (club === 'ficc')`, and never put club-specific logic outside ClubSettings, modules or custom fields.
 
@@ -250,3 +297,29 @@ Business context: this becomes a SaaS for sports clubs (tennis, padel, beach ten
 - Add the rules from this phase to AGENTS.md
 
 Done when: an existing feature can be turned on/off per club from the platform area, a new setting added to a module schema appears in the admin UI automatically, custom fields work end to end, the feedback inbox and changelog work, and running `/new-feature` produces a spec file following the template.
+
+## Phase 12 — Native apps (App Store & Google Play)
+
+> **On hold — waiting for club approval.** Do not start without the product owner's go.
+
+Context: many FICC members are older and only know how to install apps from the App Store / Google Play, so the main distribution is the stores, not the PWA. We publish ONE app under our own brand for all clubs (multi-club); FICC members see FICC's branding after login.
+
+- Add Capacitor to `apps/web` (iOS + Android projects committed under `apps/mobile` or `apps/web/ios|android`). Choose and document the approach: bundle the static app shell in the native app and call the API remotely, so the app opens fast and works offline-first for the shell.
+- Native features via Capacitor plugins (required so Apple doesn't reject the app as a "website wrapper", guideline 4.2):
+  - Push notifications (FCM for Android, APNs for iOS) as a real `NotificationChannel` implementation, with device token registration per user and per club
+  - Native camera QR scanning for the gate page
+  - Haptics on confirmations, swipe actions and celebrations
+  - Status bar, splash screen and app icon (our brand), safe areas, back-button handling on Android
+  - Native share sheet for guest QR codes and tournament links
+  - Deep links / universal links: tournament public links, guest passes and club invite links open inside the app when it's installed
+- Store requirements:
+  - In-app "Delete my account" flow (Apple guideline 5.1.1(v)), plus the existing data export
+  - Privacy policy and terms pages reachable inside the app and by public URL
+  - Login session that stays signed in (secure token storage), so older users don't need to log in again
+  - Accessibility pass for older users: support system font scaling (Dynamic Type / Android font size) without breaking layouts, minimum 16px body text, high-contrast check
+- Build & release:
+  - Scripts for building iOS and Android release builds, versioning (version + build number synced), and a README guide step by step for: Apple Developer account, App Store Connect setup, TestFlight, Google Play Console, internal/closed testing track, store listing (screenshots sizes, description in pt-BR, privacy questionnaire answers)
+  - Generate store screenshots automatically with Playwright at the required device sizes, using the demo data
+- OTA updates are NOT allowed for native code; document which changes need a new store release vs which only need a web/API deploy.
+
+Done when: the Android app builds and runs on an emulator with push, QR camera and deep links working; the iOS project builds in Xcode (to be verified manually on the product owner's Mac — add to "Needs manual check"); and the release guide is complete.

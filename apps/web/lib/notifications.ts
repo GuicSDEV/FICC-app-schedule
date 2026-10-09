@@ -1,6 +1,10 @@
-import { FREEZE_REASON_LABELS, type NotificationItem } from "@ficc/shared";
+import type { NotificationItem } from "@ficc/shared";
+import { useTranslations } from "next-intl";
+import { useCallback } from "react";
 
-import { formatDay, formatDelta } from "./format";
+import { useClub } from "@/components/providers/club-provider";
+
+import { useFormat } from "./use-format";
 
 export type NotificationTone = "ball" | "lesson" | "danger" | "warning" | "neutral";
 
@@ -11,105 +15,155 @@ export interface NotificationCopy {
   tone: NotificationTone;
 }
 
-/** pt-BR text for each notification type, built from its payload. */
-export function describeNotification(item: NotificationItem): NotificationCopy {
-  switch (item.type) {
-    case "BOOKING_INVITE":
-      return {
-        title: "Convite para jogar",
-        body: `${item.payload.invitedBy} reservou a ${item.payload.courtName} em ${formatDay(item.payload.date)}, ${item.payload.startTime}. Confirme sua presença.`,
-        href: "/app",
-        tone: "ball",
-      };
-    case "BOOKING_CONFIRMED":
-      return {
-        title: "Reserva confirmada",
-        body: `${item.payload.courtName} · ${formatDay(item.payload.date)}, ${item.payload.startTime}. Todos confirmaram.`,
-        href: "/app",
-        tone: "ball",
-      };
-    case "BOOKING_CANCELLED": {
-      const reasons = {
-        DECLINED: `${item.payload.byName ?? "Um jogador"} recusou o convite`,
-        EXPIRED: "Nem todos confirmaram em 2 horas",
-        CANCELLED_BY_PLAYER: `${item.payload.byName ?? "Um jogador"} cancelou`,
-        COURT_FROZEN: "A quadra foi interditada",
-        CANCELLED_BY_ADMIN: "Cancelada pela administração",
-      } as const;
-      return {
-        title: "Reserva cancelada",
-        body: `${item.payload.courtName} · ${formatDay(item.payload.date)}, ${item.payload.startTime}. ${reasons[item.payload.reason]}.`,
-        href: "/app/courts",
-        tone: "danger",
-      };
-    }
-    case "SLOT_OPENED":
-      return {
-        title: "Horário liberado",
-        body: `A ${item.payload.courtName} às ${item.payload.startTime} em ${formatDay(item.payload.date)} ficou livre.`,
-        href: `/app/courts?date=${item.payload.date}`,
-        tone: "ball",
-      };
-    case "LESSON_CANCELLED":
-      return {
-        title: "Aula cancelada",
-        body: `${item.payload.byName} cancelou sua aula na ${item.payload.courtName}, ${formatDay(item.payload.date)} às ${item.payload.startTime}.`,
-        href: "/coach",
-        tone: "lesson",
-      };
-    case "MATCH_REPORTED":
-      return {
-        title: "Resultado para aprovar",
-        body: `${item.payload.reportedBy} lançou ${item.payload.score}. Aprove ou conteste em até 48 h.`,
-        href: `/app/matches/${item.payload.matchId}`,
-        tone: "ball",
-      };
-    case "MATCH_CONFIRMED":
-      return {
-        title: item.payload.won ? "Vitória confirmada" : "Resultado confirmado",
-        body: `${item.payload.score} · Elo ${item.payload.eloAfter} (${formatDelta(item.payload.delta)}).`,
-        href: `/app/matches/${item.payload.matchId}`,
-        tone: item.payload.won ? "ball" : "neutral",
-      };
-    case "MATCH_DISPUTED":
-      return {
-        title: "Resultado contestado",
-        body: `${item.payload.disputedBy} contestou o placar${item.payload.comment ? `: “${item.payload.comment}”` : "."}`,
-        href: `/app/matches/${item.payload.matchId}`,
-        tone: "danger",
-      };
-    case "DISPUTE_RESOLVED":
-      return {
-        title: "Disputa resolvida",
-        body:
-          item.payload.action === "VOID"
-            ? "A administração anulou a partida."
-            : item.payload.action === "EDIT"
-              ? "A administração corrigiu o placar e o Elo foi atualizado."
-              : "A administração manteve o placar lançado.",
-        href: `/app/matches/${item.payload.matchId}`,
-        tone: "neutral",
-      };
-    case "COURT_FROZEN":
-      return {
-        title: `${FREEZE_REASON_LABELS[item.payload.reason]}: quadras interditadas`,
-        body: `${item.payload.courtNames.join(", ")} fora de uso. Sua reserva ou aula pode ser afetada.`,
-        href: "/app/courts",
-        tone: "warning",
-      };
-    case "COURT_UNFROZEN":
-      return {
-        title: "Quadras liberadas",
-        body: `${item.payload.courtNames.join(", ")} voltaram a funcionar.`,
-        href: "/app/courts",
-        tone: "ball",
-      };
-    case "GUEST_CHECKED_IN":
-      return {
-        title: "Convidado chegou",
-        body: `${item.payload.guestName} entrou no clube.`,
-        href: "/app/guests",
-        tone: "neutral",
-      };
-  }
+/** Text for each notification type (in the club's language), built from its payload. */
+export function useNotificationCopy() {
+  const t = useTranslations("notifications");
+  const labels = useTranslations("labels");
+  const format = useFormat();
+  const club = useClub();
+
+  return useCallback(
+    (item: NotificationItem): NotificationCopy => {
+      switch (item.type) {
+        case "BOOKING_INVITE": {
+          const { invitedBy, courtName, date, startTime } = item.payload;
+          return {
+            title: t("BOOKING_INVITE.title"),
+            body: t("BOOKING_INVITE.body", {
+              invitedBy,
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+            }),
+            href: "/app",
+            tone: "ball",
+          };
+        }
+        case "BOOKING_CONFIRMED": {
+          const { courtName, date, startTime } = item.payload;
+          return {
+            title: t("BOOKING_CONFIRMED.title"),
+            body: t("BOOKING_CONFIRMED.body", {
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+            }),
+            href: "/app",
+            tone: "ball",
+          };
+        }
+        case "BOOKING_CANCELLED": {
+          const { courtName, date, startTime, reason, byName } = item.payload;
+          return {
+            title: t("BOOKING_CANCELLED.title"),
+            body: t("BOOKING_CANCELLED.body", {
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+              reason: t(`BOOKING_CANCELLED.reasons.${reason}`, { name: byName ?? t("someone") }),
+            }),
+            href: "/app/courts",
+            tone: "danger",
+          };
+        }
+        case "SLOT_OPENED": {
+          const { courtName, date, startTime } = item.payload;
+          return {
+            title: t("SLOT_OPENED.title"),
+            body: t("SLOT_OPENED.body", {
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+            }),
+            href: `/app/courts?date=${date}`,
+            tone: "ball",
+          };
+        }
+        case "LESSON_CANCELLED": {
+          const { byName, courtName, date, startTime } = item.payload;
+          return {
+            title: t("LESSON_CANCELLED.title"),
+            body: t("LESSON_CANCELLED.body", {
+              byName,
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+            }),
+            href: "/coach",
+            tone: "lesson",
+          };
+        }
+        case "MATCH_REPORTED":
+          return {
+            title: t("MATCH_REPORTED.title"),
+            body: club
+              ? t("MATCH_REPORTED.body", {
+                  reportedBy: item.payload.reportedBy,
+                  score: item.payload.score,
+                  hours: club.settings.matchAutoApproveHours,
+                })
+              : t("MATCH_REPORTED.bodyNoDeadline", {
+                  reportedBy: item.payload.reportedBy,
+                  score: item.payload.score,
+                }),
+            href: `/app/matches/${item.payload.matchId}`,
+            tone: "ball",
+          };
+        case "MATCH_CONFIRMED":
+          return {
+            title: item.payload.won ? t("MATCH_CONFIRMED.titleWon") : t("MATCH_CONFIRMED.title"),
+            body: t("MATCH_CONFIRMED.body", {
+              score: item.payload.score,
+              elo: item.payload.eloAfter,
+              delta: format.delta(item.payload.delta),
+            }),
+            href: `/app/matches/${item.payload.matchId}`,
+            tone: item.payload.won ? "ball" : "neutral",
+          };
+        case "MATCH_DISPUTED":
+          return {
+            title: t("MATCH_DISPUTED.title"),
+            body: item.payload.comment
+              ? t("MATCH_DISPUTED.bodyWithComment", {
+                  disputedBy: item.payload.disputedBy,
+                  comment: item.payload.comment,
+                })
+              : t("MATCH_DISPUTED.body", { disputedBy: item.payload.disputedBy }),
+            href: `/app/matches/${item.payload.matchId}`,
+            tone: "danger",
+          };
+        case "DISPUTE_RESOLVED":
+          return {
+            title: t("DISPUTE_RESOLVED.title"),
+            body: t(`DISPUTE_RESOLVED.${item.payload.action}`),
+            href: `/app/matches/${item.payload.matchId}`,
+            tone: "neutral",
+          };
+        case "COURT_FROZEN":
+          return {
+            title: t("COURT_FROZEN.title", {
+              reason: labels(`freezeReason.${item.payload.reason}`),
+            }),
+            body: t("COURT_FROZEN.body", { courts: item.payload.courtNames.join(", ") }),
+            href: "/app/courts",
+            tone: "warning",
+          };
+        case "COURT_UNFROZEN":
+          return {
+            title: t("COURT_UNFROZEN.title"),
+            body: t("COURT_UNFROZEN.body", { courts: item.payload.courtNames.join(", ") }),
+            href: "/app/courts",
+            tone: "ball",
+          };
+        case "GUEST_CHECKED_IN":
+          return {
+            title: t("GUEST_CHECKED_IN.title"),
+            body: t("GUEST_CHECKED_IN.body", { guest: item.payload.guestName }),
+            href: "/app/guests",
+            tone: "neutral",
+          };
+      }
+    },
+    [t, labels, format, club],
+  );
 }

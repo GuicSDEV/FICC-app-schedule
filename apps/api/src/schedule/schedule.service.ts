@@ -21,6 +21,7 @@ import {
 } from "../common/mappers";
 import { PrismaService } from "../prisma/prisma.service";
 import { freezesOverlapping } from "./freezes";
+import { clubTimeZone } from "../tenancy/tenant-context";
 
 export interface ScheduleOptions {
   surface?: Surface;
@@ -47,8 +48,8 @@ export class ScheduleService {
       ...(options.courtIds ? { id: { in: [...options.courtIds] } } : {}),
     };
     const dbDate = toDbDate(date);
-    const dayStart = clubInstant(date, "00:00");
-    const dayEnd = clubInstant(addDays(date, 1), "00:00");
+    const dayStart = clubInstant(date, "00:00", clubTimeZone());
+    const dayEnd = clubInstant(addDays(date, 1), "00:00", clubTimeZone());
 
     const [courts, slots, lessons, bookings, freezes, favorites] = await Promise.all([
       this.prisma.court.findMany({ where: courtWhere, orderBy: { sortOrder: "asc" } }),
@@ -63,7 +64,7 @@ export class ScheduleService {
           status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
           court: courtWhere,
         },
-        include: { players: { include: { user: { select: playerSelect } } } },
+        include: { players: { include: { user: { select: playerSelect() } } } },
       }),
       freezesOverlapping(this.prisma, dayStart, dayEnd),
       options.viewerId
@@ -93,14 +94,14 @@ export class ScheduleService {
         const freeze = freezes.find(
           (candidate) =>
             candidate.courts.some((entry) => entry.courtId === court.id) &&
-            overlapsSlot(candidate, date, slot),
+            overlapsSlot(candidate, date, slot, clubTimeZone()),
         );
         cells.push({
           date,
           courtId: court.id,
           timeSlotId: slot.id,
           state: freeze ? "frozen" : lesson ? "lesson" : booking ? "booking" : "free",
-          past: isSlotPast(date, slot, now),
+          past: isSlotPast(date, slot, now, clubTimeZone()),
           favorite: favoriteCells.has(key(court.id, slot.id)),
           lesson: lesson
             ? {

@@ -1,7 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { type Category, MatchStatus, Role, type Surface, TeamSide } from "@ficc/db";
+import { HttpStatus, Injectable } from "@nestjs/common";
+import { MatchStatus, Role, type Sport, type Surface, TeamSide } from "@ficc/db";
 import {
-  ELO_INITIAL_RATING,
   type EloPoint,
   formatScore,
   fromDbDate,
@@ -13,12 +12,11 @@ import {
 } from "@ficc/shared";
 
 import { Clock } from "../common/clock";
-import { notFound } from "../common/domain.exception";
+import { DomainException, localize, notFound } from "../common/domain.exception";
 import { playerSelect, toPlayerSummary } from "../common/mappers";
 import { matchInclude, toMatchDetail, toSetScores } from "../matches/matches.service";
 import { PrismaService } from "../prisma/prisma.service";
-
-const TREND_DAYS = 30;
+import { clubSettings } from "../tenancy/tenant-context";
 
 const pct = (wins: number, matches: number) =>
   matches === 0 ? 0 : Math.round((wins / matches) * 100);
@@ -31,24 +29,42 @@ export class RankingService {
     private readonly clock: Clock,
   ) {}
 
-  async leaderboard(category?: Category): Promise<LeaderboardResponse> {
-    const since = new Date(this.clock.now().getTime() - TREND_DAYS * 86_400_000);
+  /** Members ranked by their rating in `sport` (the club's primary sport by default). */
+  async leaderboard(categoryKey?: string, sportParam?: Sport): Promise<LeaderboardResponse> {
+    const { primarySport, eloInitialRating } = clubSettings();
+    const sport = sportParam ?? primarySport;
+    if (categoryKey) {
+      const category = await this.prisma.category.findFirst({ where: { key: categoryKey } });
+      if (!category) {
+        // Same answer as any invalid query value (categories used to be a fixed enum).
+        const message = localize("api.unknownCategory");
+        throw new DomainException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", { text: message }, [
+          { path: "category", message },
+        ]);
+      }
+    }
+    const trendDays = clubSettings().rankingTrendDays;
+    const since = new Date(this.clock.now().getTime() - trendDays * 86_400_000);
     const members = await this.prisma.user.findMany({
       where: {
         role: Role.MEMBER,
         isActive: true,
-        ...(category ? { categories: { has: category } } : {}),
+        ...(categoryKey ? { categories: { some: { category: { key: categoryKey } } } } : {}),
       },
       select: {
-        ...playerSelect,
+        ...playerSelect(),
+        // This board's sport (the summary's elo then shows the same rating).
+        ratings: { where: { sport }, select: { elo: true } },
         matchPlayers: {
-          where: { match: { status: MatchStatus.CONFIRMED } },
+          where: { match: { status: MatchStatus.CONFIRMED, sport } },
           select: { side: true, match: { select: { winnerSide: true } } },
         },
-        eloHistory: { where: { createdAt: { gte: since } }, select: { delta: true } },
+        eloHistory: { where: { sport, createdAt: { gte: since } }, select: { delta: true } },
       },
-      orderBy: [{ elo: "desc" }, { name: "asc" }],
     });
+    const ratingOf = (member: (typeof members)[number]) =>
+      member.ratings[0]?.elo ?? eloInitialRating;
+    members.sort((a, b) => ratingOf(b) - ratingOf(a) || a.name.localeCompare(b.name));
 
     const entries: LeaderboardEntry[] = [];
     members.forEach((member, index) => {
@@ -56,12 +72,13 @@ export class RankingService {
         (entry) => entry.side === entry.match.winnerSide,
       ).length;
       const matches = member.matchPlayers.length;
+      const elo = ratingOf(member);
       const previous = entries[index - 1];
       entries.push({
         // Competition ranking: equal ratings share a rank (1, 2, 2, 4).
-        rank: previous && previous.elo === member.elo ? previous.rank : index + 1,
+        rank: previous && previous.elo === elo ? previous.rank : index + 1,
         player: toPlayerSummary(member),
-        elo: member.elo,
+        elo,
         wins,
         losses: matches - wins,
         matches,
@@ -69,17 +86,25 @@ export class RankingService {
         trend: member.eloHistory.reduce((sum, row) => sum + row.delta, 0),
       });
     });
-    return { category: category ?? null, entries, updatedAt: this.clock.now().toISOString() };
+    return {
+      category: categoryKey ?? null,
+      sport,
+      entries,
+      updatedAt: this.clock.now().toISOString(),
+    };
   }
 
-  async eloHistory(userId: string): Promise<EloPoint[]> {
+  /** Rating over time in `sport` (primary by default), starting from the initial rating. */
+  async eloHistory(userId: string, sportParam?: Sport): Promise<EloPoint[]> {
+    const { primarySport, eloInitialRating } = clubSettings();
+    const sport = sportParam ?? primarySport;
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { createdAt: true },
     });
-    if (!user) throw notFound("PLAYER_NOT_FOUND", "Jogador não encontrado.");
+    if (!user) throw notFound("PLAYER_NOT_FOUND", "api.playerNotFound");
     const rows = await this.prisma.eloHistory.findMany({
-      where: { userId },
+      where: { userId, sport },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     const start: EloPoint = {
@@ -87,7 +112,7 @@ export class RankingService {
         ? new Date(Math.min(user.createdAt.getTime(), rows[0].createdAt.getTime() - 1))
         : user.createdAt
       ).toISOString(),
-      elo: rows[0]?.before ?? ELO_INITIAL_RATING,
+      elo: rows[0]?.before ?? eloInitialRating,
       delta: 0,
       matchId: null,
     };
@@ -105,10 +130,14 @@ export class RankingService {
   async profile(userId: string, viewerId?: string): Promise<PlayerProfile> {
     const board = await this.leaderboard();
     const entry = board.entries.find((candidate) => candidate.player.id === userId);
-    if (!entry) throw notFound("PLAYER_NOT_FOUND", "Jogador não encontrado.");
+    if (!entry) throw notFound("PLAYER_NOT_FOUND", "api.playerNotFound");
     const recent = await this.prisma.match.findMany({
-      where: { status: MatchStatus.CONFIRMED, players: { some: { userId } } },
-      include: matchInclude,
+      where: {
+        status: MatchStatus.CONFIRMED,
+        sport: clubSettings().primarySport,
+        players: { some: { userId } },
+      },
+      include: matchInclude(),
       orderBy: [{ playedOn: "desc" }, { confirmedAt: "desc" }],
       take: 5,
     });
@@ -123,28 +152,31 @@ export class RankingService {
     };
   }
 
+  /** Head-to-head in the club's primary sport. */
   async h2h(aId: string, bId: string): Promise<H2HResponse> {
+    const sport = clubSettings().primarySport;
     const users = await this.prisma.user.findMany({
       where: { id: { in: [aId, bId] }, role: Role.MEMBER },
       select: {
-        ...playerSelect,
+        ...playerSelect(),
         matchPlayers: {
-          where: { match: { status: MatchStatus.CONFIRMED } },
+          where: { match: { status: MatchStatus.CONFIRMED, sport } },
           select: { side: true, match: { select: { winnerSide: true } } },
         },
       },
     });
     const a = users.find((user) => user.id === aId);
     const b = users.find((user) => user.id === bId);
-    if (!a || !b) throw notFound("PLAYER_NOT_FOUND", "Jogador não encontrado.");
+    if (!a || !b) throw notFound("PLAYER_NOT_FOUND", "api.playerNotFound");
 
     // Confirmed matches where the two played on opposite sides.
     const shared = await this.prisma.match.findMany({
       where: {
         status: MatchStatus.CONFIRMED,
+        sport,
         AND: [{ players: { some: { userId: aId } } }, { players: { some: { userId: bId } } }],
       },
-      include: matchInclude,
+      include: matchInclude(),
       orderBy: [{ playedOn: "desc" }, { confirmedAt: "desc" }],
     });
     const meetings = shared.filter((match) => {
@@ -170,7 +202,7 @@ export class RankingService {
       return {
         matchId: match.id,
         playedOn: fromDbDate(match.playedOn),
-        type: match.type,
+        format: match.format,
         surface: match.surface,
         score: formatScore(fromA),
         winner: aWon ? ("a" as const) : ("b" as const),
@@ -186,7 +218,7 @@ export class RankingService {
         h2hWins,
         winRate: pct(wins, user.matchPlayers.length),
         matches: user.matchPlayers.length,
-        history: await this.eloHistory(user.id),
+        history: await this.eloHistory(user.id, sport),
       };
     };
 

@@ -21,7 +21,7 @@ export const createFreezeSchema = z
     note: optionalText(300),
   })
   .refine((value) => !value.endsAt || Date.parse(value.endsAt) > Date.parse(value.startsAt), {
-    message: "O fim precisa ser depois do início",
+    message: "validation.freezeEndAfterStart",
     path: ["endsAt"],
   });
 export type CreateFreezeInput = z.infer<typeof createFreezeSchema>;
@@ -33,7 +33,7 @@ export const cancelAffectedSchema = z
     lessonIds: z.array(idSchema).default([]),
   })
   .refine((value) => value.bookingIds.length + value.lessonIds.length > 0, {
-    message: "Selecione ao menos uma reserva ou aula",
+    message: "validation.pickAffected",
   });
 export type CancelAffectedInput = z.infer<typeof cancelAffectedSchema>;
 export type CancelAffectedRequest = z.input<typeof cancelAffectedSchema>;

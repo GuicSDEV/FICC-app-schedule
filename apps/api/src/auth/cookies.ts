@@ -1,5 +1,6 @@
 import type { CookieOptions, Response } from "express";
 
+import { API_PREFIX } from "../api-prefix";
 import type { Env } from "../config/env";
 
 export const ACCESS_COOKIE = "ficc_at";
@@ -7,7 +8,7 @@ export const REFRESH_COOKIE = "ficc_rt";
 /** Non-sensitive hint (the role) so the web app can route before calling the API. */
 export const ROLE_COOKIE = "ficc_role";
 /** Refresh cookies only travel to the auth endpoints. */
-export const REFRESH_COOKIE_PATH = "/api/auth";
+export const REFRESH_COOKIE_PATH = `/${API_PREFIX}/auth`;
 
 type CookieEnv = Pick<
   Env,

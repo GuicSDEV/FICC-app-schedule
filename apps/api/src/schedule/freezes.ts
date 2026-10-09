@@ -3,6 +3,7 @@ import { Prisma } from "@ficc/db";
 import { slotEndsAt, slotStartsAt } from "@ficc/shared";
 
 import type { Tx } from "../common/transactions";
+import { clubTimeZone } from "../tenancy/tenant-context";
 
 export const freezeWithCourts = {
   courts: { select: { courtId: true } },
@@ -30,8 +31,8 @@ export async function isCourtFrozen(
   date: string,
   slot: { startTime: string; durationMinutes: number },
 ): Promise<boolean> {
-  const startsAt = slotStartsAt(date, slot);
-  const endsAt = slotEndsAt(date, slot);
+  const startsAt = slotStartsAt(date, slot, clubTimeZone());
+  const endsAt = slotEndsAt(date, slot, clubTimeZone());
   const freezes = await freezesOverlapping(client, startsAt, endsAt);
   return freezes.some((freeze) => freeze.courts.some((entry) => entry.courtId === courtId));
 }

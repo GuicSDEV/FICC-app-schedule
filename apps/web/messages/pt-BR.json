@@ -1,0 +1,415 @@
+{
+  "app": {
+    "title": "{club} Tênis",
+    "description": "Reservas de quadra, aulas e ranking Elo do clube.",
+    "brandFallback": "Tênis"
+  },
+  "errors": {
+    "network": "Sem conexão com o servidor. Verifique sua internet.",
+    "generic": "Algo deu errado. Tente novamente."
+  },
+  "theme": {
+    "useLight": "Usar tema claro",
+    "useDark": "Usar tema escuro"
+  },
+  "auth": {
+    "login": {
+      "metaTitle": "Entrar",
+      "headline": "A quadra",
+      "headlineAccent": "te espera.",
+      "lead": "Reserve, jogue e suba no ranking do clube.",
+      "kindLabel": "Tipo de acesso",
+      "member": "Sócio",
+      "staff": "Equipe",
+      "membershipId": "Matrícula",
+      "membershipPlaceholder": "000.000",
+      "email": "E-mail",
+      "emailPlaceholder": "voce@clube.com.br",
+      "password": "Senha",
+      "showPassword": "Mostrar senha",
+      "hidePassword": "Ocultar senha",
+      "submit": "Entrar",
+      "failed": "Não foi possível entrar.",
+      "firstAccess": "Primeiro acesso?",
+      "createAccount": "Criar conta com a matrícula"
+    },
+    "register": {
+      "metaTitle": "Criar conta",
+      "headline": "Primeiro",
+      "headlineAccent": "saque.",
+      "lead": "Use a matrícula do clube para criar seu acesso.",
+      "membershipId": "Matrícula",
+      "name": "Nome completo",
+      "password": "Senha",
+      "passwordHint": "Pelo menos 8 caracteres.",
+      "submit": "Criar conta",
+      "failed": "Não foi possível criar a conta.",
+      "haveAccount": "Já tem conta?",
+      "signIn": "Entrar"
+    }
+  },
+  "nav": {
+    "main": "Navegação principal",
+    "sidebar": "Navegação",
+    "sections": "Seções",
+    "expand": "Expandir menu",
+    "collapse": "Recolher menu",
+    "items": {
+      "home": "Início",
+      "courts": "Quadras",
+      "ranking": "Ranking",
+      "matches": "Partidas",
+      "guests": "Convidados",
+      "profile": "Perfil",
+      "agenda": "Agenda",
+      "freezes": "Interdições",
+      "coaches": "Professores",
+      "lessons": "Aulas",
+      "disputes": "Disputas",
+      "members": "Sócios",
+      "gate": "Portaria"
+    }
+  },
+  "shell": {
+    "signOut": "Sair",
+    "myProfile": "Meu perfil",
+    "memberArea": "Área do sócio",
+    "coachArea": "Área do professor",
+    "adminArea": "Administração",
+    "gateArea": "Portaria",
+    "newAction": "Nova ação",
+    "actionsLabel": "Reservar, lançar resultado ou convidar",
+    "actions": {
+      "title": "O que vamos fazer?",
+      "book": "Reservar quadra",
+      "bookDescription": "Escolha dia, horário e quem joga",
+      "report": "Lançar resultado",
+      "reportDescription": "O adversário confirma e o Elo atualiza",
+      "guest": "Convidado",
+      "guestDescription": "Passe de um dia com QR para a portaria"
+    },
+    "freeze": {
+      "title": "{reason} · {courts} {active, select, true {interditadas} other {serão interditadas}}",
+      "until": "Previsão de liberação às {time}.",
+      "noEnd": "Sem previsão de liberação.",
+      "from": "A partir de {dateTime}."
+    },
+    "dismissAlert": "Fechar aviso",
+    "refreshing": "Atualizando…"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "bellLabel": "{count, plural, =0 {Notificações} one {Notificações, 1 não lida} other {Notificações, # não lidas}}",
+    "markAllRead": "Marcar todas como lidas",
+    "emptyTitle": "Tudo em dia",
+    "emptyDescription": "Convites, resultados e avisos aparecem aqui.",
+    "view": "Ver",
+    "someone": "Um jogador",
+    "BOOKING_INVITE": {
+      "title": "Convite para jogar",
+      "body": "{invitedBy} reservou a {court} em {day}, {time}. Confirme sua presença."
+    },
+    "BOOKING_CONFIRMED": {
+      "title": "Reserva confirmada",
+      "body": "{court} · {day}, {time}. Todos confirmaram."
+    },
+    "BOOKING_CANCELLED": {
+      "title": "Reserva cancelada",
+      "body": "{court} · {day}, {time}. {reason}.",
+      "reasons": {
+        "DECLINED": "{name} recusou o convite",
+        "EXPIRED": "Nem todos confirmaram a tempo",
+        "CANCELLED_BY_PLAYER": "{name} cancelou",
+        "COURT_FROZEN": "A quadra foi interditada",
+        "CANCELLED_BY_ADMIN": "Cancelada pela administração"
+      }
+    },
+    "SLOT_OPENED": {
+      "title": "Horário liberado",
+      "body": "A {court} às {time} em {day} ficou livre."
+    },
+    "LESSON_CANCELLED": {
+      "title": "Aula cancelada",
+      "body": "{byName} cancelou sua aula na {court}, {day} às {time}."
+    },
+    "MATCH_REPORTED": {
+      "title": "Resultado para aprovar",
+      "body": "{reportedBy} lançou {score}. Aprove ou conteste em até {hours} h.",
+      "bodyNoDeadline": "{reportedBy} lançou {score}. Aprove ou conteste."
+    },
+    "MATCH_CONFIRMED": {
+      "titleWon": "Vitória confirmada",
+      "title": "Resultado confirmado",
+      "body": "{score} · Elo {elo} ({delta})."
+    },
+    "MATCH_DISPUTED": {
+      "title": "Resultado contestado",
+      "body": "{disputedBy} contestou o placar.",
+      "bodyWithComment": "{disputedBy} contestou o placar: “{comment}”"
+    },
+    "DISPUTE_RESOLVED": {
+      "title": "Disputa resolvida",
+      "VOID": "A administração anulou a partida.",
+      "EDIT": "A administração corrigiu o placar e o Elo foi atualizado.",
+      "ACCEPT": "A administração manteve o placar lançado."
+    },
+    "COURT_FROZEN": {
+      "title": "{reason}: quadras interditadas",
+      "body": "{courts} fora de uso. Sua reserva ou aula pode ser afetada."
+    },
+    "COURT_UNFROZEN": {
+      "title": "Quadras liberadas",
+      "body": "{courts} voltaram a funcionar."
+    },
+    "GUEST_CHECKED_IN": {
+      "title": "Convidado chegou",
+      "body": "{guest} entrou no clube."
+    }
+  },
+  "states": {
+    "loadFailed": "Não foi possível carregar.",
+    "retry": "Tentar de novo"
+  },
+  "swipe": {
+    "confirm": "Confirmar",
+    "decline": "Recusar"
+  },
+  "common": {
+    "singles": "Simples",
+    "doubles": "Duplas",
+    "you": "(você)",
+    "elo": "Elo {elo}",
+    "vs": "vs",
+    "court": "Quadra",
+    "minutes": "{count} min",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "keep": "Manter",
+    "confirm": "Confirmar",
+    "decline": "Recusar",
+    "now": "agora",
+    "today": "Hoje"
+  },
+  "slot": {
+    "court": "Quadra {court}",
+    "past": "{court}, horário encerrado",
+    "free": "{court}, livre. Toque para reservar",
+    "freeFavorite": "{court}, livre, favorita. Toque para reservar",
+    "lesson": "{court}, aula com {coach}",
+    "lessonUnknown": "{court}, aula",
+    "booking": "{court}, reservada por {players}",
+    "bookingPending": "{court}, reservada (aguardando confirmação) por {players}",
+    "frozen": "{court}, interditada por {reason, select, RAIN {chuva} other {manutenção}}",
+    "freeLabel": "Livre"
+  },
+  "picker": {
+    "chosen": "Jogadores escolhidos",
+    "noneChosen": "Ninguém escolhido ainda.",
+    "remove": "Remover {name}",
+    "placeholder": "Nome ou matrícula",
+    "results": "Resultados",
+    "noResults": "Nenhum sócio encontrado para “{query}”."
+  },
+  "booking": {
+    "title": "Reservar quadra",
+    "doneTitle": "Tudo certo",
+    "typeLabel": "Tipo de jogo",
+    "opponent": "Adversário",
+    "partners": "Parceiro e adversários",
+    "doublesHint": "O primeiro escolhido joga com você; os outros dois formam a dupla adversária.",
+    "choosePlayers": "{count, plural, one {Escolha 1 jogador} other {Escolha # jogadores}}",
+    "submit": "Reservar {court} · {time}",
+    "failed": "Não foi possível reservar.",
+    "checkPlayers": "Confira os jogadores.",
+    "confirmedTitle": "Quadra reservada!",
+    "confirmedWaiting": "{count, plural, one {Enviamos o convite. O outro jogador tem até {deadline} para confirmar.} other {Enviamos o convite. Os # jogadores têm até {deadline} para confirmar.}}",
+    "confirmedAll": "Todos confirmados. Bom jogo!"
+  },
+  "bookingInfo": {
+    "mine": "Sua reserva",
+    "taken": "Quadra reservada",
+    "players": "Jogadores",
+    "waiting": "Aguardando confirmação. Sem resposta, o horário é liberado.",
+    "waitingUntil": "Aguardando confirmação até {time}. Sem resposta, o horário é liberado.",
+    "cancelWarning": "Cancelar libera o horário para outros sócios e avisa os demais jogadores.",
+    "cancel": "Cancelar reserva",
+    "confirmed": "Presença confirmada",
+    "declined": "Convite recusado",
+    "cancelled": "Reserva cancelada",
+    "status": {
+      "CONFIRMED": "Confirmado",
+      "PENDING": "Aguardando",
+      "DECLINED": "Recusou"
+    }
+  },
+  "coachSheet": {
+    "title": "Aula do clube",
+    "role": "Professor · {club}",
+    "slotTaken": "Horário reservado para aula.",
+    "when": "{day}, {start}–{end} na {court}.",
+    "loadFailed": "Não foi possível carregar o perfil.",
+    "lessonsThisWeek": "Aulas na semana",
+    "courts": "Quadras",
+    "upcoming": "Próximas aulas",
+    "noUpcoming": "Nenhuma outra aula nos próximos 7 dias."
+  },
+  "favorite": {
+    "add": "Avisar quando este horário abrir",
+    "remove": "Remover dos favoritos",
+    "addShort": "Avisar quando abrir",
+    "on": "Favorito",
+    "added": "Horário favorito",
+    "addedDescription": "Avisamos quando ele ficar livre.",
+    "removed": "Favorito removido",
+    "failed": "Não foi possível salvar o favorito."
+  },
+  "ticket": {
+    "cancelled": "Cancelada",
+    "confirmed": "Confirmada",
+    "waiting": "{count, plural, one {Falta 1 confirmar} other {Faltam # confirmar}}",
+    "pendingPlayer": "(aguardando)"
+  },
+  "calendar": {
+    "title": "Quadras",
+    "dayLabel": "Dia",
+    "dayOption": "{weekday} {day} de {month}",
+    "todayOption": "Hoje, {weekday} {day} de {month}",
+    "surfaceLabel": "Piso",
+    "all": "Todas",
+    "slots": "Horários",
+    "loadFailed": "Não foi possível carregar a agenda.",
+    "legend": {
+      "free": "Livre",
+      "lesson": "Aula",
+      "booking": "Reservada",
+      "frozen": "Interditada",
+      "mine": "Sua reserva"
+    }
+  },
+  "dashboard": {
+    "title": "Início",
+    "greeting": {
+      "night": "Boa noite, {name}",
+      "morning": "Bom dia, {name}",
+      "afternoon": "Boa tarde, {name}"
+    },
+    "approvals": "Resultados para aprovar",
+    "invites": "Convites",
+    "swipeHint": "Deslize para a direita para confirmar, para a esquerda para recusar.",
+    "upcoming": "Próximos jogos",
+    "upcomingFailed": "Não foi possível carregar suas reservas.",
+    "emptyTitle": "Nenhum jogo marcado",
+    "emptyDescription": "Escolha um horário livre e chame seus parceiros.",
+    "book": "Reservar quadra",
+    "openBooking": "Reserva {court}, {time}. Ver detalhes",
+    "elo": {
+      "label": "Seu Elo",
+      "rank": "<num>#{rank}</num> no ranking",
+      "trendDays": "{days} dias",
+      "wins": "{count, plural, one {vitória} other {vitórias}}",
+      "losses": "{count, plural, one {derrota} other {derrotas}}",
+      "winRate": "aproveitamento"
+    },
+    "invite": {
+      "from": "<b>{name}</b> te chamou para jogar",
+      "until": "até <num>{time}</num>",
+      "confirmed": "Presença confirmada",
+      "confirmedAll": "Todos confirmaram. A quadra é de vocês!",
+      "confirmedWaiting": "Falta a confirmação dos outros jogadores.",
+      "declined": "Convite recusado",
+      "declinedDescription": "Avisamos quem te convidou.",
+      "failed": "Não foi possível responder.",
+      "someone": "Um sócio"
+    },
+    "approval": {
+      "reported": "<b>{name}</b> lançou um resultado",
+      "autoApprove": "{day} · aprovação automática {when}",
+      "review": "Ver ou contestar",
+      "approve": "Aprovar",
+      "approved": "Resultado aprovado",
+      "approvedDescription": "O Elo de todos foi atualizado.",
+      "failed": "Não foi possível aprovar."
+    }
+  },
+  "areas": {
+    "coach": {
+      "title": "Agenda",
+      "subtitle": "Área do professor"
+    },
+    "admin": {
+      "title": "Interdições",
+      "subtitle": "Administração"
+    },
+    "gate": {
+      "title": "Portaria",
+      "subtitle": "Leitura de QR dos convidados"
+    },
+    "hello": "Olá, {name}"
+  },
+  "dev": {
+    "title": "Componentes",
+    "subtitle": "Night Session · design system",
+    "member": "Sócio",
+    "coach": "Professor",
+    "colors": "Cores",
+    "typography": "Tipografia",
+    "body": "Body 16 · Geist Sans para a interface.",
+    "small": "Small 14 · texto secundário",
+    "buttons": "Botões",
+    "book": "Reservar",
+    "secondary": "Secundário",
+    "outline": "Contorno",
+    "ghost": "Fantasma",
+    "decline": "Recusar",
+    "cancel": "Cancelar",
+    "sending": "Enviando",
+    "disabled": "Desativado",
+    "confirmBooking": "Confirmar reserva",
+    "badges": "Selos",
+    "confirmed": "Confirmada",
+    "lesson": "Aula",
+    "approved": "Aprovado",
+    "pending": "Pendente",
+    "avatars": "Avatares",
+    "inputs": "Entradas",
+    "membershipId": "Matrícula",
+    "autoFormat": "Formato automático",
+    "searchMember": "Buscar sócio",
+    "noMember": "Nenhum sócio encontrado",
+    "segmented": "Filtro segmentado",
+    "surface": "Superfície",
+    "ticker": "Contador numérico",
+    "lose": "Perder {points}",
+    "gain": "Ganhar {points}",
+    "slotChips": "Chips de horário",
+    "gridWidth": "Largura de grade (desktop):",
+    "liveTitle": "Ao vivo: aula cancelada vira horário livre",
+    "cancelLesson": "Cancelar aula",
+    "restoreLesson": "Recriar aula",
+    "bookingConfirmed": "Reserva confirmada",
+    "invites": "Convites (deslize)",
+    "noInvites": "Sem convites pendentes",
+    "noInvitesDescription": "Quando te marcarem numa reserva, aparece aqui.",
+    "inviteSample": "Rafael te chamou para jogar",
+    "restoreInvites": "Restaurar convites",
+    "loading": "Carregando (shimmer)",
+    "alerts": "Avisos",
+    "rainSample": "Chuva · Q5, Q6 interditadas",
+    "rainUntil": "Previsão de liberação às 16:00.",
+    "maintenanceSample": "Manutenção · Q2 interditada",
+    "hideRain": "Esconder chuva",
+    "showRain": "Mostrar chuva",
+    "sheetSection": "Folha, toasts e atualizar",
+    "openSheet": "Abrir folha",
+    "toast": "Toast",
+    "error": "Erro",
+    "pullHint": "No celular, puxe este cartão para baixo no topo da página.",
+    "emptyStates": "Estados vazios e erros",
+    "noBookings": "Nenhuma reserva",
+    "noBookingsDescription": "Toque no + para marcar uma quadra.",
+    "retrying": "Tentando de novo…",
+    "sheetTitle": "Reservar Q3 · 18:30",
+    "sheetDescription": "Arraste para baixo para fechar",
+    "type": "Tipo"
+  }
+}

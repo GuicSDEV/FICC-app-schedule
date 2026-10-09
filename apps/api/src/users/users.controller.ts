@@ -32,7 +32,7 @@ export class MembersController {
           ...(digits.length >= 2 ? [{ membershipId: { startsWith: digits } }] : []),
         ],
       },
-      select: playerSelect,
+      select: playerSelect(),
       orderBy: { name: "asc" },
       take: 12,
     });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { translateIssue } from "./i18n";
 import {
   cancelAffectedSchema,
   copyWeekSchema,
@@ -17,6 +18,7 @@ import {
   resolveDisputeSchema,
   updateLessonSchema,
 } from "./schemas";
+import { TennisRules } from "./sports";
 
 const booking = {
   courtId: "court",
@@ -66,7 +68,9 @@ describe("createBookingSchema", () => {
       type: "DOUBLES",
       playerIds: ["a", "a", "b"],
     });
-    expect(result.error?.issues.map((issue) => issue.message)).toContain("Jogador repetido");
+    expect(result.error?.issues.map((issue) => translateIssue(issue))).toContain(
+      "Jogador repetido",
+    );
   });
 });
 
@@ -102,7 +106,7 @@ describe("lesson schemas", () => {
 
 describe("match schemas", () => {
   const report = {
-    type: "SINGLES",
+    format: "SINGLES",
     sideA: ["a"],
     sideB: ["b"],
     score: [
@@ -113,12 +117,13 @@ describe("match schemas", () => {
     surface: "SAIBRO",
   };
 
-  it("parses a valid report and resolves the winner", () => {
-    expect(reportMatchSchema.parse(report).score.winner).toBe("A");
+  it("parses a valid report whose sets the tennis rules accept", () => {
+    const parsed = reportMatchSchema.parse(report);
+    expect(TennisRules.scoreSchema.parse(parsed.score).winner).toBe("A");
   });
 
   it("rejects wrong team sizes, shared players and a missing surface", () => {
-    expect(reportMatchSchema.safeParse({ ...report, type: "DOUBLES" }).success).toBe(false);
+    expect(reportMatchSchema.safeParse({ ...report, format: "DOUBLES" }).success).toBe(false);
     expect(reportMatchSchema.safeParse({ ...report, sideB: ["a"] }).success).toBe(false);
     expect(reportMatchSchema.safeParse({ ...report, surface: undefined }).success).toBe(false);
     expect(
@@ -130,9 +135,12 @@ describe("match schemas", () => {
     expect(resolveDisputeSchema.safeParse({ action: "EDIT", score: report.score }).success).toBe(
       true,
     );
+    // The schema only checks the shape; the sport's rules decide whether 6-5 is a set.
+    const edited = resolveDisputeSchema.parse({ action: "EDIT", score: [{ a: 6, b: 5 }] });
     expect(
-      resolveDisputeSchema.safeParse({ action: "EDIT", score: [{ a: 6, b: 5 }] }).success,
+      edited.action === "EDIT" && TennisRules.scoreSchema.safeParse(edited.score).success,
     ).toBe(false);
+    expect(resolveDisputeSchema.safeParse({ action: "EDIT", score: [] }).success).toBe(false);
     expect(h2hQuerySchema.safeParse({ a: "x", b: "x" }).success).toBe(false);
   });
 });
@@ -194,6 +202,6 @@ describe("freeze and admin schemas", () => {
       { membershipId: "104218", holderName: "Rafael A." },
       { membershipId: "200300" },
     ]);
-    expect(result.errors).toEqual([{ line: 4, message: 'Matrícula inválida: "abc"' }]);
+    expect(result.errors).toEqual([{ line: 4, value: "abc" }]);
   });
 });

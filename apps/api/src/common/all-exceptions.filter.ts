@@ -7,8 +7,10 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Prisma } from "@ficc/db";
-import type { ApiErrorBody } from "@ficc/shared";
+import type { ApiErrorBody, MessageKey } from "@ficc/shared";
 import type { Response } from "express";
+
+import { localize } from "./domain.exception";
 
 /** Every error leaves the API as `{ statusCode, code, message, details? }`. */
 @Catch()
@@ -31,10 +33,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof raw === "object" && raw !== null && "code" in raw) {
         return raw as ApiErrorBody;
       }
+      const fallback = DEFAULT_MESSAGES[status];
       return {
         statusCode: status,
         code: HttpStatus[status] ?? "ERROR",
-        message: DEFAULT_MESSAGES[status] ?? exception.message,
+        message: fallback ? localize(fallback) : exception.message,
       };
     }
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
@@ -42,25 +45,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return {
           statusCode: 409,
           code: "CONFLICT",
-          message: "Esse registro já existe ou o horário foi ocupado.",
+          message: localize("api.conflict"),
         };
       }
       if (exception.code === "P2025") {
-        return { statusCode: 404, code: "NOT_FOUND", message: "Registro não encontrado." };
+        return { statusCode: 404, code: "NOT_FOUND", message: localize("api.recordNotFound") };
       }
     }
     return {
       statusCode: 500,
       code: "INTERNAL_ERROR",
-      message: "Algo deu errado. Tente novamente.",
+      message: localize("api.internal"),
     };
   }
 }
 
-const DEFAULT_MESSAGES: Record<number, string> = {
-  400: "Requisição inválida.",
-  401: "Faça login para continuar.",
-  403: "Você não tem permissão para isso.",
-  404: "Não encontrado.",
-  429: "Muitas tentativas. Aguarde um pouco.",
+const DEFAULT_MESSAGES: Record<number, MessageKey> = {
+  400: "api.badRequest",
+  401: "api.loginRequired",
+  403: "api.forbidden",
+  404: "api.notFound",
+  429: "api.tooManyRequests",
 };

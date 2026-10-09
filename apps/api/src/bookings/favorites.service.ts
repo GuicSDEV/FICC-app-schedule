@@ -22,7 +22,7 @@ export class FavoritesService {
       this.prisma.court.findUnique({ where: { id: input.courtId } }),
       this.prisma.timeSlot.findUnique({ where: { id: input.timeSlotId } }),
     ]);
-    if (!court || !slot) throw notFound("SLOT_NOT_FOUND", "Quadra ou horário não encontrado.");
+    if (!court || !slot) throw notFound("SLOT_NOT_FOUND", "api.courtOrSlotNotFound");
     const favorite = await this.prisma.slotFavorite.upsert({
       where: { userId_courtId_timeSlotId: { userId, ...input } },
       create: { userId, ...input },

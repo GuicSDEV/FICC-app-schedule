@@ -1,30 +1,28 @@
-import {
-  calculateMatchElo,
-  DEFAULT_SLOT_START_TIMES,
-  type DefaultSlotStartTime,
-  ELO_INITIAL_RATING,
-  SLOT_DURATION_MINUTES,
-  slotEndTime,
-} from "@ficc/shared";
+import { calculateMatchElo, slotEndTime } from "@ficc/shared";
 
-import { Category, MatchConfirmation, MatchType, TeamSide, Weekday } from "../../src";
+import { MatchConfirmation, MatchFormat, TeamSide, Weekday } from "../../src";
 import {
+  type CategoryKey,
   COURTS,
   type CourtName,
+  FICC_CLUB,
+  FICC_SETTINGS,
+  FICC_SLOT_START_TIMES,
   LESSON_TEMPLATE,
   MATCH_COUNTS,
   MATCH_SPACING_DAYS,
   MEMBERS,
   RIVALRIES,
   type SeedMember,
+  type SlotStartTime,
 } from "./data";
 import { addDays, clubInstant, type IsoDate, weekdayOf } from "./dates";
 import type { Random } from "./random";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-/** Unanswered reports are auto-approved after 48 h (docs/SPEC.md, Elo & Competitive Ranking). */
-const APPROVAL_WINDOW_MS = 48 * HOUR;
+/** Unanswered reports are auto-approved after the club's window (48 h for FICC). */
+const APPROVAL_WINDOW_MS = FICC_SETTINGS.matchAutoApproveHours * HOUR;
 
 export interface PlannedSet {
   setNumber: number;
@@ -34,7 +32,7 @@ export interface PlannedSet {
 }
 
 export interface PlannedMatch {
-  type: MatchType;
+  format: MatchFormat;
   sideA: readonly SeedMember[];
   sideB: readonly SeedMember[];
   winner: TeamSide;
@@ -63,7 +61,7 @@ export interface RatedMatch extends PlannedMatch {
 }
 
 interface Matchup {
-  type: MatchType;
+  format: MatchFormat;
   sideA: SeedMember[];
   sideB: SeedMember[];
 }
@@ -74,7 +72,7 @@ function memberNamed(name: string): SeedMember {
   return member;
 }
 
-function membersIn(category: Category): SeedMember[] {
+function membersIn(category: CategoryKey): SeedMember[] {
   return MEMBERS.filter((member) => member.categories.includes(category));
 }
 
@@ -87,7 +85,7 @@ function planMatchups(random: Random): Matchup[] {
       const [first, second] = players.map(memberNamed) as [SeedMember, SeedMember];
       // Alternate sides so neither rival is always side A.
       matchups.push({
-        type: MatchType.SINGLES,
+        format: MatchFormat.SINGLES,
         sideA: game % 2 === 0 ? [first] : [second],
         sideB: game % 2 === 0 ? [second] : [first],
       });
@@ -95,26 +93,26 @@ function planMatchups(random: Random): Matchup[] {
   }
 
   const singlesPools = [
-    [Category.CLASS_A, 25],
-    [Category.CLASS_B, 25],
-    [Category.CLASS_C, 25],
-    [Category.WOMENS, 15],
-    [Category.SENIORS, 10],
+    ["CLASS_A", 25],
+    ["CLASS_B", 25],
+    ["CLASS_C", 25],
+    ["WOMENS", 15],
+    ["SENIORS", 10],
   ] as const;
   while (matchups.length < MATCH_COUNTS.singles) {
     const [first, second] = random.shuffle(membersIn(random.weighted(singlesPools))) as [
       SeedMember,
       SeedMember,
     ];
-    matchups.push({ type: MatchType.SINGLES, sideA: [first], sideB: [second] });
+    matchups.push({ format: MatchFormat.SINGLES, sideA: [first], sideB: [second] });
   }
 
   const doublesPools = [
-    [Category.CLASS_A, 15],
-    [Category.CLASS_B, 30],
-    [Category.CLASS_C, 30],
-    [Category.WOMENS, 15],
-    [Category.SENIORS, 10],
+    ["CLASS_A", 15],
+    ["CLASS_B", 30],
+    ["CLASS_C", 30],
+    ["WOMENS", 15],
+    ["SENIORS", 10],
   ] as const;
   for (let game = 0; game < MATCH_COUNTS.doubles; game += 1) {
     const [p1, p2, p3, p4] = random.shuffle(membersIn(random.weighted(doublesPools))) as [
@@ -123,7 +121,7 @@ function planMatchups(random: Random): Matchup[] {
       SeedMember,
       SeedMember,
     ];
-    matchups.push({ type: MatchType.DOUBLES, sideA: [p1, p2], sideB: [p3, p4] });
+    matchups.push({ format: MatchFormat.DOUBLES, sideA: [p1, p2], sideB: [p3, p4] });
   }
 
   return random.shuffle(matchups);
@@ -184,13 +182,13 @@ function generateSets(winner: TeamSide, random: Random): PlannedSet[] {
 }
 
 const ALL_COURTS = COURTS.map((court) => court.name);
-const EVENING_SLOTS: readonly DefaultSlotStartTime[] = ["17:15", "18:30", "19:45", "21:00"];
+const EVENING_SLOTS: readonly SlotStartTime[] = ["17:15", "18:30", "19:45", "21:00"];
 
 /** Weekday matches use evening slots on courts the lesson template leaves free; weekends use any. */
 function pickCourtAndSlot(date: IsoDate, random: Random) {
   const weekday = weekdayOf(date);
   if (weekday === Weekday.SAT || weekday === Weekday.SUN) {
-    return { startTime: random.pick(DEFAULT_SLOT_START_TIMES), court: random.pick(ALL_COURTS) };
+    return { startTime: random.pick(FICC_SLOT_START_TIMES), court: random.pick(ALL_COURTS) };
   }
   const startTime = random.pick(EVENING_SLOTS);
   const lessonCourts = LESSON_TEMPLATE[startTime];
@@ -205,9 +203,12 @@ function planTimeline(
   now: Date,
   random: Random,
 ) {
-  const endTime = slotEndTime({ startTime, durationMinutes: SLOT_DURATION_MINUTES });
+  const endTime = slotEndTime({
+    startTime,
+    durationMinutes: FICC_SETTINGS.defaultSlotDurationMinutes,
+  });
   const reportedAt = new Date(
-    clubInstant(playedOn, endTime).getTime() + random.int(5, 90) * MINUTE,
+    clubInstant(playedOn, endTime, FICC_CLUB.timezone).getTime() + random.int(5, 90) * MINUTE,
   );
   const approvalDeadline = new Date(reportedAt.getTime() + APPROVAL_WINDOW_MS);
 
@@ -279,7 +280,8 @@ export function planMatches({
  */
 export function rateMatches(planned: readonly PlannedMatch[]) {
   const ratings = new Map<string, number>();
-  const ratingOf = (member: SeedMember) => ratings.get(member.membershipId) ?? ELO_INITIAL_RATING;
+  const ratingOf = (member: SeedMember) =>
+    ratings.get(member.membershipId) ?? FICC_SETTINGS.eloInitialRating;
 
   const matches: RatedMatch[] = [...planned]
     .sort((a, b) => a.confirmedAt.getTime() - b.confirmedAt.getTime())
@@ -288,6 +290,7 @@ export function rateMatches(planned: readonly PlannedMatch[]) {
         sideA: match.sideA.map(ratingOf),
         sideB: match.sideB.map(ratingOf),
         winner: match.winner,
+        k: FICC_SETTINGS.eloKFactor,
       });
       const rated: RatedPlayer[] = [
         ...match.sideA.map((member) => ({ member, delta: deltaA })),

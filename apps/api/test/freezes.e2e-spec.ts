@@ -23,8 +23,8 @@ describe("Court freezes and admin coaches", () => {
 
   beforeEach(async () => {
     ctx.clock.reset();
-    await resetDatabase(ctx.prisma);
-    club = await seedClub(ctx.prisma);
+    await resetDatabase(ctx);
+    club = await seedClub(ctx);
     await createStaff(ctx.prisma, Role.ADMIN, "admin@ficc.test", "Diretoria");
     ana = await createMember(ctx.prisma, { name: "Ana Lima" });
     bruno = await createMember(ctx.prisma, { name: "Bruno Reis" });
@@ -49,18 +49,21 @@ describe("Court freezes and admin coaches", () => {
     const admin = await ctx.loginStaff("admin@ficc.test");
 
     const existing = await member
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send(booking(club.courts.Q6.id))
       .expect(201);
     const lesson = await coach
-      .post("/api/coach/lessons")
+      .post("/api/v1/coach/lessons")
       .send({ courtId: club.courts.Q5.id, timeSlotId: club.slots["19:45"]!.id, date: "2030-03-04" })
       .expect(201);
     // Outside the window: untouched.
-    await member.post("/api/bookings").send(booking(club.courts.Q6.id, "2030-03-05")).expect(201);
+    await member
+      .post("/api/v1/bookings")
+      .send(booking(club.courts.Q6.id, "2030-03-05"))
+      .expect(201);
 
     const freeze = await admin
-      .post("/api/admin/freezes")
+      .post("/api/v1/admin/freezes")
       .send({
         target: { scope: "SURFACE", surface: "SAIBRO" },
         reason: "RAIN",
@@ -89,12 +92,12 @@ describe("Court freezes and admin coaches", () => {
 
     // A freeze blocks booking (and lessons) on the frozen courts.
     const blocked = await member
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send(booking(club.courts.Q5.id, "2030-03-04", "21:00"))
       .expect(409);
     expect(blocked.body.code).toBe("COURT_FROZEN");
     const blockedLesson = await coach
-      .post("/api/coach/lessons")
+      .post("/api/v1/coach/lessons")
       .send({ courtId: club.courts.Q5.id, timeSlotId: club.slots["21:00"]!.id, date: "2030-03-04" })
       .expect(409);
     expect(blockedLesson.body.code).toBe("COURT_FROZEN");
@@ -103,38 +106,38 @@ describe("Court freezes and admin coaches", () => {
     await ctx.prisma.slotOccupancy.deleteMany({ where: { bookingId: { not: null } } });
 
     // At 09:00 the 14:00 freeze is announced as upcoming; once it starts it is active.
-    const upcoming = await member.get("/api/freezes/active").expect(200);
+    const upcoming = await member.get("/api/v1/freezes/active").expect(200);
     expect(upcoming.body).toEqual([
       expect.objectContaining({ id: freeze.body.id, active: false, courtNames: ["Q5", "Q6"] }),
     ]);
     ctx.clock.set("2030-03-04T18:00:00Z");
-    const banner = await member.get("/api/freezes/active").expect(200);
+    const banner = await member.get("/api/v1/freezes/active").expect(200);
     expect(banner.body).toEqual([expect.objectContaining({ id: freeze.body.id, active: true })]);
 
     const afterCancel = await admin
-      .post(`/api/admin/freezes/${freeze.body.id}/cancel-affected`)
+      .post(`/api/v1/admin/freezes/${freeze.body.id}/cancel-affected`)
       .send({ lessonIds: [lesson.body.lesson.id] })
       .expect(200);
     expect(afterCancel.body.affected.lessons).toEqual([]);
 
-    await admin.post(`/api/admin/freezes/${freeze.body.id}/lift`).expect(200);
-    expect((await member.get("/api/freezes/active")).body).toEqual([]);
+    await admin.post(`/api/v1/admin/freezes/${freeze.body.id}/lift`).expect(200);
+    expect((await member.get("/api/v1/freezes/active")).body).toEqual([]);
     await member
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send(booking(club.courts.Q5.id, "2030-03-04", "21:00"))
       .expect(201);
-    await admin.post(`/api/admin/freezes/${freeze.body.id}/lift`).expect(409);
+    await admin.post(`/api/v1/admin/freezes/${freeze.body.id}/lift`).expect(409);
   });
 
   it("bulk-cancels affected bookings with the freeze reason", async () => {
     const member = await ctx.loginMember(ana.membershipId!);
     const admin = await ctx.loginStaff("admin@ficc.test");
     const existing = await member
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send(booking(club.courts.Q2.id, "2030-03-05"))
       .expect(201);
     const freeze = await admin
-      .post("/api/admin/freezes")
+      .post("/api/v1/admin/freezes")
       .send({
         target: { scope: "COURT", courtId: club.courts.Q2.id },
         reason: "MAINTENANCE",
@@ -144,11 +147,11 @@ describe("Court freezes and admin coaches", () => {
     expect(freeze.body.endsAt).toBeNull();
 
     await admin
-      .post(`/api/admin/freezes/${freeze.body.id}/cancel-affected`)
+      .post(`/api/v1/admin/freezes/${freeze.body.id}/cancel-affected`)
       .send({ bookingIds: ["not-affected"] })
       .expect(422);
     await admin
-      .post(`/api/admin/freezes/${freeze.body.id}/cancel-affected`)
+      .post(`/api/v1/admin/freezes/${freeze.body.id}/cancel-affected`)
       .send({ bookingIds: [existing.body.id] })
       .expect(200);
     expect(
@@ -162,7 +165,7 @@ describe("Court freezes and admin coaches", () => {
   it("keeps freezes admin-only", async () => {
     const member = await ctx.loginMember(ana.membershipId!);
     await member
-      .post("/api/admin/freezes")
+      .post("/api/v1/admin/freezes")
       .send({ target: { scope: "ALL" }, reason: "RAIN", startsAt: "2030-03-04T14:00:00-03:00" })
       .expect(403);
   });
@@ -170,7 +173,7 @@ describe("Court freezes and admin coaches", () => {
   it("creates, updates and deactivates coach accounts", async () => {
     const admin = await ctx.loginStaff("admin@ficc.test");
     const created = await admin
-      .post("/api/admin/coaches")
+      .post("/api/v1/admin/coaches")
       .send({
         name: "Carla Mendes",
         email: "carla@ficc.test",
@@ -187,7 +190,7 @@ describe("Court freezes and admin coaches", () => {
       courtIds: [club.courts.Q2.id],
     });
     await admin
-      .post("/api/admin/coaches")
+      .post("/api/v1/admin/coaches")
       .send({
         name: "Outra Pessoa",
         email: "carla@ficc.test",
@@ -200,12 +203,12 @@ describe("Court freezes and admin coaches", () => {
 
     const login = await ctx
       .http()
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ kind: "staff", email: "carla@ficc.test", password: "senha-forte-1" });
     expect(login.status).toBe(200);
 
     const updated = await admin
-      .patch(`/api/admin/coaches/${created.body.id}`)
+      .patch(`/api/v1/admin/coaches/${created.body.id}`)
       .send({ courtIds: [club.courts.Q3.id, club.courts.Q4.id], displayName: "Profa. Carla" })
       .expect(200);
     expect(updated.body).toMatchObject({
@@ -214,14 +217,14 @@ describe("Court freezes and admin coaches", () => {
     });
 
     await admin
-      .patch(`/api/admin/coaches/${created.body.id}`)
+      .patch(`/api/v1/admin/coaches/${created.body.id}`)
       .send({ isActive: false })
       .expect(200);
     await ctx
       .http()
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ kind: "staff", email: "carla@ficc.test", password: "senha-forte-1" })
       .expect(401);
-    expect((await admin.get("/api/admin/coaches")).body[0]).toMatchObject({ isActive: false });
+    expect((await admin.get("/api/v1/admin/coaches")).body[0]).toMatchObject({ isActive: false });
   });
 });

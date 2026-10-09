@@ -23,8 +23,8 @@ describe("Auth", () => {
   afterAll(() => ctx.close());
 
   beforeEach(async () => {
-    await resetDatabase(ctx.prisma);
-    await seedClub(ctx.prisma);
+    await resetDatabase(ctx);
+    await seedClub(ctx);
   });
 
   describe("member registration", () => {
@@ -35,7 +35,7 @@ describe("Auth", () => {
       const agent = ctx.http();
 
       const response = await agent
-        .post("/api/auth/register")
+        .post("/api/v1/auth/register")
         .send({ membershipId: "777.123", name: "Ana Lima", password: TEST_PASSWORD })
         .expect(201);
 
@@ -48,13 +48,13 @@ describe("Auth", () => {
       expect(cookieNames(response)).toEqual(
         expect.arrayContaining(["ficc_at", "ficc_rt", "ficc_role"]),
       );
-      await agent.get("/api/auth/me").expect(200);
+      await agent.get("/api/v1/auth/me").expect(200);
     });
 
     it("rejects a matrícula that is not on the club's list", async () => {
       const response = await ctx
         .http()
-        .post("/api/auth/register")
+        .post("/api/v1/auth/register")
         .send({ membershipId: "999999", name: "Fulano Silva", password: TEST_PASSWORD })
         .expect(404);
       expect(response.body.code).toBe("MEMBERSHIP_NOT_FOUND");
@@ -64,7 +64,7 @@ describe("Auth", () => {
       await createMember(ctx.prisma, { membershipId: "777124" });
       const response = await ctx
         .http()
-        .post("/api/auth/register")
+        .post("/api/v1/auth/register")
         .send({ membershipId: "777124", name: "Outra Pessoa", password: TEST_PASSWORD })
         .expect(409);
       expect(response.body.code).toBe("MEMBERSHIP_TAKEN");
@@ -73,7 +73,7 @@ describe("Auth", () => {
     it("validates the body with the shared schema", async () => {
       const response = await ctx
         .http()
-        .post("/api/auth/register")
+        .post("/api/v1/auth/register")
         .send({ membershipId: "12", name: "A", password: "x" })
         .expect(400);
       expect(response.body.code).toBe("VALIDATION_FAILED");
@@ -85,12 +85,12 @@ describe("Auth", () => {
       await createMember(ctx.prisma, { membershipId: "777200", name: "Rafael Almeida" });
       await ctx
         .http()
-        .post("/api/auth/login")
+        .post("/api/v1/auth/login")
         .send({ kind: "member", membershipId: "777200", password: TEST_PASSWORD })
         .expect(200);
       const wrong = await ctx
         .http()
-        .post("/api/auth/login")
+        .post("/api/v1/auth/login")
         .send({ kind: "member", membershipId: "777200", password: "errada" })
         .expect(401);
       expect(wrong.body).toMatchObject({
@@ -102,7 +102,7 @@ describe("Auth", () => {
     it.each([Role.ADMIN, Role.GATE, Role.COACH])("logs %s staff in by email", async (role) => {
       await createStaff(ctx.prisma, role, `${role.toLowerCase()}@ficc.test`);
       const agent = await ctx.loginStaff(`${role.toLowerCase()}@ficc.test`);
-      const me = await agent.get("/api/auth/me").expect(200);
+      const me = await agent.get("/api/v1/auth/me").expect(200);
       expect(me.body.role).toBe(role);
     });
 
@@ -111,7 +111,7 @@ describe("Auth", () => {
       await ctx.prisma.user.update({ where: { id: member.id }, data: { isActive: false } });
       await ctx
         .http()
-        .post("/api/auth/login")
+        .post("/api/v1/auth/login")
         .send({ kind: "member", membershipId: "777201", password: TEST_PASSWORD })
         .expect(401);
     });
@@ -119,14 +119,14 @@ describe("Auth", () => {
 
   describe("guards", () => {
     it("requires authentication", async () => {
-      const response = await ctx.http().get("/api/bookings/mine").expect(401);
+      const response = await ctx.http().get("/api/v1/bookings/mine").expect(401);
       expect(response.body.code).toBe("UNAUTHENTICATED");
     });
 
     it("enforces roles", async () => {
       await createStaff(ctx.prisma, Role.GATE, "portaria@ficc.test");
       const gate = await ctx.loginStaff("portaria@ficc.test");
-      const response = await gate.get("/api/bookings/mine").expect(403);
+      const response = await gate.get("/api/v1/bookings/mine").expect(403);
       expect(response.body.code).toBe("FORBIDDEN");
     });
 
@@ -134,13 +134,13 @@ describe("Auth", () => {
       await createMember(ctx.prisma, { membershipId: "777202" });
       const response = await ctx
         .http()
-        .post("/api/auth/login")
+        .post("/api/v1/auth/login")
         .send({ kind: "member", membershipId: "777202", password: TEST_PASSWORD });
       const token = (response.headers["set-cookie"] as unknown as string[])
         .find((cookie) => cookie.startsWith("ficc_at="))!
         .split(";")[0]!
         .slice("ficc_at=".length);
-      await ctx.http().get("/api/auth/me").set("Authorization", `Bearer ${token}`).expect(200);
+      await ctx.http().get("/api/v1/auth/me").set("Authorization", `Bearer ${token}`).expect(200);
     });
   });
 
@@ -154,28 +154,32 @@ describe("Auth", () => {
       await createMember(ctx.prisma, { membershipId: "777300" });
       const login = await ctx
         .http()
-        .post("/api/auth/login")
+        .post("/api/v1/auth/login")
         .send({ kind: "member", membershipId: "777300", password: TEST_PASSWORD })
         .expect(200);
       const first = refreshCookie(login);
 
-      const rotated = await ctx.http().post("/api/auth/refresh").set("Cookie", first).expect(200);
+      const rotated = await ctx
+        .http()
+        .post("/api/v1/auth/refresh")
+        .set("Cookie", first)
+        .expect(200);
       const second = refreshCookie(rotated);
       expect(second).not.toBe(first);
 
-      const replay = await ctx.http().post("/api/auth/refresh").set("Cookie", first).expect(401);
+      const replay = await ctx.http().post("/api/v1/auth/refresh").set("Cookie", first).expect(401);
       expect(replay.body.code).toBe("REFRESH_REUSED");
       // The legitimate newer token is revoked too.
-      await ctx.http().post("/api/auth/refresh").set("Cookie", second).expect(401);
+      await ctx.http().post("/api/v1/auth/refresh").set("Cookie", second).expect(401);
       expect(await ctx.prisma.refreshToken.count({ where: { revokedAt: null } })).toBe(0);
     });
 
     it("logs out by revoking the refresh family and clearing cookies", async () => {
       await createMember(ctx.prisma, { membershipId: "777301" });
       const agent = await ctx.loginMember("777301");
-      await agent.post("/api/auth/logout").expect(204);
+      await agent.post("/api/v1/auth/logout").expect(204);
       expect(await ctx.prisma.refreshToken.count({ where: { revokedAt: null } })).toBe(0);
-      await agent.post("/api/auth/refresh").expect(401);
+      await agent.post("/api/v1/auth/refresh").expect(401);
     });
   });
 });

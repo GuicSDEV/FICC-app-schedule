@@ -4,6 +4,14 @@ import { z } from "zod";
 // before .env exists. Production must set every secret explicitly.
 const DEV_DATABASE_URL = "postgresql://ficc:ficc@localhost:5432/ficc?schema=public";
 const DEV_SECRET = "dev-only-secret-change-me-in-production-0123456789";
+/** 32 zero-ish bytes, base64: fine for local data, never for real guests' documents. */
+const DEV_ENCRYPTION_KEY = Buffer.from("dev-only-encryption-key-32-bytes").toString("base64");
+const DEV_REDIS_URL = "redis://localhost:6379";
+
+/** AES-256 key: 32 bytes, base64-encoded (`openssl rand -base64 32`). */
+const encryptionKey = z.string().refine((value) => Buffer.from(value, "base64").length === 32, {
+  message: "Must be 32 bytes encoded as base64 (openssl rand -base64 32)",
+});
 
 const booleanFlag = z
   .enum(["true", "false", "1", "0"])
@@ -24,10 +32,24 @@ const envSchema = z
     COOKIE_SECURE: booleanFlag.optional(),
     /** Scheduled jobs (booking expiry, series generation, auto-approve). Off in tests. */
     JOBS_ENABLED: booleanFlag.default(true),
+    /** The club this deployment serves (v1 is one club per deployment; see ClubResolver). */
+    DEFAULT_CLUB_SLUG: z.string().trim().min(1).default("ficc"),
+    /** Redis for the job queue (BullMQ) and the Socket.IO adapter. */
+    REDIS_URL: z.url().optional(),
+    /** Key prefix of the job queue in Redis (lets several environments share one Redis). */
+    QUEUE_PREFIX: z.string().trim().min(1).default("ficc"),
+    /** Encrypts guest document numbers at rest (LGPD). */
+    DATA_ENCRYPTION_KEY: encryptionKey.optional(),
   })
   .transform((env, ctx) => {
     const production = env.NODE_ENV === "production";
-    for (const key of ["DATABASE_URL", "JWT_ACCESS_SECRET", "GUEST_PASS_SECRET"] as const) {
+    for (const key of [
+      "DATABASE_URL",
+      "JWT_ACCESS_SECRET",
+      "GUEST_PASS_SECRET",
+      "REDIS_URL",
+      "DATA_ENCRYPTION_KEY",
+    ] as const) {
       if (production && !env[key]) {
         ctx.addIssue({ code: "custom", path: [key], message: "Required in production" });
       }
@@ -38,6 +60,8 @@ const envSchema = z
       DATABASE_URL: env.DATABASE_URL ?? DEV_DATABASE_URL,
       JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET ?? DEV_SECRET,
       GUEST_PASS_SECRET: env.GUEST_PASS_SECRET ?? `${DEV_SECRET}-guest`,
+      REDIS_URL: env.REDIS_URL ?? DEV_REDIS_URL,
+      DATA_ENCRYPTION_KEY: env.DATA_ENCRYPTION_KEY ?? DEV_ENCRYPTION_KEY,
       COOKIE_SECURE: env.COOKIE_SECURE ?? production,
     };
   });

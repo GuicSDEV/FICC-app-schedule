@@ -8,10 +8,10 @@ import {
   OTHER_PLAYERS_BY_TYPE,
   type PlayerSummary,
   type SlotSummary,
-  SURFACE_LABELS,
 } from "@ficc/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -21,11 +21,13 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
-import { api, ApiError } from "@/lib/api";
-import { formatLongDayTitle } from "@/lib/format";
+import { api } from "@/lib/api";
 import { fadeVariants, haptic } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { patchScheduleCells } from "@/lib/schedule-cache";
+import { useErrorMessage } from "@/lib/use-error-message";
+import { useFormat } from "@/lib/use-format";
+import { useIssueMessage } from "@/lib/use-issue-message";
 import { useLastDefined } from "@/lib/use-last-defined";
 import { cn } from "@/lib/utils";
 
@@ -38,11 +40,6 @@ export interface BookingTarget {
   slot: SlotSummary;
   favorite: boolean;
 }
-
-const TYPE_OPTIONS = [
-  { value: "SINGLES", label: "Simples" },
-  { value: "DOUBLES", label: "Duplas" },
-] as const;
 
 /**
  * Bottom sheet to book a free slot. The calendar updates optimistically while the request runs;
@@ -58,6 +55,14 @@ export function BookingSheet({
   onOpenChange: (open: boolean) => void;
   onBooked: (booking: BookingDetail) => void;
 }) {
+  const t = useTranslations();
+  const format = useFormat();
+  const issueMessage = useIssueMessage();
+  const errorMessage = useErrorMessage();
+  const typeOptions = [
+    { value: "SINGLES", label: t("common.singles") },
+    { value: "DOUBLES", label: t("common.doubles") },
+  ] as const;
   const { user } = useSession();
   const client = useQueryClient();
   const [type, setType] = useState<BookingType>("SINGLES");
@@ -112,7 +117,7 @@ export function BookingSheet({
     },
     onError: (failure, _input, rollback) => {
       rollback?.();
-      const message = failure instanceof ApiError ? failure.message : "Não foi possível reservar.";
+      const message = errorMessage(failure, t("booking.failed"));
       setError(message);
       toast.error(message);
     },
@@ -143,7 +148,7 @@ export function BookingSheet({
       playerIds: players.map((player) => player.id),
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Confira os jogadores.");
+      setError(issueMessage(parsed.error.issues[0]));
       return;
     }
     setError(null);
@@ -157,17 +162,20 @@ export function BookingSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={booked ? "Tudo certo" : "Reservar quadra"}
+      title={booked ? t("booking.doneTitle") : t("booking.title")}
       footer={
         booked ? (
           <Button block size="lg" onClick={() => onOpenChange(false)}>
-            Fechar
+            {t("common.close")}
           </Button>
         ) : (
           <Button block size="lg" loading={mutation.isPending} onClick={submit} disabled={!target}>
             {players.length < needed
-              ? `Escolha ${needed - players.length} ${needed - players.length === 1 ? "jogador" : "jogadores"}`
-              : `Reservar ${target?.court.name ?? ""} · ${target?.slot.startTime ?? ""}`}
+              ? t("booking.choosePlayers", { count: needed - players.length })
+              : t("booking.submit", {
+                  court: target?.court.name ?? "",
+                  time: target?.slot.startTime ?? "",
+                })}
           </Button>
         )
       }
@@ -203,13 +211,14 @@ export function BookingSheet({
                   {target.court.name}
                 </span>
                 <span className="text-[0.625rem] font-medium tracking-wide uppercase opacity-90">
-                  {SURFACE_LABELS[surface]}
+                  {t(`labels.surface.${surface}`)}
                 </span>
               </span>
               <div className="min-w-0 flex-1">
-                <p className="leading-snug font-medium">{formatLongDayTitle(target.date)}</p>
+                <p className="leading-snug font-medium">{format.longDayTitle(target.date)}</p>
                 <p className="num text-small text-muted-foreground">
-                  {target.slot.startTime}–{target.slot.endTime} · {target.slot.durationMinutes} min
+                  {target.slot.startTime}–{target.slot.endTime} ·{" "}
+                  {t("common.minutes", { count: target.slot.durationMinutes })}
                 </p>
               </div>
               <FavoriteToggle
@@ -221,14 +230,14 @@ export function BookingSheet({
             </div>
 
             <SegmentedControl
-              label="Tipo de jogo"
-              options={TYPE_OPTIONS}
+              label={t("booking.typeLabel")}
+              options={typeOptions}
               value={type}
               onChange={changeType}
             />
 
             <MemberPicker
-              label={type === "SINGLES" ? "Adversário" : "Parceiro e adversários"}
+              label={type === "SINGLES" ? t("booking.opponent") : t("booking.partners")}
               selected={players}
               onChange={(next) => {
                 setPlayers(next);
@@ -239,9 +248,7 @@ export function BookingSheet({
               invalid={Boolean(error)}
             />
             {type === "DOUBLES" ? (
-              <p className="-mt-3 text-small text-muted-foreground">
-                O primeiro escolhido joga com você; os outros dois formam a dupla adversária.
-              </p>
+              <p className="-mt-3 text-small text-muted-foreground">{t("booking.doublesHint")}</p>
             ) : null}
             <FieldError>{error}</FieldError>
           </motion.div>

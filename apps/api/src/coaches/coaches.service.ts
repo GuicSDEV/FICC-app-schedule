@@ -13,6 +13,7 @@ import { Clock } from "../common/clock";
 import { notFound } from "../common/domain.exception";
 import { toCoachSummary, toCourtSummary, toSlotSummary } from "../common/mappers";
 import { PrismaService } from "../prisma/prisma.service";
+import { clubTimeZone } from "../tenancy/tenant-context";
 
 const UPCOMING_LIMIT = 6;
 
@@ -26,12 +27,12 @@ export class CoachesService {
   /** Public profile of an active coach, shown when a member taps a lesson. */
   async profile(id: string): Promise<CoachProfile> {
     const now = this.clock.now();
-    const today = clubToday(now);
+    const today = clubToday(now, clubTimeZone());
     const coach = await this.prisma.coach.findFirst({
       where: { id, isActive: true },
       include: { allowedCourts: { include: { court: true } } },
     });
-    if (!coach) throw notFound("COACH_NOT_FOUND", "Professor não encontrado.");
+    if (!coach) throw notFound("COACH_NOT_FOUND", "api.coachNotFound");
 
     const lessons = await this.prisma.lesson.findMany({
       where: {
@@ -47,7 +48,7 @@ export class CoachesService {
       ],
     });
     const remaining = lessons.filter(
-      (lesson) => !isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now),
+      (lesson) => !isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now, clubTimeZone()),
     );
 
     return {

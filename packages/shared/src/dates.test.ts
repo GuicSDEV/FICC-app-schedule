@@ -16,17 +16,30 @@ import {
   weekdayOf,
 } from "./dates";
 
+const SAO_PAULO = "America/Sao_Paulo";
+
 describe("club dates", () => {
   it("uses the São Paulo calendar day, not UTC", () => {
     // 01:30 UTC on Oct 9 is still 22:30 on Oct 8 in São Paulo (UTC-3).
     const instant = new Date("2026-10-09T01:30:00Z");
-    expect(clubToday(instant)).toBe("2026-10-08");
-    expect(clubTimeOfDay(instant)).toBe("22:30");
+    expect(clubToday(instant, SAO_PAULO)).toBe("2026-10-08");
+    expect(clubTimeOfDay(instant, SAO_PAULO)).toBe("22:30");
+  });
+
+  it("follows the club's own time zone", () => {
+    const instant = new Date("2026-10-09T01:30:00Z");
+    expect(clubToday(instant, "Europe/Lisbon")).toBe("2026-10-09");
+    expect(clubTimeOfDay(instant, "Europe/Lisbon")).toBe("02:30");
+    expect(clubInstant("2026-10-08", "18:30", "Europe/Lisbon").toISOString()).toBe(
+      "2026-10-08T17:30:00.000Z",
+    );
   });
 
   it("converts club-local times to UTC instants", () => {
-    expect(clubInstant("2026-10-08", "18:30").toISOString()).toBe("2026-10-08T21:30:00.000Z");
-    expect(endOfClubDay("2026-10-08").toISOString()).toBe("2026-10-09T02:59:59.999Z");
+    expect(clubInstant("2026-10-08", "18:30", SAO_PAULO).toISOString()).toBe(
+      "2026-10-08T21:30:00.000Z",
+    );
+    expect(endOfClubDay("2026-10-08", SAO_PAULO).toISOString()).toBe("2026-10-09T02:59:59.999Z");
   });
 
   it("does calendar arithmetic across month and year ends", () => {

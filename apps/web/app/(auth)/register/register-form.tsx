@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,15 @@ import { Field, Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api";
 import { haptic, sheetVariants, shakeAnimation } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { useErrorMessage } from "@/lib/use-error-message";
+import { useIssueMessage } from "@/lib/use-issue-message";
 
 type Errors = Partial<Record<"membershipId" | "name" | "password" | "form", string>>;
 
 export function RegisterForm() {
+  const t = useTranslations("auth.register");
+  const issueMessage = useIssueMessage();
+  const errorMessage = useErrorMessage();
   const router = useRouter();
   const client = useQueryClient();
   const [scope, animate] = useAnimate();
@@ -31,7 +37,7 @@ export function RegisterForm() {
     if (!parsed.success) {
       const next: Errors = {};
       for (const issue of parsed.error.issues)
-        next[issue.path[0] as keyof Errors] ??= issue.message;
+        next[issue.path[0] as keyof Errors] ??= issueMessage(issue);
       setErrors(next);
       void animate(scope.current, shakeAnimation);
       return;
@@ -44,8 +50,7 @@ export function RegisterForm() {
       client.setQueryData(queryKeys.me, user);
       router.replace("/app");
     } catch (caught) {
-      const message =
-        caught instanceof ApiError ? caught.message : "Não foi possível criar a conta.";
+      const message = errorMessage(caught, t("failed"));
       setErrors(
         caught instanceof ApiError && caught.code.startsWith("MEMBERSHIP")
           ? { membershipId: message }
@@ -65,11 +70,9 @@ export function RegisterForm() {
     >
       <div className="mb-8 space-y-3">
         <h1 className="font-display text-display leading-[1.05] font-bold">
-          Primeiro <span className="text-accent-ink">saque.</span>
+          {t("headline")} <span className="text-accent-ink">{t("headlineAccent")}</span>
         </h1>
-        <p className="text-body text-muted-foreground">
-          Use a matrícula do clube para criar seu acesso.
-        </p>
+        <p className="text-body text-muted-foreground">{t("lead")}</p>
       </div>
       <form
         ref={scope}
@@ -77,7 +80,7 @@ export function RegisterForm() {
         noValidate
         className="space-y-5 rounded-2xl border border-border bg-surface/80 p-5 shadow-raised backdrop-blur-sm"
       >
-        <Field label="Matrícula" htmlFor="membershipId" error={errors.membershipId}>
+        <Field label={t("membershipId")} htmlFor="membershipId" error={errors.membershipId}>
           <Input
             id="membershipId"
             inputMode="numeric"
@@ -92,7 +95,7 @@ export function RegisterForm() {
             autoFocus
           />
         </Field>
-        <Field label="Nome completo" htmlFor="name" error={errors.name}>
+        <Field label={t("name")} htmlFor="name" error={errors.name}>
           <Input
             id="name"
             autoComplete="name"
@@ -102,10 +105,10 @@ export function RegisterForm() {
           />
         </Field>
         <Field
-          label="Senha"
+          label={t("password")}
           htmlFor="password"
           error={errors.password ?? errors.form}
-          hint="Pelo menos 8 caracteres."
+          hint={t("passwordHint")}
         >
           <Input
             id="password"
@@ -117,16 +120,16 @@ export function RegisterForm() {
           />
         </Field>
         <Button type="submit" size="lg" block loading={pending}>
-          Criar conta
+          {t("submit")}
         </Button>
       </form>
       <p className="mt-5 text-center text-small text-muted-foreground">
-        Já tem conta?{" "}
+        {t("haveAccount")}{" "}
         <Link
           href="/login"
           className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline"
         >
-          Entrar
+          {t("signIn")}
         </Link>
       </p>
     </motion.div>

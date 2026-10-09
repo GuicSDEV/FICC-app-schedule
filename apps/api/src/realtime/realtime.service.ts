@@ -7,7 +7,14 @@ import {
 } from "@ficc/shared";
 import type { Server } from "socket.io";
 
-/** Emits real-time events. A no-op until the gateway attaches its server. */
+import { tenant } from "../tenancy/tenant-context";
+
+/** Every socket of a club joins this room; club-wide events never cross clubs. */
+export const clubRoom = (clubId: string) => `club:${clubId}`;
+export const userRoom = (userId: string) => `user:${userId}`;
+export const roleRoom = (clubId: string, role: string) => `club:${clubId}:role:${role}`;
+
+/** Emits real-time events to the current club. A no-op until the gateway attaches its server. */
 @Injectable()
 export class RealtimeService {
   private server: Server | null = null;
@@ -18,18 +25,23 @@ export class RealtimeService {
 
   scheduleUpdated(event: ScheduleUpdatedEvent): void {
     if (event.dates.length === 0) return;
-    this.server?.emit(SOCKET_EVENTS.scheduleUpdated, event);
+    this.toClub(SOCKET_EVENTS.scheduleUpdated, event);
   }
 
   leaderboardUpdated(event: LeaderboardUpdatedEvent): void {
-    this.server?.emit(SOCKET_EVENTS.leaderboardUpdated, event);
+    this.toClub(SOCKET_EVENTS.leaderboardUpdated, event);
   }
 
   freezeUpdated(event: FreezeUpdatedEvent): void {
-    this.server?.emit(SOCKET_EVENTS.freezeUpdated, event);
+    this.toClub(SOCKET_EVENTS.freezeUpdated, event);
   }
 
+  /** User ids are globally unique, so personal rooms need no club prefix. */
   toUser(userId: string, event: string, payload: unknown): void {
-    this.server?.to(`user:${userId}`).emit(event, payload);
+    this.server?.to(userRoom(userId)).emit(event, payload);
+  }
+
+  private toClub(event: string, payload: unknown): void {
+    this.server?.to(clubRoom(tenant().clubId)).emit(event, payload);
   }
 }

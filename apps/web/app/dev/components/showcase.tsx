@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, CalendarX2, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ import { SlotChip, type SlotChipState } from "@/components/ui/slot-chip";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SwipeCard } from "@/components/ui/swipe-card";
 import { TennisBall } from "@/components/ui/tennis-ball";
-import { formatDelta } from "@/lib/format";
+import { formatDelta } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 const PLAYERS = [
@@ -67,6 +68,8 @@ function Section({
 }
 
 export function Showcase() {
+  const t = useTranslations("dev");
+  const common = useTranslations();
   const [elo, setElo] = useState(1274);
   const [surface, setSurface] = useState<"ALL" | "HARTRU" | "SAIBRO">("ALL");
   const [banner, setBanner] = useState(true);
@@ -84,18 +87,18 @@ export function Showcase() {
     >
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="font-display text-headline font-bold">Componentes</h1>
-          <p className="text-small text-muted-foreground">Night Session · design system</p>
+          <h1 className="font-display text-headline font-bold">{t("title")}</h1>
+          <p className="text-small text-muted-foreground">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="secondary" size="sm" onClick={() => setAreaCoach((value) => !value)}>
-            {areaCoach ? "Sócio" : "Professor"}
+            {areaCoach ? t("member") : t("coach")}
           </Button>
           <ThemeToggle />
         </div>
       </header>
 
-      <Section title="Cores">
+      <Section title={t("colors")}>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
           {SWATCHES.map((swatch) => (
             <div key={swatch.name} className="space-y-1.5">
@@ -106,15 +109,15 @@ export function Showcase() {
         </div>
       </Section>
 
-      <Section title="Tipografia">
+      <Section title={t("typography")}>
         <Card>
           <CardContent className="space-y-2">
             <p className="num font-display text-hero font-bold text-accent-ink">1274</p>
             <p className="font-display text-display font-bold">Display 40</p>
             <p className="font-display text-headline font-semibold">Headline 28</p>
             <p className="text-title font-semibold">Title 20</p>
-            <p className="text-body">Body 16 · Geist Sans para a interface.</p>
-            <p className="text-small text-muted-foreground">Small 14 · texto secundário</p>
+            <p className="text-body">{t("body")}</p>
+            <p className="text-small text-muted-foreground">{t("small")}</p>
             <p className="num text-caption text-muted-foreground">
               Caption 12 · 18:30 · 6-4, 3-6, [10-8]
             </p>
@@ -122,40 +125,40 @@ export function Showcase() {
         </Card>
       </Section>
 
-      <Section title="Botões">
+      <Section title={t("buttons")}>
         <div className="flex flex-wrap gap-2">
-          <Button>Reservar</Button>
-          <Button variant="secondary">Secundário</Button>
-          <Button variant="outline">Contorno</Button>
-          <Button variant="ghost">Fantasma</Button>
-          <Button variant="dangerSoft">Recusar</Button>
-          <Button variant="danger">Cancelar</Button>
-          <Button loading>Enviando</Button>
-          <Button disabled>Desativado</Button>
-          <Button size="icon" variant="secondary" aria-label="Notificações">
+          <Button>{t("book")}</Button>
+          <Button variant="secondary">{t("secondary")}</Button>
+          <Button variant="outline">{t("outline")}</Button>
+          <Button variant="ghost">{t("ghost")}</Button>
+          <Button variant="dangerSoft">{t("decline")}</Button>
+          <Button variant="danger">{t("cancel")}</Button>
+          <Button loading>{t("sending")}</Button>
+          <Button disabled>{t("disabled")}</Button>
+          <Button size="icon" variant="secondary" aria-label={common("notifications.title")}>
             <Bell />
           </Button>
         </div>
         <Button size="lg" block>
-          Confirmar reserva
+          {t("confirmBooking")}
         </Button>
       </Section>
 
-      <Section title="Selos">
+      <Section title={t("badges")}>
         <div className="flex flex-wrap gap-2">
           <Badge tone="ball">+18</Badge>
-          <Badge tone="ballSoft">Confirmada</Badge>
-          <Badge tone="lesson">Aula</Badge>
-          <Badge tone="hartru">Har-Tru</Badge>
-          <Badge tone="saibro">Saibro</Badge>
-          <Badge tone="success">Aprovado</Badge>
+          <Badge tone="ballSoft">{t("confirmed")}</Badge>
+          <Badge tone="lesson">{t("lesson")}</Badge>
+          <Badge tone="hartru">{common("labels.surface.HARTRU")}</Badge>
+          <Badge tone="saibro">{common("labels.surface.SAIBRO")}</Badge>
+          <Badge tone="success">{t("approved")}</Badge>
           <Badge tone="danger">−12</Badge>
-          <Badge tone="warning">Chuva</Badge>
-          <Badge>Pendente</Badge>
+          <Badge tone="warning">{common("labels.freezeReason.RAIN")}</Badge>
+          <Badge>{t("pending")}</Badge>
         </div>
       </Section>
 
-      <Section title="Avatares">
+      <Section title={t("avatars")}>
         <div className="flex items-center gap-4">
           <Avatar name="Rafael Almeida" size="xl" />
           <Avatar name="Juliana Costa" size="lg" />
@@ -164,50 +167,55 @@ export function Showcase() {
         </div>
       </Section>
 
-      <Section title="Entradas">
-        <Field label="Matrícula" htmlFor="dev-id" hint="Formato automático">
+      <Section title={t("inputs")}>
+        <Field label={t("membershipId")} htmlFor="dev-id" hint={t("autoFormat")}>
           <Input id="dev-id" className="num text-title tracking-wider" defaultValue="104.218" />
         </Field>
-        <Field label="Buscar sócio" htmlFor="dev-search" error="Nenhum sócio encontrado">
+        <Field label={t("searchMember")} htmlFor="dev-search" error={t("noMember")}>
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input id="dev-search" placeholder="Nome ou matrícula" className="pl-11" aria-invalid />
+            <Input
+              id="dev-search"
+              placeholder={common("picker.placeholder")}
+              className="pl-11"
+              aria-invalid
+            />
           </div>
         </Field>
       </Section>
 
-      <Section title="Filtro segmentado">
+      <Section title={t("segmented")}>
         <SegmentedControl
-          label="Superfície"
+          label={t("surface")}
           value={surface}
           onChange={setSurface}
           options={[
-            { value: "ALL", label: "Todas" },
-            { value: "HARTRU", label: "Har-Tru" },
-            { value: "SAIBRO", label: "Saibro" },
+            { value: "ALL", label: common("calendar.all") },
+            { value: "HARTRU", label: common("labels.surface.HARTRU") },
+            { value: "SAIBRO", label: common("labels.surface.SAIBRO") },
           ]}
         />
       </Section>
 
-      <Section title="Contador numérico">
+      <Section title={t("ticker")}>
         <Card>
           <CardContent className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-small text-muted-foreground">Seu Elo</p>
+              <p className="text-small text-muted-foreground">{common("dashboard.elo.label")}</p>
               <NumberTicker value={elo} from={1200} className="font-display text-hero font-bold" />
             </div>
             <div className="flex gap-2">
               <Button
                 variant="dangerSoft"
                 size="icon"
-                aria-label="Perder 12"
+                aria-label={t("lose", { points: 12 })}
                 onClick={() => setElo((value) => value - 12)}
               >
                 {formatDelta(-12)}
               </Button>
               <Button
                 size="icon"
-                aria-label="Ganhar 18"
+                aria-label={t("gain", { points: 18 })}
                 onClick={() => setElo((value) => value + 18)}
               >
                 {formatDelta(18)}
@@ -217,7 +225,7 @@ export function Showcase() {
         </Card>
       </Section>
 
-      <Section title="Chips de horário">
+      <Section title={t("slotChips")}>
         <div className="grid grid-cols-3 gap-2">
           <SlotChip courtName="Q1" surface="HARTRU" state="free" onPress={() => undefined} />
           <SlotChip
@@ -263,7 +271,7 @@ export function Showcase() {
           <SlotChip courtName="Q4" surface="HARTRU" state="frozen" freezeReason="MAINTENANCE" />
           <SlotChip courtName="Q1" surface="HARTRU" state="free" past />
         </div>
-        <p className="text-small text-muted-foreground">Largura de grade (desktop):</p>
+        <p className="text-small text-muted-foreground">{t("gridWidth")}</p>
         <div className="grid grid-cols-2 gap-2">
           <SlotChip
             courtName="Q5"
@@ -284,7 +292,7 @@ export function Showcase() {
         </div>
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-small font-medium">Ao vivo: aula cancelada vira horário livre</p>
+            <p className="text-small font-medium">{t("liveTitle")}</p>
             <div className="flex gap-3">
               <SlotChip
                 courtName="Q6"
@@ -319,7 +327,7 @@ export function Showcase() {
                   setHighlight((value) => value + 1);
                 }}
               >
-                {liveState === "lesson" ? "Cancelar aula" : "Recriar aula"}
+                {liveState === "lesson" ? t("cancelLesson") : t("restoreLesson")}
               </Button>
               <Button
                 size="sm"
@@ -329,49 +337,46 @@ export function Showcase() {
                   window.setTimeout(() => setCelebrate(false), 1200);
                 }}
               >
-                Reserva confirmada
+                {t("bookingConfirmed")}
               </Button>
             </div>
           </CardContent>
         </Card>
       </Section>
 
-      <Section title="Convites (deslize)">
+      <Section title={t("invites")}>
         {invites.length === 0 ? (
-          <EmptyState
-            title="Sem convites pendentes"
-            description="Quando te marcarem numa reserva, aparece aqui."
-          />
+          <EmptyState title={t("noInvites")} description={t("noInvitesDescription")} />
         ) : (
           invites.map((id) => (
             <SwipeCard
               key={id}
               onConfirm={() => {
                 setInvites((list) => list.filter((entry) => entry !== id));
-                toast.success("Presença confirmada");
+                toast.success(common("dashboard.invite.confirmed"));
               }}
               onDecline={() => {
                 setInvites((list) => list.filter((entry) => entry !== id));
-                toast("Convite recusado");
+                toast(common("dashboard.invite.declined"));
               }}
             >
               <div className="flex items-center gap-3 p-4">
                 <AvatarStack people={PLAYERS.slice(0, 2)} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold">Rafael te chamou para jogar</p>
+                  <p className="font-semibold">{t("inviteSample")}</p>
                   <p className="num text-small text-muted-foreground">Q3 · qui, 9 out · 18:30</p>
                 </div>
-                <Badge tone="hartru">Har-Tru</Badge>
+                <Badge tone="hartru">{common("labels.surface.HARTRU")}</Badge>
               </div>
             </SwipeCard>
           ))
         )}
         <Button variant="ghost" size="sm" onClick={() => setInvites(["a", "b"])}>
-          Restaurar convites
+          {t("restoreInvites")}
         </Button>
       </Section>
 
-      <Section title="Carregando (shimmer)">
+      <Section title={t("loading")}>
         <Card>
           <CardContent className="space-y-3">
             <Skeleton className="h-6 w-1/2" />
@@ -385,79 +390,75 @@ export function Showcase() {
         </Card>
       </Section>
 
-      <Section title="Avisos">
+      <Section title={t("alerts")}>
         <AlertBanner
           show={banner}
           tone="rain"
-          title="Chuva · Q5, Q6 interditadas"
+          title={t("rainSample")}
           onDismiss={() => setBanner(false)}
         >
-          Previsão de liberação às 16:00.
+          {t("rainUntil")}
         </AlertBanner>
-        <AlertBanner show tone="maintenance" title="Manutenção · Q2 interditada">
-          Sem previsão de liberação.
+        <AlertBanner show tone="maintenance" title={t("maintenanceSample")}>
+          {common("shell.freeze.noEnd")}
         </AlertBanner>
         <Button variant="secondary" size="sm" onClick={() => setBanner((value) => !value)}>
-          {banner ? "Esconder chuva" : "Mostrar chuva"}
+          {banner ? t("hideRain") : t("showRain")}
         </Button>
       </Section>
 
-      <Section title="Folha, toasts e atualizar">
+      <Section title={t("sheetSection")}>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => setSheet(true)}>
-            Abrir folha
+            {t("openSheet")}
           </Button>
           <Button
             variant="secondary"
-            onClick={() => toast.success("Reserva confirmada", { description: "Q3 · 18:30" })}
+            onClick={() => toast.success(t("bookingConfirmed"), { description: "Q3 · 18:30" })}
           >
-            Toast
+            {t("toast")}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => toast.error("Esse horário acabou de ser reservado.")}
-          >
-            Erro
+          <Button variant="secondary" onClick={() => toast.error(common("api.slotJustTaken"))}>
+            {t("error")}
           </Button>
         </div>
         <PullToRefresh onRefresh={() => new Promise((resolve) => setTimeout(resolve, 1200))}>
           <Card>
             <CardContent className="flex items-center gap-3 text-small text-muted-foreground">
-              <TennisBall className="size-6" /> No celular, puxe este cartão para baixo no topo da
-              página.
+              <TennisBall className="size-6" /> {t("pullHint")}
             </CardContent>
           </Card>
         </PullToRefresh>
       </Section>
 
-      <Section title="Estados vazios e erros">
+      <Section title={t("emptyStates")}>
         <EmptyState
           icon={CalendarX2}
-          title="Nenhuma reserva"
-          description="Toque no + para marcar uma quadra."
-          action={<Button size="sm">Reservar</Button>}
+          title={t("noBookings")}
+          description={t("noBookingsDescription")}
+          action={<Button size="sm">{t("book")}</Button>}
         />
-        <ErrorState onRetry={() => toast("Tentando de novo…")} />
+        <ErrorState onRetry={() => toast(t("retrying"))} />
       </Section>
 
       <Sheet
         open={sheet}
         onOpenChange={setSheet}
-        title="Reservar Q3 · 18:30"
-        description="Arraste para baixo para fechar"
+        title={t("sheetTitle")}
+        description={t("sheetDescription")}
         footer={
           <Button block size="lg" onClick={() => setSheet(false)}>
-            Confirmar
+            {common("common.confirm")}
           </Button>
         }
       >
         <SegmentedControl
-          label="Tipo"
+          label={t("type")}
           value="SINGLES"
           onChange={() => undefined}
           options={[
-            { value: "SINGLES", label: "Simples" },
-            { value: "DOUBLES", label: "Duplas" },
+            { value: "SINGLES", label: common("common.singles") },
+            { value: "DOUBLES", label: common("common.doubles") },
           ]}
         />
         <div className="mt-4 space-y-2">

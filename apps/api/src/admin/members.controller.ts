@@ -12,9 +12,11 @@ import {
 } from "@ficc/shared";
 
 import { Roles } from "../common/auth.decorators";
+import { localize } from "../common/domain.exception";
 import { playerSelect, toPlayerSummary } from "../common/mappers";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { PrismaService } from "../prisma/prisma.service";
+import { tenant } from "../tenancy/tenant-context";
 
 @Controller("admin")
 @Roles(Role.ADMIN)
@@ -39,7 +41,7 @@ export class AdminMembersController {
           : {}),
       },
       select: {
-        ...playerSelect,
+        ...playerSelect(),
         isActive: true,
         guestPassesSuspendedAt: true,
         guestPassesSuspendedReason: true,
@@ -72,13 +74,25 @@ export class AdminMembersController {
     await this.prisma.$transaction(
       rows.map((row) =>
         this.prisma.validMembershipId.upsert({
-          where: { membershipId: row.membershipId },
+          where: {
+            clubId_membershipId: { clubId: tenant().clubId, membershipId: row.membershipId },
+          },
           create: { membershipId: row.membershipId, holderName: row.holderName ?? null },
           update: { isActive: true, ...(row.holderName ? { holderName: row.holderName } : {}) },
         }),
       ),
     );
     const updated = rows.filter((row) => existing.has(row.membershipId)).length;
-    return { created: rows.length - updated, updated, errors };
+    return {
+      created: rows.length - updated,
+      updated,
+      errors: errors.map((error) => ({
+        line: error.line,
+        message: localize({
+          key: "validation.invalidMembershipIdValue",
+          params: { value: error.value },
+        }),
+      })),
+    };
   }
 }

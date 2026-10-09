@@ -25,6 +25,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
 import { freezeWithCourts, type FreezeWithCourts } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
+import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
 const freezeDetailInclude = {
   ...freezeWithCourts,
@@ -33,9 +34,6 @@ const freezeDetailInclude = {
 } satisfies Prisma.CourtFreezeInclude;
 
 type FreezeRecord = Prisma.CourtFreezeGetPayload<{ include: typeof freezeDetailInclude }>;
-
-/** Open-ended freezes are checked against this many days of bookings and lessons. */
-const OPEN_ENDED_HORIZON_DAYS = 56;
 
 /** Rain / maintenance: freezing courts, listing what it hits, bulk cancelling and lifting. */
 @Injectable()
@@ -63,7 +61,7 @@ export class FreezesService {
             ? { surface: input.target.surface, status: "ACTIVE" }
             : { status: "ACTIVE" },
     });
-    if (courts.length === 0) throw notFound("COURT_NOT_FOUND", "Nenhuma quadra encontrada.");
+    if (courts.length === 0) throw notFound("COURT_NOT_FOUND", "api.noCourtFound");
 
     const freeze = await this.prisma.courtFreeze.create({
       data: {
@@ -140,7 +138,7 @@ export class FreezesService {
       ...input.lessonIds.filter((id) => !lessonIds.has(id)),
     ];
     if (unknown.length > 0) {
-      throw unprocessable("NOT_AFFECTED", "Algum item não é afetado por essa interdição.", unknown);
+      throw unprocessable("NOT_AFFECTED", "api.notAffected", unknown);
     }
     for (const bookingId of input.bookingIds) {
       await this.bookings.cancel(bookingId, BookingCancelReason.COURT_FROZEN, null);
@@ -153,7 +151,7 @@ export class FreezesService {
 
   async lift(actor: RequestUser, freezeId: string): Promise<FreezeDetail> {
     const freeze = await this.load(freezeId);
-    if (freeze.liftedAt) throw conflict("FREEZE_LIFTED", "Essa interdição já foi encerrada.");
+    if (freeze.liftedAt) throw conflict("FREEZE_LIFTED", "api.freezeLifted");
     const lifted = await this.prisma.courtFreeze.update({
       where: { id: freezeId },
       data: { liftedAt: this.clock.now(), liftedById: actor.id },
@@ -197,7 +195,7 @@ export class FreezesService {
       where: { id: freezeId },
       include: freezeDetailInclude,
     });
-    if (!freeze) throw notFound("FREEZE_NOT_FOUND", "Interdição não encontrada.");
+    if (!freeze) throw notFound("FREEZE_NOT_FOUND", "api.freezeNotFound");
     return freeze;
   }
 
@@ -222,12 +220,15 @@ export class FreezesService {
 
   /** Club dates the freeze window touches (open-ended windows use an 8-week horizon). */
   private windowDates(freeze: FreezeWithCourts): string[] {
-    const from = clubToday(freeze.startsAt);
+    const from = clubToday(freeze.startsAt, clubTimeZone());
     const to = freeze.endsAt
-      ? clubToday(new Date(freeze.endsAt.getTime() - 1))
+      ? clubToday(new Date(freeze.endsAt.getTime() - 1), clubTimeZone())
       : addDays(
-          clubToday(this.clock.now()) > from ? clubToday(this.clock.now()) : from,
-          OPEN_ENDED_HORIZON_DAYS,
+          clubToday(this.clock.now(), clubTimeZone()) > from
+            ? clubToday(this.clock.now(), clubTimeZone())
+            : from,
+          // Open-ended freezes are checked as far ahead as lessons are generated.
+          clubSettings().lessonWindowDays,
         );
     return dateRange(from, to);
   }
@@ -245,7 +246,7 @@ export class FreezesService {
         include: {
           court: true,
           timeSlot: true,
-          players: { include: { user: { select: playerSelect } } },
+          players: { include: { user: { select: playerSelect() } } },
         },
         orderBy: [{ date: "asc" }, { timeSlot: { sortOrder: "asc" } }],
       }),
@@ -258,7 +259,7 @@ export class FreezesService {
     const hits = (entry: {
       date: Date;
       timeSlot: { startTime: string; durationMinutes: number };
-    }) => overlapsSlot(freeze, fromDbDate(entry.date), entry.timeSlot);
+    }) => overlapsSlot(freeze, fromDbDate(entry.date), entry.timeSlot, clubTimeZone());
 
     return {
       ...this.toSummary(freeze),
@@ -309,7 +310,7 @@ export class FreezesService {
     this.realtime.freezeUpdated({ freezeId: freeze.id, action });
     this.slotEvents.datesChanged(
       "freeze.changed",
-      this.windowDates(freeze).slice(0, OPEN_ENDED_HORIZON_DAYS),
+      this.windowDates(freeze).slice(0, clubSettings().lessonWindowDays),
     );
   }
 }

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/toaster";
 
+import { ClubProvider } from "./club-provider";
 import { QueryProvider } from "./query-provider";
 import { SocketProvider } from "./socket-provider";
 
@@ -20,8 +21,10 @@ export function Providers({ children }: { children: ReactNode }) {
       {/* Respect prefers-reduced-motion: transforms become fades, layout animations are skipped. */}
       <MotionConfig reducedMotion="user">
         <QueryProvider>
-          <SocketProvider>{children}</SocketProvider>
-          <Toaster />
+          <ClubProvider>
+            <SocketProvider>{children}</SocketProvider>
+            <Toaster />
+          </ClubProvider>
         </QueryProvider>
       </MotionConfig>
     </ThemeProvider>

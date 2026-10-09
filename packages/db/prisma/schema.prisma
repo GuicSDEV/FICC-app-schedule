@@ -1,8 +1,18 @@
-// Prisma schema for the FICC tennis club (see docs/SPEC.md, "DATA MODEL").
+// Prisma schema (see docs/SPEC.md, "DATA MODEL" and "MULTI-CLUB STRATEGY").
+//
+// Tenancy
+// - v1 serves only FICC, but every club-owned table carries `clubId` and is read and written
+//   through the API's tenant Prisma extension, which filters and stamps it automatically.
+//   Child rows that only exist under a club-owned parent (CoachCourt, BookingPlayer,
+//   MatchPlayer, MatchSet, CourtFreezeCourt, UserCategory) inherit the club from it.
+// - `clubId` defaults to the session setting `app.club_id`, which is never set: the default only
+//   exists so Prisma's generated input types treat clubId as optional (the extension always
+//   stamps it). A write that escapes the extension gets NULL and fails the NOT NULL constraint.
+// - Club rules live in ClubSettings.values (validated by clubSettingsSchema in @ficc/shared).
 //
 // Conventions
 // - Instants are timestamptz (UTC). Calendar days are `@db.Date` and always mean the club-local
-//   date in America/Sao_Paulo; the slot's start time comes from TimeSlot.
+//   date in the club's time zone (Club.timezone); the slot's start time comes from TimeSlot.
 // - Rows that carry history (lessons, bookings, matches, ratings, scans) are never hard-deleted
 //   through their parents: those relations use `Restrict` or `SetNull`.
 // - CHECK constraints that Prisma cannot express live in the migration SQL and are listed in the
@@ -29,12 +39,8 @@ enum Role {
   GATE
 }
 
-enum Category {
-  CLASS_A
-  CLASS_B
-  CLASS_C
-  WOMENS
-  SENIORS
+enum Sport {
+  TENNIS
 }
 
 enum Surface {
@@ -108,9 +114,17 @@ enum FreezeScope {
   ALL
 }
 
-enum MatchType {
+enum MatchFormat {
   SINGLES
   DOUBLES
+}
+
+/// What a match counts for. Only RANKED matches move the Elo ladder; TOURNAMENT matches belong to
+/// a tournament draw (Phase 9.5) and follow its category's setting.
+enum MatchType {
+  FRIENDLY
+  RANKED
+  TOURNAMENT
 }
 
 enum MatchStatus {
@@ -173,31 +187,102 @@ enum NotificationType {
   GUEST_CHECKED_IN
 }
 
+// ─── Clubs ──────────────────────────────────────────────────────────────────
+
+/// A club served by the platform. v1 resolves it from DEFAULT_CLUB_SLUG; later from a subdomain.
+model Club {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  /// IANA time zone for every club-local date and time, e.g. "America/Sao_Paulo".
+  timezone     String
+  /// UI and message locale, e.g. "pt-BR".
+  locale       String
+  logoUrl      String?
+  /// Brand colors (#RRGGBB) for the club's theming.
+  primaryColor String?
+  accentColor  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  settings           ClubSettings?
+  categories         Category[]
+  users              User[]
+  validMembershipIds ValidMembershipId[]
+  refreshTokens      RefreshToken[]
+  coaches            Coach[]
+  courts             Court[]
+  timeSlots          TimeSlot[]
+  occupancies        SlotOccupancy[]
+  lessonSeries       LessonSeries[]
+  lessons            Lesson[]
+  lessonAuditLogs    LessonAuditLog[]
+  bookings           Booking[]
+  slotFavorites      SlotFavorite[]
+  freezes            CourtFreeze[]
+  matches            Match[]
+  ratings            PlayerRating[]
+  eloHistory         EloHistory[]
+  guestPasses        GuestPass[]
+  guestBlocks        GuestBlock[]
+  gateScans          GateScanLog[]
+  notifications      Notification[]
+}
+
+/// The club's configurable rules. `values` holds the fields of clubSettingsSchema
+/// (@ficc/shared); missing fields fall back to DEFAULT_CLUB_SETTINGS, so adding a setting needs
+/// no data migration.
+model ClubSettings {
+  clubId    String   @id
+  values    Json     @default("{}")
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+}
+
+/// A club's competitive categories (FICC: Classe A, B, C, Feminino, Sênior).
+model Category {
+  id        String   @id @default(cuid())
+  clubId    String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  /// Stable identifier used by the APIs, e.g. "CLASS_A".
+  key       String
+  name      String
+  sortOrder Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  club    Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  members UserCategory[]
+
+  @@unique([clubId, key])
+}
+
 // ─── People & access ────────────────────────────────────────────────────────
 
 /// Any account: member, coach, admin or gate staff.
 /// CHECK: members must have a membershipId; every user has a login (membershipId or email).
 model User {
-  id                         String     @id @default(cuid())
-  role                       Role       @default(MEMBER)
-  /// Matrícula, digits only. Members log in with it.
-  membershipId               String?    @unique
-  /// Login for staff accounts (coach, admin, gate).
-  email                      String?    @unique
+  id                         String    @id @default(cuid())
+  clubId                     String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  role                       Role      @default(MEMBER)
+  /// Matrícula, digits only, unique within the club. Members log in with it.
+  membershipId               String?
+  /// Login for staff accounts (coach, admin, gate), unique within the club.
+  email                      String?
   passwordHash               String
   name                       String
   photoUrl                   String?
-  categories                 Category[]
-  /// Current rating; always equals the `after` of the user's latest EloHistory row.
-  elo                        Int        @default(1200)
-  isActive                   Boolean    @default(true)
+  isActive                   Boolean   @default(true)
   /// Set by an admin to stop this member from creating guest passes.
-  guestPassesSuspendedAt     DateTime?  @db.Timestamptz(3)
+  guestPassesSuspendedAt     DateTime? @db.Timestamptz(3)
   guestPassesSuspendedReason String?
-  createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime   @updatedAt @db.Timestamptz(3)
+  createdAt                  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime  @updatedAt @db.Timestamptz(3)
 
-  membership         ValidMembershipId? @relation(fields: [membershipId], references: [membershipId], onDelete: Restrict, onUpdate: Cascade)
+  club               Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  membership         ValidMembershipId? @relation(fields: [clubId, membershipId], references: [clubId, membershipId], onDelete: Restrict, onUpdate: Cascade)
+  categories         UserCategory[]
+  ratings            PlayerRating[]
   coach              Coach?
   refreshTokens      RefreshToken[]
   bookingsCreated    Booking[]          @relation("BookingCreatedBy")
@@ -217,26 +302,45 @@ model User {
   lessonAuditLogs    LessonAuditLog[]
   notifications      Notification[]
 
-  @@index([role, elo])
-  @@index([categories], type: Gin)
+  @@unique([clubId, membershipId])
+  @@unique([clubId, email])
+  @@index([clubId, role])
+}
+
+/// Categories a member plays in.
+model UserCategory {
+  userId     String
+  categoryId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, categoryId])
+  @@index([categoryId])
 }
 
 /// Membership IDs allowed to register (imported by the admin, e.g. from CSV).
 /// User.membershipId references this table, so an account can only use a listed ID.
 model ValidMembershipId {
-  membershipId String   @id
+  id           String   @id @default(cuid())
+  clubId       String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  membershipId String
   /// Name on the club's records, to help members recognise their ID.
   holderName   String?
   /// Inactive IDs can no longer be used to register.
   isActive     Boolean  @default(true)
   importedAt   DateTime @default(now()) @db.Timestamptz(3)
 
+  club Club  @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user User?
+
+  @@unique([clubId, membershipId])
 }
 
 /// Rotating refresh tokens (stored hashed). Reusing a revoked token revokes its whole family.
 model RefreshToken {
   id        String    @id @default(cuid())
+  clubId    String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   userId    String
   familyId  String
   tokenHash String    @unique
@@ -245,6 +349,7 @@ model RefreshToken {
   revokedAt DateTime? @db.Timestamptz(3)
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
 
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -254,6 +359,7 @@ model RefreshToken {
 /// Coach profile of a COACH user.
 model Coach {
   id          String   @id @default(cuid())
+  clubId      String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   userId      String   @unique
   displayName String
   photoUrl    String?
@@ -263,6 +369,7 @@ model Coach {
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
+  club          Club           @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   allowedCourts CoachCourt[]
   lessonSeries  LessonSeries[]
@@ -285,14 +392,17 @@ model CoachCourt {
 
 model Court {
   id        String      @id @default(cuid())
-  /// "Q1" … "Q6".
-  name      String      @unique
+  clubId    String      @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  /// "Q1" … "Q6", unique within the club.
+  name      String
   surface   Surface
+  sport     Sport
   status    CourtStatus @default(ACTIVE)
   sortOrder Int
   createdAt DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt DateTime    @updatedAt @db.Timestamptz(3)
 
+  club         Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
   coachCourts  CoachCourt[]
   lessonSeries LessonSeries[]
   lessons      Lesson[]
@@ -301,26 +411,32 @@ model Court {
   favorites    SlotFavorite[]
   freezes      CourtFreezeCourt[]
   matches      Match[]
+
+  @@unique([clubId, name])
 }
 
-/// One slot of the daily grid (admin-editable; seeded from DEFAULT_SLOT_GRID in @ficc/shared).
+/// One slot of the club's daily grid (admin-editable; seeded from the club's data).
 /// Retire a slot with isActive = false: past bookings and lessons keep pointing at it.
 /// CHECK: startTime is "HH:mm" and durationMinutes > 0.
 model TimeSlot {
   id              String   @id @default(cuid())
+  clubId          String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   /// "HH:mm", club local time.
-  startTime       String   @unique @db.VarChar(5)
+  startTime       String   @db.VarChar(5)
   durationMinutes Int      @default(75)
   sortOrder       Int
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
+  club         Club            @relation(fields: [clubId], references: [id], onDelete: Restrict)
   lessonSeries LessonSeries[]
   lessons      Lesson[]
   bookings     Booking[]
   occupancies  SlotOccupancy[]
   favorites    SlotFavorite[]
+
+  @@unique([clubId, startTime])
 }
 
 // ─── Slot occupancy: the single double-booking guard ────────────────────────
@@ -336,6 +452,7 @@ model TimeSlot {
 // CHECK: exactly one of bookingId / lessonId is set.
 
 model SlotOccupancy {
+  clubId     String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   courtId    String
   date       DateTime @db.Date
   timeSlotId String
@@ -343,6 +460,7 @@ model SlotOccupancy {
   lessonId   String?  @unique
   createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
   court    Court    @relation(fields: [courtId], references: [id], onDelete: Restrict)
   timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
   booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -359,6 +477,7 @@ model SlotOccupancy {
 /// CHECK: at least one weekday; endDate (inclusive), when set, is not before startDate.
 model LessonSeries {
   id             String    @id @default(cuid())
+  clubId         String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   coachId        String
   courtId        String
   timeSlotId     String
@@ -374,6 +493,7 @@ model LessonSeries {
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
 
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
   coach     Coach            @relation(fields: [coachId], references: [id], onDelete: Restrict)
   court     Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
   timeSlot  TimeSlot         @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
@@ -389,6 +509,7 @@ model LessonSeries {
 /// also stops the series job from re-creating the occurrence (unique seriesId + date).
 model Lesson {
   id           String       @id @default(cuid())
+  clubId       String       @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   seriesId     String?
   coachId      String
   courtId      String
@@ -401,6 +522,7 @@ model Lesson {
   createdAt    DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
 
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
   series    LessonSeries?    @relation(fields: [seriesId], references: [id], onDelete: Restrict)
   coach     Coach            @relation(fields: [coachId], references: [id], onDelete: Restrict)
   court     Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
@@ -416,6 +538,7 @@ model Lesson {
 /// Who changed which lesson or series, and how. Survives deletion of the lesson or series.
 model LessonAuditLog {
   id        String            @id @default(cuid())
+  clubId    String            @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   lessonId  String?
   seriesId  String?
   actorId   String
@@ -424,6 +547,7 @@ model LessonAuditLog {
   details   Json?
   createdAt DateTime          @default(now()) @db.Timestamptz(3)
 
+  club   Club          @relation(fields: [clubId], references: [id], onDelete: Restrict)
   lesson Lesson?       @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   series LessonSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   actor  User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
@@ -441,6 +565,7 @@ model LessonAuditLog {
 /// SlotOccupancy row.
 model Booking {
   id           String               @id @default(cuid())
+  clubId       String               @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   type         BookingType
   status       BookingStatus        @default(PENDING)
   courtId      String
@@ -455,6 +580,7 @@ model Booking {
   createdAt    DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
 
+  club        Club            @relation(fields: [clubId], references: [id], onDelete: Restrict)
   court       Court           @relation(fields: [courtId], references: [id], onDelete: Restrict)
   timeSlot    TimeSlot        @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
   createdBy   User            @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -485,11 +611,13 @@ model BookingPlayer {
 /// Court + slot a member watches; they are notified whenever it opens up on any date.
 model SlotFavorite {
   id         String   @id @default(cuid())
+  clubId     String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   userId     String
   courtId    String
   timeSlotId String
   createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   court    Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
   timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
@@ -505,6 +633,7 @@ model SlotFavorite {
 /// CHECK: surface is set exactly when scope = SURFACE; endsAt, when set, is after startsAt.
 model CourtFreeze {
   id          String       @id @default(cuid())
+  clubId      String       @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   reason      FreezeReason
   scope       FreezeScope
   surface     Surface?
@@ -517,6 +646,7 @@ model CourtFreeze {
   liftedById  String?
   createdAt   DateTime     @default(now()) @db.Timestamptz(3)
 
+  club      Club               @relation(fields: [clubId], references: [id], onDelete: Restrict)
   courts    CourtFreezeCourt[]
   createdBy User               @relation("FreezeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   liftedBy  User?              @relation("FreezeLiftedBy", fields: [liftedById], references: [id], onDelete: SetNull)
@@ -544,7 +674,12 @@ model CourtFreezeCourt {
 /// confirmation. The booking link is optional.
 model Match {
   id               String             @id @default(cuid())
+  clubId           String             @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  format           MatchFormat
   type             MatchType
+  sport            Sport
+  /// Tournament draw this match belongs to (TOURNAMENT matches; relation added in Phase 9.5).
+  tournamentId     String?
   status           MatchStatus        @default(PENDING)
   /// Club-local date the match was played.
   playedOn         DateTime           @db.Date
@@ -568,6 +703,7 @@ model Match {
   createdAt        DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(3)
 
+  club        Club          @relation(fields: [clubId], references: [id], onDelete: Restrict)
   court       Court?        @relation(fields: [courtId], references: [id], onDelete: SetNull)
   booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   reportedBy  User          @relation("MatchReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
@@ -577,9 +713,10 @@ model Match {
   sets        MatchSet[]
   eloHistory  EloHistory[]
 
-  @@index([status, approvalDeadline])
-  @@index([playedOn])
+  @@index([clubId, status, approvalDeadline])
+  @@index([clubId, playedOn])
   @@index([bookingId])
+  @@index([tournamentId])
 }
 
 /// Player and team side (A or B). Singles has one player per side, doubles two.
@@ -595,8 +732,8 @@ model MatchPlayer {
   @@index([userId])
 }
 
-/// One set of a best-of-3 match. A deciding match tie-break stores points (e.g. 10-8).
-/// CHECK: setNumber is 1–3 and scores are non-negative.
+/// One set of a match (tennis: best of 3). A deciding match tie-break stores points (e.g. 10-8).
+/// CHECK: setNumber is 1–5 (the sport decides how many are valid) and scores are non-negative.
 model MatchSet {
   matchId         String
   setNumber       Int
@@ -609,22 +746,45 @@ model MatchSet {
   @@id([matchId, setNumber])
 }
 
+/// Current rating of a player in one sport. Always equals the `after` of the player's latest
+/// EloHistory row for that sport (or the club's initial rating before any match).
+model PlayerRating {
+  id        String   @id @default(cuid())
+  clubId    String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId    String
+  sport     Sport
+  elo       Int
+  /// Confirmed rated matches played in this sport.
+  matches   Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@index([clubId, sport, elo])
+}
+
 /// Rating change for one player in one confirmed match.
 /// CHECK: after = before + delta.
 model EloHistory {
   id        String   @id @default(cuid())
+  clubId    String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   userId    String
   matchId   String
+  sport     Sport
   before    Int
   after     Int
   delta     Int
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
+  club  Club  @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
   match Match @relation(fields: [matchId], references: [id], onDelete: Restrict)
 
   @@unique([userId, matchId])
-  @@index([userId, createdAt])
+  @@index([userId, sport, createdAt])
   @@index([matchId])
 }
 
@@ -632,13 +792,25 @@ model EloHistory {
 
 /// Single-entry day pass for one visit date. The QR holds a signed token referencing this row,
 /// never personal data. Entry flips status ACTIVE → USED atomically.
+/// Personal data (LGPD): the document number is stored encrypted (AES-256-GCM, key from
+/// DATA_ENCRYPTION_KEY) with a keyed hash for lookups; name and document are erased
+/// (anonymizedAt) after the club's guestDataRetentionDays.
+/// CHECK: guestName is set until the pass is anonymized.
 model GuestPass {
   id             String            @id @default(cuid())
+  clubId         String            @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   hostId         String
-  guestName      String
+  /// Null once anonymized.
+  guestName      String?
   documentType   GuestDocumentType
-  /// Normalized document number. Lists mask it; only the gate view shows it in full.
-  documentNumber String
+  /// Legacy plaintext from before encryption; emptied by the encrypt-legacy job. Always null for
+  /// new rows; the column is dropped in a later migration.
+  documentNumber String?
+  /// Encrypted normalized document number ("v1:iv:tag:ciphertext").
+  documentCipher String?
+  /// HMAC-SHA256 of type + normalized number, for equality lookups (gate search, blocklist).
+  documentHash   String?
+  anonymizedAt   DateTime?         @db.Timestamptz(3)
   visitDate      DateTime          @db.Date
   /// Optional link to one of the host's bookings on visitDate.
   bookingId      String?
@@ -647,35 +819,43 @@ model GuestPass {
   cancelledAt    DateTime?         @db.Timestamptz(3)
   createdAt      DateTime          @default(now()) @db.Timestamptz(3)
 
+  club    Club          @relation(fields: [clubId], references: [id], onDelete: Restrict)
   host    User          @relation(fields: [hostId], references: [id], onDelete: Restrict)
   booking Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   scans   GateScanLog[]
 
   @@index([hostId, visitDate])
-  @@index([documentType, documentNumber])
-  @@index([visitDate, status])
+  @@index([clubId, documentHash])
+  @@index([clubId, visitDate, status])
 }
 
 /// Guest document barred from entry. Lifting keeps the row (liftedAt) for accountability.
 model GuestBlock {
   id             String            @id @default(cuid())
+  clubId         String            @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   documentType   GuestDocumentType
-  documentNumber String
+  /// Legacy plaintext (see GuestPass.documentNumber).
+  documentNumber String?
+  documentCipher String?
+  documentHash   String?
+  anonymizedAt   DateTime?         @db.Timestamptz(3)
   reason         String?
   blockedById    String
   createdAt      DateTime          @default(now()) @db.Timestamptz(3)
   liftedAt       DateTime?         @db.Timestamptz(3)
   liftedById     String?
 
+  club      Club  @relation(fields: [clubId], references: [id], onDelete: Restrict)
   blockedBy User  @relation("GuestBlockBlockedBy", fields: [blockedById], references: [id], onDelete: Restrict)
   liftedBy  User? @relation("GuestBlockLiftedBy", fields: [liftedById], references: [id], onDelete: SetNull)
 
-  @@index([documentType, documentNumber])
+  @@index([clubId, documentHash])
 }
 
 /// Every gate scan, accepted or not.
 model GateScanLog {
   id          String         @id @default(cuid())
+  clubId      String         @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   /// Null when the token could not be matched to a pass.
   guestPassId String?
   scannedById String
@@ -683,6 +863,7 @@ model GateScanLog {
   result      GateScanResult
   scannedAt   DateTime       @default(now()) @db.Timestamptz(3)
 
+  club      Club       @relation(fields: [clubId], references: [id], onDelete: Restrict)
   guestPass GuestPass? @relation(fields: [guestPassId], references: [id], onDelete: SetNull)
   scannedBy User       @relation(fields: [scannedById], references: [id], onDelete: Restrict)
 
@@ -695,12 +876,14 @@ model GateScanLog {
 /// In-app notification. `payload` carries the data; the web app renders the pt-BR text.
 model Notification {
   id        String           @id @default(cuid())
+  clubId    String           @default(dbgenerated("current_setting('app.club_id'::text, true)"))
   userId    String
   type      NotificationType
   payload   Json             @default("{}")
   readAt    DateTime?        @db.Timestamptz(3)
   createdAt DateTime         @default(now()) @db.Timestamptz(3)
 
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])

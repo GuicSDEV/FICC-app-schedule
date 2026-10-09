@@ -2,8 +2,10 @@
 
 import type { BookingDetail } from "@ficc/shared";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 import { duration, ease, spring, transitions } from "@/lib/motion";
+import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 import { TicketCard } from "./ticket-card";
@@ -59,6 +61,8 @@ export function DrawnCheck({
 
 /** Second step of the booking sheet: drawn check, headline and the ticket sliding up. */
 export function BookingConfirmed({ booking }: { booking: BookingDetail }) {
+  const t = useTranslations("booking");
+  const format = useFormat();
   const others = booking.players.filter((player) => player.status === "PENDING").length;
   return (
     <div className="flex flex-col items-center gap-5 pt-2 pb-2 text-center">
@@ -69,11 +73,11 @@ export function BookingConfirmed({ booking }: { booking: BookingDetail }) {
         transition={{ ...transitions.base, delay: duration.slow }}
         className="space-y-1"
       >
-        <p className="font-display text-headline font-semibold">Quadra reservada!</p>
+        <p className="font-display text-headline font-semibold">{t("confirmedTitle")}</p>
         <p className="text-small text-muted-foreground">
           {others > 0
-            ? `Enviamos o convite. ${others === 1 ? "O outro jogador tem" : `Os ${others} jogadores têm`} até 2 h para confirmar.`
-            : "Todos confirmados. Bom jogo!"}
+            ? t("confirmedWaiting", { count: others, deadline: format.time(booking.expiresAt) })
+            : t("confirmedAll")}
         </p>
       </motion.div>
       <motion.div

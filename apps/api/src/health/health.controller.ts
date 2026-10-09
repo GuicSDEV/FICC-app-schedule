@@ -1,19 +1,20 @@
 import { Controller, Get } from "@nestjs/common";
-import { CLUB_TIMEZONE } from "@ficc/shared";
 
-import { PrismaService } from "../prisma/prisma.service";
+import { Public } from "../common/auth.decorators";
+import { PrismaBaseService } from "../prisma/prisma.service";
 
 export interface HealthResponse {
   status: "ok";
   service: "api";
   database: "up" | "down";
-  timezone: string;
   time: string;
 }
 
+/** Liveness probe: public and outside any club (it must answer even when the database is down). */
+@Public()
 @Controller("health")
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaBaseService) {}
 
   @Get()
   async check(): Promise<HealthResponse> {
@@ -21,7 +22,6 @@ export class HealthController {
       status: "ok",
       service: "api",
       database: (await this.isDatabaseUp()) ? "up" : "down",
-      timezone: CLUB_TIMEZONE,
       time: new Date().toISOString(),
     };
   }

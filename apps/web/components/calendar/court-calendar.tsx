@@ -8,6 +8,9 @@ import {
   type Surface,
 } from "@ficc/shared";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
+
+import { useClub } from "@/components/providers/club-provider";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlotChip } from "@/components/ui/slot-chip";
@@ -39,6 +42,8 @@ export function CourtCalendar({
   celebrate: string | null;
   onCell: (cell: ScheduleCell) => void;
 }) {
+  const common = useTranslations("common");
+  const timeZone = useClub()?.timezone;
   const courts = day.courts.filter((court) => filter === "ALL" || court.surface === filter);
   const cells = new Map(day.cells.map((cell) => [cellKey(cell), cell]));
 
@@ -73,7 +78,10 @@ export function CourtCalendar({
       </div>
 
       {day.slots.map((slot) => {
-        const live = now >= slotStartsAt(day.date, slot) && now < slotEndsAt(day.date, slot);
+        const live =
+          timeZone !== undefined &&
+          now >= slotStartsAt(day.date, slot, timeZone) &&
+          now < slotEndsAt(day.date, slot, timeZone);
         return (
           <div
             key={slot.id}
@@ -86,7 +94,7 @@ export function CourtCalendar({
               {live ? (
                 <span className="flex items-center gap-1 text-caption font-medium text-accent-ink">
                   <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-primary" />{" "}
-                  agora
+                  {common("now")}
                 </span>
               ) : (
                 <span className="num text-caption text-muted-foreground">{slot.endTime}</span>
@@ -178,18 +186,19 @@ export function CourtCalendarSkeleton({
 }
 
 export function CalendarLegend() {
+  const t = useTranslations("calendar.legend");
   const items = [
-    { label: "Livre", className: "border border-dashed border-hartru/70" },
-    { label: "Aula", className: "bg-lesson-soft border border-lesson/40" },
-    { label: "Reservada", className: "bg-hartru-soft border border-hartru/40" },
-    { label: "Interditada", className: "striped border border-warning/40" },
-  ];
+    { key: "free", className: "border border-dashed border-hartru/70" },
+    { key: "lesson", className: "bg-lesson-soft border border-lesson/40" },
+    { key: "booking", className: "bg-hartru-soft border border-hartru/40" },
+    { key: "frozen", className: "striped border border-warning/40" },
+  ] as const;
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-2 text-caption text-muted-foreground">
       {items.map((item) => (
-        <li key={item.label} className="flex items-center gap-1.5">
+        <li key={item.key} className="flex items-center gap-1.5">
           <span aria-hidden className={cn("size-3.5 rounded-sm", item.className)} />
-          {item.label}
+          {t(item.key)}
         </li>
       ))}
       <li className="flex items-center gap-1.5">
@@ -197,7 +206,7 @@ export function CalendarLegend() {
           aria-hidden
           className="size-3.5 rounded-sm ring-2 ring-ball ring-offset-1 ring-offset-background"
         />
-        Sua reserva
+        {t("mine")}
       </li>
     </ul>
   );

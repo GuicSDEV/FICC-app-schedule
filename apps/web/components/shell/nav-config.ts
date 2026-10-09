@@ -14,9 +14,25 @@ import {
   Users,
 } from "lucide-react";
 
+/** Keys of the nav labels in the messages (nav.items.*). */
+export type NavLabel =
+  | "home"
+  | "courts"
+  | "ranking"
+  | "matches"
+  | "guests"
+  | "profile"
+  | "agenda"
+  | "freezes"
+  | "coaches"
+  | "lessons"
+  | "disputes"
+  | "members"
+  | "gate";
+
 export interface NavItem {
   href: string;
-  label: string;
+  label: NavLabel;
   icon: LucideIcon;
   /** Match exactly (area roots) instead of by prefix. */
   exact?: boolean;
@@ -25,36 +41,36 @@ export interface NavItem {
 /** Member bottom bar: two tabs, the central "+", two tabs. Profile lives in the header avatar. */
 export const MEMBER_TABS: { left: NavItem[]; right: NavItem[] } = {
   left: [
-    { href: "/app", label: "Início", icon: Home, exact: true },
-    { href: "/app/courts", label: "Quadras", icon: CalendarDays },
+    { href: "/app", label: "home", icon: Home, exact: true },
+    { href: "/app/courts", label: "courts", icon: CalendarDays },
   ],
   right: [
-    { href: "/app/ranking", label: "Ranking", icon: Trophy },
-    { href: "/app/matches", label: "Partidas", icon: Swords },
+    { href: "/app/ranking", label: "ranking", icon: Trophy },
+    { href: "/app/matches", label: "matches", icon: Swords },
   ],
 };
 
 export const MEMBER_SIDEBAR: NavItem[] = [
   ...MEMBER_TABS.left,
   ...MEMBER_TABS.right,
-  { href: "/app/guests", label: "Convidados", icon: UserCheck },
-  { href: "/app/profile", label: "Perfil", icon: User },
+  { href: "/app/guests", label: "guests", icon: UserCheck },
+  { href: "/app/profile", label: "profile", icon: User },
 ];
 
 export const COACH_NAV: NavItem[] = [
-  { href: "/coach", label: "Agenda", icon: CalendarClock, exact: true },
-  { href: "/coach/courts", label: "Quadras", icon: CalendarDays },
-  { href: "/coach/profile", label: "Perfil", icon: User },
+  { href: "/coach", label: "agenda", icon: CalendarClock, exact: true },
+  { href: "/coach/courts", label: "courts", icon: CalendarDays },
+  { href: "/coach/profile", label: "profile", icon: User },
 ];
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "Interdições", icon: Ban, exact: true },
-  { href: "/admin/coaches", label: "Professores", icon: GraduationCap },
-  { href: "/admin/lessons", label: "Aulas", icon: CalendarClock },
-  { href: "/admin/disputes", label: "Disputas", icon: Scale },
-  { href: "/admin/guests", label: "Convidados", icon: UserCheck },
-  { href: "/admin/members", label: "Sócios", icon: Users },
-  { href: "/gate", label: "Portaria", icon: ScanLine },
+  { href: "/admin", label: "freezes", icon: Ban, exact: true },
+  { href: "/admin/coaches", label: "coaches", icon: GraduationCap },
+  { href: "/admin/lessons", label: "lessons", icon: CalendarClock },
+  { href: "/admin/disputes", label: "disputes", icon: Scale },
+  { href: "/admin/guests", label: "guests", icon: UserCheck },
+  { href: "/admin/members", label: "members", icon: Users },
+  { href: "/gate", label: "gate", icon: ScanLine },
 ];
 
 export function isActive(pathname: string, item: NavItem): boolean {

@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
-import { dayParts } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { spring, tap } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,9 @@ export function DayStrip({
   onChange: (date: string) => void;
   layoutGroup?: string;
 }) {
+  const t = useTranslations("calendar");
+  const common = useTranslations("common");
+  const format = useFormat();
   const listRef = useRef<HTMLDivElement>(null);
 
   // Keep the selected day in view (e.g. when it is changed from elsewhere).
@@ -33,11 +37,11 @@ export function DayStrip({
     <div
       ref={listRef}
       role="radiogroup"
-      aria-label="Dia"
+      aria-label={t("dayLabel")}
       className="-mx-4 no-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-1.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:scroll-px-8 md:px-8"
     >
       {days.map((date) => {
-        const parts = dayParts(date);
+        const parts = format.dayParts(date);
         const selected = date === value;
         const isToday = date === today;
         return (
@@ -46,7 +50,7 @@ export function DayStrip({
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-label={`${isToday ? "Hoje, " : ""}${parts.weekday} ${parts.day} de ${parts.month}`}
+            aria-label={t(isToday ? "todayOption" : "dayOption", parts)}
             data-date={date}
             whileTap={tap}
             onClick={() => onChange(date)}
@@ -68,7 +72,7 @@ export function DayStrip({
                 selected ? "opacity-80" : "text-muted-foreground",
               )}
             >
-              {isToday ? "Hoje" : parts.weekday}
+              {isToday ? common("today") : parts.weekday}
             </span>
             <span className="relative num font-display text-title leading-tight font-semibold">
               {parts.day}

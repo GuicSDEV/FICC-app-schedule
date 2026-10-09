@@ -3,13 +3,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { haptic, popVariants, spring, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { patchScheduleCells } from "@/lib/schedule-cache";
+import { useErrorMessage } from "@/lib/use-error-message";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,6 +30,8 @@ export function FavoriteToggle({
   /** Icon-only button (sheet headers). */
   compact?: boolean;
 }) {
+  const t = useTranslations("favorite");
+  const errorMessage = useErrorMessage();
   const client = useQueryClient();
   const [on, setOn] = useState(favorite);
   useEffect(() => setOn(favorite), [favorite]);
@@ -48,20 +52,18 @@ export function FavoriteToggle({
     onError: (failure, next, rollback) => {
       rollback?.();
       setOn(!next);
-      toast.error(
-        failure instanceof ApiError ? failure.message : "Não foi possível salvar o favorito.",
-      );
+      toast.error(errorMessage(failure, t("failed")));
     },
     onSuccess: (_result, next) => {
       haptic();
-      toast(next ? "Horário favorito" : "Favorito removido", {
-        description: next ? "Avisamos quando ele ficar livre." : undefined,
+      toast(next ? t("added") : t("removed"), {
+        description: next ? t("addedDescription") : undefined,
       });
     },
     onSettled: () => void client.invalidateQueries({ queryKey: queryKeys.favorites }),
   });
 
-  const label = on ? "Remover dos favoritos" : "Avisar quando este horário abrir";
+  const label = on ? t("remove") : t("add");
   const icon = (
     <span className="relative inline-flex size-5 items-center justify-center">
       <Star
@@ -100,7 +102,7 @@ export function FavoriteToggle({
       )}
     >
       {icon}
-      {compact ? null : on ? "Favorito" : "Avisar quando abrir"}
+      {compact ? null : on ? t("on") : t("addShort")}
     </motion.button>
   );
 }

@@ -3,6 +3,7 @@
 import { LogOut, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { useLogout } from "@/components/providers/session-provider";
@@ -19,6 +20,7 @@ import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
 function SidebarFooter({ children }: { children?: ReactNode }) {
+  const t = useTranslations("shell");
   const logout = useLogout();
   return (
     <div className="flex flex-col gap-2">
@@ -28,7 +30,7 @@ function SidebarFooter({ children }: { children?: ReactNode }) {
         <button
           type="button"
           onClick={() => void logout()}
-          aria-label="Sair"
+          aria-label={t("signOut")}
           className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground"
         >
           <LogOut className="size-5" />
@@ -42,6 +44,7 @@ function SidebarFooter({ children }: { children?: ReactNode }) {
 const MOBILE_BOTTOM = "pb-[calc(env(safe-area-inset-bottom)+6.5rem)] md:pb-12";
 
 export function MemberShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("shell");
   const [actionsOpen, setActionsOpen] = useState(false);
   return (
     <AreaGuard area="/app">
@@ -49,11 +52,11 @@ export function MemberShell({ children }: { children: ReactNode }) {
         <Sidebar
           group="member"
           items={MEMBER_SIDEBAR}
-          header={<Brand subtitle="Área do sócio" />}
+          header={<Brand subtitle={t("memberArea")} />}
           footer={
             <SidebarFooter>
               <Button onClick={() => setActionsOpen(true)} block className="justify-start">
-                <Plus /> Nova ação
+                <Plus /> {t("newAction")}
               </Button>
             </SidebarFooter>
           }
@@ -71,7 +74,7 @@ export function MemberShell({ children }: { children: ReactNode }) {
           left={MEMBER_TABS.left}
           right={MEMBER_TABS.right}
           onAction={() => setActionsOpen(true)}
-          actionLabel="Reservar, lançar resultado ou convidar"
+          actionLabel={t("actionsLabel")}
         />
         <ActionSheet open={actionsOpen} onOpenChange={setActionsOpen} />
       </div>
@@ -80,13 +83,14 @@ export function MemberShell({ children }: { children: ReactNode }) {
 }
 
 export function CoachShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("shell");
   return (
     <AreaGuard area="/coach">
       <div data-area="coach" className="flex min-h-dvh">
         <Sidebar
           group="coach"
           items={COACH_NAV}
-          header={<Brand subtitle="Área do professor" />}
+          header={<Brand subtitle={t("coachArea")} />}
           footer={<SidebarFooter />}
         />
         <main className={cn("min-w-0 flex-1 px-4 md:px-8", MOBILE_BOTTOM)}>
@@ -105,6 +109,8 @@ export function CoachShell({ children }: { children: ReactNode }) {
 
 /** Admin: sidebar on wide screens, a scrollable tab row on phones. */
 export function AdminShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("shell");
+  const nav = useTranslations("nav");
   const pathname = usePathname();
   return (
     <AreaGuard area="/admin">
@@ -112,12 +118,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <Sidebar
           group="admin"
           items={ADMIN_NAV}
-          header={<Brand subtitle="Administração" />}
+          header={<Brand subtitle={t("adminArea")} />}
           footer={<SidebarFooter />}
         />
         <main className="min-w-0 flex-1 px-4 pb-12 md:px-8">
           <nav
-            aria-label="Seções"
+            aria-label={nav("sections")}
             className="sticky top-0 z-40 -mx-4 no-scrollbar flex gap-2 overflow-x-auto border-b border-border glass px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden"
           >
             {ADMIN_NAV.map((item) => {
@@ -135,7 +141,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <item.icon className="size-4" />
-                  {item.label}
+                  {nav(`items.${item.label}`)}
                 </Link>
               );
             })}
@@ -149,19 +155,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
 /** Gate: full-screen tool with a minimal header. */
 export function GateShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("shell");
   const logout = useLogout();
   return (
     <AreaGuard area="/gate">
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-border glass pt-safe">
           <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
-            <Brand subtitle="Portaria" />
+            <Brand subtitle={t("gateArea")} />
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <button
                 type="button"
                 onClick={() => void logout()}
-                aria-label="Sair"
+                aria-label={t("signOut")}
                 className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-2"
               >
                 <LogOut className="size-5" />

@@ -6,15 +6,18 @@ import { Eye, EyeOff } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { haptic, sheetVariants, shakeAnimation } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { AREA_BY_ROLE, AREA_ROLES } from "@/lib/roles";
+import { useErrorMessage } from "@/lib/use-error-message";
+import { useIssueMessage } from "@/lib/use-issue-message";
 
 type Kind = "member" | "staff";
 
@@ -26,6 +29,9 @@ function destination(role: Role, next: string | null): string {
 }
 
 export function LoginForm() {
+  const t = useTranslations("auth.login");
+  const issueMessage = useIssueMessage();
+  const errorMessage = useErrorMessage();
   const router = useRouter();
   const params = useSearchParams();
   const client = useQueryClient();
@@ -45,7 +51,7 @@ export function LoginForm() {
       kind === "member" ? { kind, membershipId, password } : { kind, email, password },
     );
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Confira os dados");
+      setError(issueMessage(parsed.error.issues[0]));
       void animate(scope.current, shakeAnimation);
       return;
     }
@@ -56,7 +62,7 @@ export function LoginForm() {
       client.setQueryData(queryKeys.me, user);
       router.replace(destination(user.role, params.get("next")));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Não foi possível entrar.");
+      setError(errorMessage(caught, t("failed")));
       void animate(scope.current, shakeAnimation);
       setPending(false);
     }
@@ -71,13 +77,11 @@ export function LoginForm() {
     >
       <div className="mb-8 space-y-3">
         <h1 className="font-display text-display leading-[1.05] font-bold sm:text-hero">
-          A quadra
+          {t("headline")}
           <br />
-          <span className="text-accent-ink">te espera.</span>
+          <span className="text-accent-ink">{t("headlineAccent")}</span>
         </h1>
-        <p className="text-body text-muted-foreground">
-          Reserve, jogue e suba no ranking do clube.
-        </p>
+        <p className="text-body text-muted-foreground">{t("lead")}</p>
       </div>
 
       <form
@@ -87,25 +91,25 @@ export function LoginForm() {
         className="space-y-5 rounded-2xl border border-border bg-surface/80 p-5 shadow-raised backdrop-blur-sm"
       >
         <SegmentedControl
-          label="Tipo de acesso"
+          label={t("kindLabel")}
           value={kind}
           onChange={(value) => {
             setKind(value);
             setError(null);
           }}
           options={[
-            { value: "member", label: "Sócio" },
-            { value: "staff", label: "Equipe" },
+            { value: "member", label: t("member") },
+            { value: "staff", label: t("staff") },
           ]}
         />
 
         {kind === "member" ? (
-          <Field label="Matrícula" htmlFor="membershipId">
+          <Field label={t("membershipId")} htmlFor="membershipId">
             <Input
               id="membershipId"
               inputMode="numeric"
               autoComplete="username"
-              placeholder="000.000"
+              placeholder={t("membershipPlaceholder")}
               value={membershipId}
               onChange={(event) =>
                 setMembershipId(formatMembershipId(event.target.value).slice(0, 13))
@@ -116,13 +120,13 @@ export function LoginForm() {
             />
           </Field>
         ) : (
-          <Field label="E-mail" htmlFor="email">
+          <Field label={t("email")} htmlFor="email">
             <Input
               id="email"
               type="email"
               inputMode="email"
               autoComplete="username"
-              placeholder="voce@ficc.test"
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               aria-invalid={Boolean(error) || undefined}
@@ -130,7 +134,7 @@ export function LoginForm() {
           </Field>
         )}
 
-        <Field label="Senha" htmlFor="password" error={error ?? undefined}>
+        <Field label={t("password")} htmlFor="password" error={error ?? undefined}>
           <div className="relative">
             <Input
               id="password"
@@ -144,7 +148,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
-              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
               className="absolute top-0.5 right-0.5 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
             >
               {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
@@ -153,18 +157,18 @@ export function LoginForm() {
         </Field>
 
         <Button type="submit" size="lg" block loading={pending}>
-          Entrar
+          {t("submit")}
         </Button>
       </form>
 
       {kind === "member" ? (
         <p className="mt-5 text-center text-small text-muted-foreground">
-          Primeiro acesso?{" "}
+          {t("firstAccess")}{" "}
           <Link
             href="/register"
             className="inline-flex min-h-11 items-center font-semibold text-accent-ink underline-offset-4 hover:underline"
           >
-            Criar conta com a matrícula
+            {t("createAccount")}
           </Link>
         </p>
       ) : null}

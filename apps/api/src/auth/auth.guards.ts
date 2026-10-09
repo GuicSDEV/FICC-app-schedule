@@ -6,6 +6,7 @@ import type { Request } from "express";
 import { IS_PUBLIC_KEY, ROLES_KEY, type RequestUser } from "../common/auth.decorators";
 import { forbidden, unauthorized } from "../common/domain.exception";
 import { PrismaService } from "../prisma/prisma.service";
+import { tenant } from "../tenancy/tenant-context";
 import { ACCESS_COOKIE } from "./cookies";
 import { TokensService } from "./tokens.service";
 
@@ -39,13 +40,16 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request & { user?: RequestUser }>();
     const token = accessTokenFrom(request);
     const payload = token ? this.tokens.verifyAccess(token) : null;
-    if (!payload) throw unauthorized("UNAUTHENTICATED", "Faça login para continuar.");
+    // A token only works for the club that issued it (the lookup below is club-scoped too).
+    if (!payload || payload.cid !== tenant().clubId) {
+      throw unauthorized("UNAUTHENTICATED", "api.loginRequired");
+    }
 
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { id: payload.sub },
       select: { id: true, role: true, name: true, isActive: true, coach: { select: { id: true } } },
     });
-    if (!user?.isActive) throw unauthorized("UNAUTHENTICATED", "Faça login para continuar.");
+    if (!user?.isActive) throw unauthorized("UNAUTHENTICATED", "api.loginRequired");
 
     request.user = {
       id: user.id,
@@ -70,7 +74,7 @@ export class RolesGuard implements CanActivate {
     if (!roles || roles.length === 0) return true;
     const user = context.switchToHttp().getRequest<{ user?: RequestUser }>().user;
     if (!user || !roles.includes(user.role)) {
-      throw forbidden("FORBIDDEN", "Você não tem permissão para isso.");
+      throw forbidden("FORBIDDEN", "api.forbidden");
     }
     return true;
   }

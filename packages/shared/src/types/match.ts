@@ -1,5 +1,13 @@
 import type { IsoDate } from "../dates";
-import type { MatchConfirmation, MatchStatus, MatchType, Surface, TeamSide } from "../enums";
+import type {
+  MatchConfirmation,
+  MatchFormat,
+  MatchStatus,
+  MatchType,
+  Sport,
+  Surface,
+  TeamSide,
+} from "../enums";
 import type { SetScore } from "../score";
 import type { CourtSummary, IsoDateTime, PlayerSummary } from "./common";
 
@@ -14,7 +22,13 @@ export interface MatchPlayerInfo {
 
 export interface MatchDetail {
   id: string;
+  /** Singles or doubles. */
+  format: MatchFormat;
+  /** What it counts for (only RANKED matches move the Elo ladder). */
   type: MatchType;
+  sport: Sport;
+  /** Set for TOURNAMENT matches (Phase 9.5). */
+  tournamentId: string | null;
   status: MatchStatus;
   playedOn: IsoDate;
   surface: Surface;
@@ -68,7 +82,9 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardResponse {
+  /** Category key, or null for everyone. */
   category: string | null;
+  sport: Sport;
   entries: LeaderboardEntry[];
   updatedAt: IsoDateTime;
 }
@@ -103,7 +119,7 @@ export interface H2HSideStats {
 export interface H2HMeeting {
   matchId: string;
   playedOn: IsoDate;
-  type: MatchType;
+  format: MatchFormat;
   surface: Surface;
   /** Score from player A's point of view. */
   score: string;

@@ -1,19 +1,62 @@
 // Club data for the development seed. Courts, slots, coaches and the lesson template are the
 // real club setup from docs/SPEC.md; members and their skill levels are fictional.
 
-import type { DefaultSlotStartTime } from "@ficc/shared";
+import { type ClubSettings, DEFAULT_CLUB_SETTINGS, type SlotDefinition } from "@ficc/shared";
 
-import { Category, Role, Surface, Weekday } from "../../src";
+import { Role, Sport, Surface, Weekday } from "../../src";
+
+/** The club itself. Its rules are FICC's (the platform defaults were taken from them). */
+export const FICC_CLUB = {
+  slug: "ficc",
+  name: "FICC",
+  timezone: "America/Sao_Paulo",
+  locale: "pt-BR",
+  primaryColor: "#D7F24A",
+  accentColor: "#8B7CF6",
+} as const;
+
+export const FICC_SETTINGS: ClubSettings = { ...DEFAULT_CLUB_SETTINGS };
+
+/** FICC's competitive categories. */
+export const FICC_CATEGORIES = [
+  { key: "CLASS_A", name: "Classe A", sortOrder: 1 },
+  { key: "CLASS_B", name: "Classe B", sortOrder: 2 },
+  { key: "CLASS_C", name: "Classe C", sortOrder: 3 },
+  { key: "WOMENS", name: "Feminino", sortOrder: 4 },
+  { key: "SENIORS", name: "Sênior", sortOrder: 5 },
+] as const;
+export type CategoryKey = (typeof FICC_CATEGORIES)[number]["key"];
+
+/** Daily start times, club local time. Slots last 75 minutes; the grid is not hourly. */
+export const FICC_SLOT_START_TIMES = [
+  "08:30",
+  "10:00",
+  "14:45",
+  "16:00",
+  "17:15",
+  "18:30",
+  "19:45",
+  "21:00",
+] as const;
+export type SlotStartTime = (typeof FICC_SLOT_START_TIMES)[number];
+
+export const FICC_SLOT_GRID: readonly SlotDefinition[] = FICC_SLOT_START_TIMES.map(
+  (startTime, index) => ({
+    startTime,
+    durationMinutes: FICC_SETTINGS.defaultSlotDurationMinutes,
+    sortOrder: index + 1,
+  }),
+);
 
 export type CourtName = "Q1" | "Q2" | "Q3" | "Q4" | "Q5" | "Q6";
 
-export const COURTS: readonly { name: CourtName; surface: Surface }[] = [
-  { name: "Q1", surface: Surface.HARTRU },
-  { name: "Q2", surface: Surface.HARTRU },
-  { name: "Q3", surface: Surface.HARTRU },
-  { name: "Q4", surface: Surface.HARTRU },
-  { name: "Q5", surface: Surface.SAIBRO },
-  { name: "Q6", surface: Surface.SAIBRO },
+export const COURTS: readonly { name: CourtName; surface: Surface; sport: Sport }[] = [
+  { name: "Q1", surface: Surface.HARTRU, sport: Sport.TENNIS },
+  { name: "Q2", surface: Surface.HARTRU, sport: Sport.TENNIS },
+  { name: "Q3", surface: Surface.HARTRU, sport: Sport.TENNIS },
+  { name: "Q4", surface: Surface.HARTRU, sport: Sport.TENNIS },
+  { name: "Q5", surface: Surface.SAIBRO, sport: Sport.TENNIS },
+  { name: "Q6", surface: Surface.SAIBRO, sport: Sport.TENNIS },
 ];
 
 export const STAFF: readonly { role: Role; name: string; email: string }[] = [
@@ -46,7 +89,7 @@ export const COACHES: Record<CoachKey, SeedCoach> = {
  * Default weekly lesson template, Monday to Friday (docs/SPEC.md, "Current typical lesson
  * schedule"). Each entry becomes one LessonSeries; missing courts are free.
  */
-export const LESSON_TEMPLATE: Record<DefaultSlotStartTime, Partial<Record<CourtName, CoachKey>>> = {
+export const LESSON_TEMPLATE: Record<SlotStartTime, Partial<Record<CourtName, CoachKey>>> = {
   "08:30": { Q1: "club", Q5: "alan", Q6: "phelipe" },
   "10:00": { Q1: "club", Q5: "alan", Q6: "phelipe" },
   "14:45": { Q1: "club", Q5: "alan", Q6: "club" },
@@ -65,18 +108,22 @@ export const LESSON_WEEKDAYS: readonly Weekday[] = [
   Weekday.FRI,
 ];
 
-/** Lesson occurrences are generated for this many weeks ahead (the rolling window). */
-export const LESSON_WINDOW_WEEKS = 8;
+/** Lesson occurrences are generated for the club's rolling window (8 weeks for FICC). */
+export const LESSON_WINDOW_DAYS = FICC_SETTINGS.lessonWindowDays;
 
 export interface SeedMember {
   membershipId: string;
   name: string;
-  categories: readonly Category[];
+  categories: readonly CategoryKey[];
   /** Hidden playing strength (0–100) used only to simulate match results. */
   skill: number;
 }
 
-const { CLASS_A, CLASS_B, CLASS_C, WOMENS, SENIORS } = Category;
+const CLASS_A: CategoryKey = "CLASS_A";
+const CLASS_B: CategoryKey = "CLASS_B";
+const CLASS_C: CategoryKey = "CLASS_C";
+const WOMENS: CategoryKey = "WOMENS";
+const SENIORS: CategoryKey = "SENIORS";
 
 export const MEMBERS: readonly SeedMember[] = [
   // Class A

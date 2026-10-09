@@ -1,10 +1,14 @@
+import type { ClubInfo } from "@ficc/shared";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers/providers";
+import { API_PREFIX, API_URL } from "@/lib/api";
 
 import "./globals.css";
 
@@ -16,13 +20,32 @@ const bricolage = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: { default: "FICC Tênis", template: "%s · FICC Tênis" },
-  description: "Reservas de quadra, aulas e ranking Elo do clube.",
-  applicationName: "FICC Tênis",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FICC Tênis" },
-  formatDetection: { telephone: false },
-};
+/** Pages re-read the club's name (titles) at most every 5 minutes. */
+export const revalidate = 300;
+
+/** The club's name for titles; the build does not need the API (pages revalidate later). */
+async function clubName(): Promise<string | null> {
+  if (process.env.NEXT_PHASE === "phase-production-build") return null;
+  try {
+    const response = await fetch(`${API_URL}${API_PREFIX}/club`, { next: { revalidate: 300 } });
+    return response.ok ? ((await response.json()) as ClubInfo).name : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("app");
+  const club = await clubName();
+  const title = club ? t("title", { club }) : t("brandFallback");
+  return {
+    title: { default: title, template: `%s · ${title}` },
+    description: t("description"),
+    applicationName: title,
+    appleWebApp: { capable: true, statusBarStyle: "black-translucent", title },
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -34,20 +57,23 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
     <html
-      lang="pt-BR"
+      lang={locale}
       suppressHydrationWarning
       className={`${GeistSans.variable} ${GeistMono.variable} ${bricolage.variable}`}
     >
       <body>
-        <Providers>
-          {/* vaul scales this wrapper behind open sheets. */}
-          <div {...{ "vaul-drawer-wrapper": "" }} className="min-h-dvh bg-background">
-            {children}
-          </div>
-        </Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>
+            {/* vaul scales this wrapper behind open sheets. */}
+            <div {...{ "vaul-drawer-wrapper": "" }} className="min-h-dvh bg-background">
+              {children}
+            </div>
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

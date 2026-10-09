@@ -5,22 +5,36 @@ and what still needs a human to check.
 
 ## Phase status
 
-| Phase | Title                                 | Status      | Commit          |
-| ----- | ------------------------------------- | ----------- | --------------- |
-| 0     | Monorepo setup                        | Done        | `9128b7f`       |
-| 1     | Database                              | Done        | `9501ffb`       |
-| 2     | Shared package                        | Done        | `feat(phase-2)` |
-| 3     | API core: auth, schedule, bookings    | Done        | `feat(phase-3)` |
-| 4     | API: coaches, lessons, maintenance    | Done        | `feat(phase-4)` |
-| 5     | API: matches, Elo, ranking, guests    | Done        | `feat(phase-5)` |
-| 6     | Frontend foundation (design + motion) | Done        | `feat(phase-6)` |
-| 7     | Member: dashboard, calendar, booking  | Done        | `feat(phase-7)` |
-| 7.5   | Multi-club-ready foundation           | Not started |                 |
-| 8     | Member: matches, ranking, H2H, guests | Not started |                 |
-| 9     | Coach, gate, admin screens            | Not started |                 |
-| 9.5   | Tournaments & circuits                | Not started |                 |
-| 10    | PWA, polish, QA                       | Not started |                 |
-| 11    | SaaS extensibility & feature workflow | Not started |                 |
+| Phase | Title                                 | Status                              | Commit            |
+| ----- | ------------------------------------- | ----------------------------------- | ----------------- |
+| 0     | Monorepo setup                        | Done                                | `9128b7f`         |
+| 1     | Database                              | Done                                | `9501ffb`         |
+| 2     | Shared package                        | Done                                | `feat(phase-2)`   |
+| 3     | API core: auth, schedule, bookings    | Done                                | `feat(phase-3)`   |
+| 4     | API: coaches, lessons, maintenance    | Done                                | `feat(phase-4)`   |
+| 5     | API: matches, Elo, ranking, guests    | Done                                | `feat(phase-5)`   |
+| 6     | Frontend foundation (design + motion) | Done                                | `feat(phase-6)`   |
+| 7     | Member: dashboard, calendar, booking  | Done                                | `feat(phase-7)`   |
+| 7.5   | Multi-club-ready foundation           | Done                                | `feat(phase-7.5)` |
+| 8     | Member: matches, ranking, H2H, guests | Not started                         |                   |
+| 9     | Coach, gate, admin screens            | Not started                         |                   |
+| 9.5   | Tournaments & circuits                | Not started                         |                   |
+| 9.8   | FICC operations adjustments           | Not started                         |                   |
+| 10    | PWA, polish, QA                       | Not started                         |                   |
+| 11    | SaaS extensibility & feature workflow | On hold — waiting for club approval |                   |
+| 12    | Native apps (App Store & Google Play) | On hold — waiting for club approval |                   |
+
+Execution order: 7.5 → 8 → 9 → 9.5 → 9.8 → 10. Work stops after Phase 10 until the club approves
+Phases 11 and 12.
+
+## Security
+
+- **`.env` is git-ignored and has never been committed** (checked with
+  `git log --all --full-history -- .env`, which returns nothing). No secrets need rotating.
+  Only `.env.example` is in the repo, and it holds placeholders and local-only development
+  values (the docker-compose database password `ficc`, `change-me…` secrets).
+- Production must set its own `JWT_ACCESS_SECRET`, `GUEST_PASS_SECRET` and
+  `DATA_ENCRYPTION_KEY`; the API refuses to start in production without them.
 
 ## Decisions
 
@@ -122,10 +136,10 @@ and what still needs a human to check.
 - **`/dev/components`** (living component showcase) is hidden in production builds unless
   `NEXT_PUBLIC_SHOW_DEV_PAGES=true`.
 
-- **Phases 7.5, 9.5 and 11 were added by the product owner mid-run** (multi-club foundation,
-  tournaments, SaaS extensibility). Order: 7 → 7.5 → 8 → 9 → 9.5 → 10 → 11. Phase 7 was finished
+- **Phases 7.5, 9.5, 9.8, 11 and 12 were added by the product owner mid-run** (multi-club foundation,
+  tournaments, SaaS extensibility). Order now: 7.5 → 8 → 9 → 9.5 → 9.8 → 10; 11 and 12 are on hold. Phase 7 was finished
   first because it was in progress; Phase 7.5 then moves its strings to next-intl too.
-- **Booking window: 14 days** (`BOOKING_WINDOW_DAYS` in shared). The spec gives none; the calendar
+- **Booking window: 14 days** (`bookingWindowDays` in `ClubSettings` since Phase 7.5). The spec gives none; the calendar
   day strip shows the same window and the API refuses later dates (`BEYOND_BOOKING_WINDOW`).
 - **Coach profile for members:** `GET /coaches/:id` (active coaches only) returns courts, lessons in
   the next 7 days and the next 6 lessons that have not started. The lesson chip opens it.
@@ -140,6 +154,47 @@ and what still needs a human to check.
 - **Narrow slot chips** (6 courts at 390 px) stack avatar over court name; wider chips (surface
   filter, desktop grid) show coach names and up to 4 player avatars.
 
+- **Tenancy (Phase 7.5):** every club-owned model has `clubId`. The API's `PrismaService` is the
+  Prisma client wrapped in a tenant extension that adds `clubId` to every `where` and stamps it on
+  every create (nested creates too), reading the club from an `AsyncLocalStorage` context set by a
+  middleware (one club per deployment: `DEFAULT_CLUB_SLUG`). Jobs and sockets set the context
+  explicitly. `PrismaBaseService` (unscoped) is only used for clubs, health and job fan-out. The
+  JWT carries the club id and the guard rejects tokens from another club.
+- **`clubId` has a database default of `current_setting('app.club_id', true)`**, which is never set:
+  it only makes Prisma type the column as optional (so callers do not pass it); an unscoped insert
+  still fails on NOT NULL instead of silently landing in some club.
+- **Club rules live in `ClubSettings.values` (JSON)** validated by a Zod schema merged over defaults
+  (`clubSettingsSchema` in shared): booking window, active-booking limit, confirmation window,
+  auto-approve hours, report window, Elo K and initial rating, trend days, lesson generation
+  window, slot-opened notice window, slot duration, guest-pass horizon, guest data retention. JSON
+  keeps adding a rule to a one-line change; the schema keeps it typed. Read through a 30 s cache.
+- **Categories are a per-club table** (`Category`, key + label + order) replacing the old enum;
+  the API speaks category keys, labels come from the club. An unknown category on the
+  leaderboard is a 400 `VALIDATION_FAILED`, like any other invalid query value.
+- **Ratings are per sport** (`PlayerRating`, `EloHistory.sport`, `Match.sport`); `User.elo` was
+  moved there. Courts have a `sport` (TENNIS only for now). Scoring rules sit behind
+  `SportRules` (`TennisRules`), so result validation asks the match's sport.
+- **`Match.matchType` was renamed `format`** (SINGLES/DOUBLES) to free `type` for
+  FRIENDLY/RANKED/TOURNAMENT. Existing and reported matches are RANKED (they move Elo, as before);
+  `tournamentId` is nullable and unused until Phase 9.5.
+- **i18n:** API messages, validation messages and domain labels live in one catalogue in shared
+  (`packages/shared/src/i18n/pt-BR.ts`), so the web shows the same text for client-side
+  validation. Errors carry a stable `code` plus the translated `message`. Screen copy lives in
+  `apps/web/messages/pt-BR.json` (next-intl, pt-BR only). Dates, times and numbers are formatted
+  through `useFormat()` with the club's locale and time zone. Blocked-slot reasons are codes
+  (`BOOKING`, `LESSON`, `FROZEN`…), not text.
+- **API prefix is `/api/v1`** (the refresh cookie path follows: `/api/v1/auth`).
+- **Background jobs run on BullMQ** (queue `club-jobs`, Redis) with repeatable schedulers:
+  booking expiry and freeze announcements every minute, match auto-approval every 5 minutes,
+  lesson generation hourly (and at boot), LGPD jobs daily (and at boot). Each run loops over
+  active clubs inside that club's tenant context; every job is idempotent, so a retry or a
+  second worker does no harm. Socket.IO uses the Redis adapter and club-scoped rooms.
+- **LGPD:** guest document numbers are stored AES-256-GCM encrypted (`documentCipher`) plus an
+  HMAC (`documentHash`) for exact-match lookups (blocks, duplicates). A daily job encrypts any
+  legacy plain-text rows and another anonymizes guest name/document after
+  `guestDataRetentionDays` (90). The gate's partial-document search decrypts only today's passes
+  in memory.
+
 ## Known issues
 
 - None open.
@@ -151,3 +206,8 @@ and what still needs a human to check.
 - iOS safe areas (notch / home indicator) on a real device.
 - Live calendar updates between two real phones (verified here with two Playwright browser
   contexts: a booking in one appears in the other without reload).
+- Redis/BullMQ in production: queue persistence, one worker per deployment or several (jobs are
+  idempotent, verified here with one worker), and monitoring of failed jobs.
+- `DATA_ENCRYPTION_KEY` custody: where production stores it and how it is backed up (losing it
+  makes stored guest documents unreadable; rotating it needs a re-encryption script).
+- LGPD retention period (90 days by default) confirmed by the club's legal advisor.

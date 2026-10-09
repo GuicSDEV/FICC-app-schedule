@@ -36,7 +36,8 @@ export function matchTiebreakWinner({ a, b }: Pick<SetScore, "a" | "b">): TeamSi
   return a > b ? "A" : "B";
 }
 
-const setScoreSchema = z.object({
+/** Shape of one set; whether the numbers make a valid set is up to the sport's rules. */
+export const setScoreSchema = z.object({
   a: z.number().int().min(0).max(99),
   b: z.number().int().min(0).max(99),
   tiebreak: z.boolean().default(false),
@@ -45,12 +46,12 @@ const setScoreSchema = z.object({
 /**
  * Validates a best-of-3 score and resolves the winner. Regular sets must be finished sets;
  * a match tie-break is only allowed as the deciding third set; the match must end exactly when a
- * side wins its second set. Messages are pt-BR because the UI shows them as-is.
+ * side wins its second set. Messages are catalogue keys (see i18n), translated by the API and web.
  */
 export const matchScoreSchema = z
   .array(setScoreSchema)
-  .min(2, { message: "Informe pelo menos 2 sets" })
-  .max(3, { message: "Melhor de 3: no máximo 3 sets" })
+  .min(2, { message: "validation.score.minSets" })
+  .max(3, { message: "validation.score.maxSets" })
   .transform((sets, ctx): MatchScore => {
     const setsWon: Record<TeamSide, number> = { A: 0, B: 0 };
     let winner: TeamSide | null = null;
@@ -61,7 +62,7 @@ export const matchScoreSchema = z
         ctx.addIssue({
           code: "custom",
           path: [index],
-          message: "A partida já estava decidida: remova o último set",
+          message: "validation.score.alreadyDecided",
         });
         return z.NEVER;
       }
@@ -69,7 +70,7 @@ export const matchScoreSchema = z
         ctx.addIssue({
           code: "custom",
           path: [index],
-          message: "O match tie-break só pode ser o 3º set",
+          message: "validation.score.tiebreakThirdOnly",
         });
         return z.NEVER;
       }
@@ -79,8 +80,9 @@ export const matchScoreSchema = z
           code: "custom",
           path: [index],
           message: set.tiebreak
-            ? `Match tie-break inválido: ${label} (até 10, com 2 de diferença)`
-            : `Set inválido: ${label} (válidos: 6-0 a 6-4, 7-5, 7-6)`,
+            ? "validation.score.invalidTiebreak"
+            : "validation.score.invalidSet",
+          params: { score: label },
         });
         return z.NEVER;
       }
@@ -89,7 +91,7 @@ export const matchScoreSchema = z
     }
 
     if (!winner) {
-      ctx.addIssue({ code: "custom", path: [], message: "Sets empatados: falta o set decisivo" });
+      ctx.addIssue({ code: "custom", path: [], message: "validation.score.tied" });
       return z.NEVER;
     }
     return { sets, winner, setsWon };
@@ -99,9 +101,18 @@ export type MatchScoreInput = z.input<typeof matchScoreSchema>;
 
 const SET_TOKEN = /^(\[)?\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(\])?$/;
 
+/** Thrown by {@link splitScoreText} for a token that is not a set ("6-4" or "[10-8]"). */
+export class ScoreFormatError extends Error {
+  constructor(readonly token: string) {
+    super(`Malformed score token "${token}"`);
+    this.name = "ScoreFormatError";
+  }
+}
+
 /**
- * Splits "6-4, 3-6, [10-8]" into sets. Brackets mark the match tie-break. Throws a pt-BR
- * message when a token is malformed; set rules are checked by {@link matchScoreSchema}.
+ * Splits "6-4, 3-6, [10-8]" into sets. Brackets mark the match tie-break. Throws a
+ * {@link ScoreFormatError} when a token is malformed; set rules are checked by
+ * {@link matchScoreSchema}.
  */
 export function splitScoreText(text: string): SetScore[] {
   const tokens = text
@@ -111,7 +122,7 @@ export function splitScoreText(text: string): SetScore[] {
   return tokens.map((token) => {
     const match = SET_TOKEN.exec(token);
     if (!match || Boolean(match[1]) !== Boolean(match[4])) {
-      throw new Error(`Placar mal formatado: "${token}"`);
+      throw new ScoreFormatError(token);
     }
     return { a: Number(match[2]), b: Number(match[3]), tiebreak: Boolean(match[1]) };
   });
@@ -123,20 +134,30 @@ export const scoreTextSchema = z.string().transform((text, ctx): MatchScore => {
   try {
     sets = splitScoreText(text);
   } catch (error) {
-    ctx.addIssue({ code: "custom", message: (error as Error).message });
+    // splitScoreText only throws ScoreFormatError.
+    ctx.addIssue({
+      code: "custom",
+      message: "validation.score.malformed",
+      params: { token: (error as ScoreFormatError).token },
+    });
     return z.NEVER;
   }
   const result = matchScoreSchema.safeParse(sets);
   if (!result.success) {
     for (const issue of result.error.issues) {
-      ctx.addIssue({ code: "custom", message: issue.message, path: issue.path });
+      ctx.addIssue({
+        code: "custom",
+        message: issue.message,
+        path: issue.path,
+        ...("params" in issue && issue.params ? { params: issue.params } : {}),
+      });
     }
     return z.NEVER;
   }
   return result.data;
 });
 
-/** Parses a text score; throws a ZodError with pt-BR messages when it is invalid. */
+/** Parses a text score; throws a ZodError whose messages are catalogue keys when it is invalid. */
 export function parseScore(text: string): MatchScore {
   return scoreTextSchema.parse(text);
 }

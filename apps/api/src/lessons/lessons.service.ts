@@ -15,6 +15,8 @@ import {
   type LessonAuditQuery,
   type LessonCancelScope,
   type LessonDetail,
+  type MessageRef,
+  type SlotBlockReason,
   slotStartsAt,
   toDbDate,
   type UpdateLessonInput,
@@ -36,9 +38,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
-
-/** Occurrences are kept generated this many days ahead (8 weeks, docs/SPEC.md). */
-export const LESSON_WINDOW_DAYS = 56;
+import { clubSettings, clubTimeZone } from "../tenancy/tenant-context";
 
 export const lessonInclude = {
   court: true,
@@ -59,7 +59,7 @@ export function toLessonDetail(lesson: LessonWithRelations): LessonDetail {
     court: toCourtSummary(lesson.court),
     slot: toSlotSummary(lesson.timeSlot),
     coach: toCoachSummary(lesson.coach),
-    startsAt: slotStartsAt(date, lesson.timeSlot).toISOString(),
+    startsAt: slotStartsAt(date, lesson.timeSlot, clubTimeZone()).toISOString(),
     studentNames: lesson.studentNames,
     note: lesson.note,
     series: lesson.series
@@ -83,7 +83,7 @@ interface Target {
 }
 
 /** Why a slot cannot take a lesson, or null when it is free. */
-type Blocker = { code: string; message: string; reason: string };
+type Blocker = { code: string; message: MessageRef; reason: SlotBlockReason };
 
 @Injectable()
 export class LessonsService {
@@ -126,8 +126,8 @@ export class LessonsService {
         return { lessons: [lesson], series: null };
       }
 
-      const today = clubToday(now);
-      const horizon = addDays(today, LESSON_WINDOW_DAYS - 1);
+      const today = clubToday(now, clubTimeZone());
+      const horizon = addDays(today, clubSettings().lessonWindowDays - 1);
       const windowEnd = maxDate(input.date, minDate(input.repeat.endDate ?? horizon, horizon));
       const series = await tx.lessonSeries.create({
         data: {
@@ -184,10 +184,10 @@ export class LessonsService {
     const lesson = await this.loadLesson(lessonId);
     this.assertCanManage(actor, lesson);
     if (lesson.status !== LessonStatus.SCHEDULED) {
-      throw conflict("LESSON_ALREADY_CANCELLED", "Essa aula já está cancelada.");
+      throw conflict("LESSON_ALREADY_CANCELLED", "api.lessonAlreadyCancelled");
     }
-    if (isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now)) {
-      throw unprocessable("SLOT_IN_PAST", "Essa aula já começou ou já aconteceu.");
+    if (isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now, clubTimeZone())) {
+      throw unprocessable("SLOT_IN_PAST", "api.lessonStarted");
     }
 
     const cancelled = await serializable(this.prisma, async (tx) => {
@@ -263,10 +263,10 @@ export class LessonsService {
     const lesson = await this.loadLesson(lessonId);
     this.assertCanManage(actor, lesson);
     if (lesson.status !== LessonStatus.CANCELLED) {
-      throw conflict("LESSON_NOT_CANCELLED", "Essa aula não está cancelada.");
+      throw conflict("LESSON_NOT_CANCELLED", "api.lessonNotCancelled");
     }
     if (lesson.series?.endDate && lesson.series.endDate < lesson.date) {
-      throw conflict("SERIES_ENDED", "A série dessa aula foi encerrada.");
+      throw conflict("SERIES_ENDED", "api.seriesEnded");
     }
 
     const restored = await serializable(this.prisma, async (tx) => {
@@ -322,13 +322,13 @@ export class LessonsService {
     const lesson = await this.loadLesson(lessonId);
     this.assertCanManage(actor, lesson);
     if (input.coachId && actor.role !== Role.ADMIN) {
-      throw forbidden("FORBIDDEN", "Só a administração pode trocar o professor.");
+      throw forbidden("FORBIDDEN", "api.onlyAdminChangesCoach");
     }
     if (lesson.status !== LessonStatus.SCHEDULED) {
-      throw conflict("LESSON_ALREADY_CANCELLED", "Essa aula está cancelada.");
+      throw conflict("LESSON_ALREADY_CANCELLED", "api.lessonCancelled");
     }
-    if (isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now)) {
-      throw unprocessable("SLOT_IN_PAST", "Essa aula já começou ou já aconteceu.");
+    if (isSlotPast(fromDbDate(lesson.date), lesson.timeSlot, now, clubTimeZone())) {
+      throw unprocessable("SLOT_IN_PAST", "api.lessonStarted");
     }
 
     const coachId = input.coachId ?? lesson.coachId;
@@ -345,7 +345,7 @@ export class LessonsService {
         where: { id: coachId },
         include: { allowedCourts: true },
       });
-      if (!coach || !coach.isActive) throw notFound("COACH_NOT_FOUND", "Professor não encontrado.");
+      if (!coach || !coach.isActive) throw notFound("COACH_NOT_FOUND", "api.coachNotFound");
       this.assertCourtAllowed(coach, courtId);
     }
 
@@ -486,8 +486,8 @@ export class LessonsService {
   async generateSeriesOccurrences(
     now: Date = this.clock.now(),
   ): Promise<{ created: number; skipped: number }> {
-    const today = clubToday(now);
-    const horizon = addDays(today, LESSON_WINDOW_DAYS - 1);
+    const today = clubToday(now, clubTimeZone());
+    const horizon = addDays(today, clubSettings().lessonWindowDays - 1);
     const seriesList = await this.prisma.lessonSeries.findMany({
       where: {
         coach: { isActive: true },
@@ -593,20 +593,20 @@ export class LessonsService {
   private async resolveCoach(actor: RequestUser, requestedCoachId?: string) {
     let coachId: string;
     if (actor.role === Role.COACH) {
-      if (!actor.coachId) throw forbidden("NOT_A_COACH", "Conta sem perfil de professor.");
+      if (!actor.coachId) throw forbidden("NOT_A_COACH", "api.notACoach");
       if (requestedCoachId && requestedCoachId !== actor.coachId) {
-        throw forbidden("NOT_YOUR_LESSON", "Você só pode marcar suas próprias aulas.");
+        throw forbidden("NOT_YOUR_LESSON", "api.notYourLessonCreate");
       }
       coachId = actor.coachId;
     } else {
-      if (!requestedCoachId) throw unprocessable("COACH_REQUIRED", "Escolha o professor da aula.");
+      if (!requestedCoachId) throw unprocessable("COACH_REQUIRED", "api.coachRequired");
       coachId = requestedCoachId;
     }
     const coach = await this.prisma.coach.findUnique({
       where: { id: coachId },
       include: { allowedCourts: true },
     });
-    if (!coach || !coach.isActive) throw notFound("COACH_NOT_FOUND", "Professor não encontrado.");
+    if (!coach || !coach.isActive) throw notFound("COACH_NOT_FOUND", "api.coachNotFound");
     return coach;
   }
 
@@ -615,14 +615,17 @@ export class LessonsService {
     courtId: string,
   ) {
     if (!coach.allowedCourts.some((entry) => entry.courtId === courtId)) {
-      throw forbidden("COURT_NOT_ALLOWED", `${coach.displayName} não dá aulas nessa quadra.`);
+      throw forbidden("COURT_NOT_ALLOWED", {
+        key: "api.courtNotAllowed",
+        params: { coach: coach.displayName },
+      });
     }
   }
 
   private assertCanManage(actor: RequestUser, lesson: { coachId: string }) {
     if (actor.role === Role.ADMIN) return;
     if (actor.role !== Role.COACH || actor.coachId !== lesson.coachId) {
-      throw forbidden("NOT_YOUR_LESSON", "Você só pode alterar suas próprias aulas.");
+      throw forbidden("NOT_YOUR_LESSON", "api.notYourLessonEdit");
     }
   }
 
@@ -631,7 +634,7 @@ export class LessonsService {
       where: { id: lessonId },
       include: { ...lessonInclude, series: true },
     });
-    if (!lesson) throw notFound("LESSON_NOT_FOUND", "Aula não encontrada.");
+    if (!lesson) throw notFound("LESSON_NOT_FOUND", "api.lessonNotFound");
     return lesson;
   }
 
@@ -640,26 +643,25 @@ export class LessonsService {
       tx.court.findUnique({ where: { id: courtId } }),
       tx.timeSlot.findUnique({ where: { id: timeSlotId } }),
     ]);
-    if (!court || court.status !== "ACTIVE")
-      throw notFound("COURT_NOT_FOUND", "Quadra não encontrada.");
-    if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "Horário não encontrado.");
+    if (!court || court.status !== "ACTIVE") throw notFound("COURT_NOT_FOUND", "api.courtNotFound");
+    if (!slot || !slot.isActive) throw notFound("SLOT_NOT_FOUND", "api.slotNotFound");
     return { court, slot };
   }
 
   /** Read-only checks that a lesson may take this slot (inside the caller's transaction). */
   private async blockerFor(tx: Tx, target: Target, now: Date): Promise<Blocker | null> {
-    if (isSlotPast(target.date, target.slot, now)) {
+    if (isSlotPast(target.date, target.slot, now, clubTimeZone())) {
       return {
         code: "SLOT_IN_PAST",
-        message: "Esse horário já passou.",
-        reason: "horário passado",
+        message: "api.slotInPast",
+        reason: "SLOT_PAST",
       };
     }
     if (await isCourtFrozen(tx, target.courtId, target.date, target.slot)) {
       return {
         code: "COURT_FROZEN",
-        message: `A ${target.courtName} está interditada nesse horário.`,
-        reason: "quadra interditada",
+        message: { key: "api.courtFrozen", params: { court: target.courtName } },
+        reason: "COURT_FROZEN",
       };
     }
     const occupied = await tx.slotOccupancy.findUnique({
@@ -675,13 +677,13 @@ export class LessonsService {
       return occupied.lessonId
         ? {
             code: "SLOT_HAS_LESSON",
-            message: "Esse horário já tem aula marcada.",
-            reason: "outra aula",
+            message: "api.slotHasLesson",
+            reason: "LESSON",
           }
         : {
             code: "SLOT_TAKEN",
-            message: "Esse horário está reservado por sócios.",
-            reason: "reservado por sócios",
+            message: "api.slotHasBooking",
+            reason: "BOOKING",
           };
     }
     const busy = await tx.lesson.findFirst({
@@ -697,8 +699,8 @@ export class LessonsService {
     if (busy) {
       return {
         code: "COACH_BUSY",
-        message: "O professor já tem aula nesse horário em outra quadra.",
-        reason: "professor ocupado",
+        message: "api.coachBusy",
+        reason: "COACH_BUSY",
       };
     }
     return null;

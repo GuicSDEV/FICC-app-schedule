@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { spring, tap } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { isActive, type NavItem } from "./nav-config";
 
 function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group: string }) {
+  const t = useTranslations("nav.items");
   const active = isActive(pathname, item);
   const Icon = item.icon;
   return (
@@ -40,7 +42,7 @@ function Tab({ item, pathname, group }: { item: NavItem; pathname: string; group
           active ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {item.label}
+        {t(item.label)}
       </span>
     </Link>
   );
@@ -63,10 +65,11 @@ export function BottomNav({
   onAction?: () => void;
   actionLabel?: string;
 }) {
+  const t = useTranslations("nav");
   const pathname = usePathname();
   return (
     <nav
-      aria-label="Navegação principal"
+      aria-label={t("main")}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass pb-safe md:hidden"
     >
       <div className="mx-auto flex max-w-lg items-stretch px-2 pt-1 pb-1">

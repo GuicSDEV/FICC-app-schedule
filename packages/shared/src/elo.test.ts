@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_CLUB_SETTINGS } from "./club";
 import {
-  calculateMatchElo,
-  ELO_INITIAL_RATING,
-  ELO_K_FACTOR,
+  calculateMatchElo as rawCalculateMatchElo,
   expectedScore,
   teamRating,
+  type EloMatchInput,
 } from "./elo";
+
+const K = DEFAULT_CLUB_SETTINGS.eloKFactor;
+/** FICC's K-factor unless a test passes its own. */
+const calculateMatchElo = (input: Omit<EloMatchInput, "k"> & { k?: number }) =>
+  rawCalculateMatchElo({ k: K, ...input });
 
 describe("expectedScore", () => {
   it("is 0.5 between equal ratings", () => {
@@ -34,9 +39,9 @@ describe("teamRating", () => {
 });
 
 describe("calculateMatchElo", () => {
-  it("uses K = 32 and a 1200 starting rating", () => {
-    expect(ELO_K_FACTOR).toBe(32);
-    expect(ELO_INITIAL_RATING).toBe(1200);
+  it("defaults clubs to K = 32 and a 1200 starting rating", () => {
+    expect(DEFAULT_CLUB_SETTINGS.eloKFactor).toBe(32);
+    expect(DEFAULT_CLUB_SETTINGS.eloInitialRating).toBe(1200);
   });
 
   it("moves equal players by K/2", () => {

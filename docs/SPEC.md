@@ -182,6 +182,18 @@ Replaces LetzPlay for FICC's tournaments; the organizer's workflow matters as mu
 
 ---
 
+## 9. FICC operations (added later, see PHASES.md Phase 9.8)
+Every rule here lives in ClubSettings and is editable by staff.
+- Slot grids per weekday plus date exceptions (holidays, events, closed days); per day/date court mode BOOKING or FREE_PLAY. FREE_PLAY: live "Courts now", check-in/check-out with auto-checkout, optional digital queue (position, push when a court frees, 5 minutes to claim).
+- Booking opening rule ("day D opens at HH:MM, N days before") + max bookings per member per day; server-time countdown; fair first-come-first-served under a 150-member rush (transactions, rate limiting, load test) with next free options on conflict.
+- Self sign-up → PENDING → staff approve/reject with reason (notification); optional holder + dependents mode (off by default).
+- Granular staff permissions in editable roles (Secretaria, Diretoria, Professor, Super admin; multiple roles per person) with an audit log of every staff action.
+- No-shows (staff or co-players), configurable late-cancellation window, per-member history, optional automatic penalty (off by default).
+- "Mural" news board: posts with photos, event date, pin, optional push, read counts, 👍 reactions; latest pinned post on the dashboard.
+- Backlog (not now): see docs/BACKLOG.md.
+
+---
+
 # MULTI-CLUB STRATEGY (added later, see PHASES.md Phase 7.5)
 v1 is built **only for FICC**: no multi-club or multi-sport UI or features. The structure is ready for more clubs and sports (padel, beach tennis) so adding them later is additive work, not a rewrite:
 - Every club-owned table carries `clubId`; a request-scoped tenant context plus a Prisma extension filter and stamp it. v1 resolves the club from `DEFAULT_CLUB_SLUG=ficc` (later: subdomain), so URLs don't change.
@@ -199,6 +211,15 @@ The product becomes a SaaS for sports clubs. Rule: **build for one club, ship fo
 - Signed outgoing webhooks with retries; public read API with per-club API keys (OpenAPI).
 - Demo club command (resettable); `/platform` dashboard with clubs, modules and usage metrics.
 - Feature workflow: `/new-feature` command, `docs/features/_template.md`, ADRs in `docs/decisions/`.
+
+---
+
+# NATIVE APPS (added later, see PHASES.md Phase 12)
+Main distribution is the App Store and Google Play (many members are older and only install apps from the stores). ONE multi-club app under our brand; FICC members see FICC's branding after login.
+- Capacitor with the static app shell bundled in the native app and the API called remotely (fast start, offline-first shell).
+- Native features: push (FCM/APNs) as a real `NotificationChannel` with device tokens per user and club; native camera QR scanning at the gate; haptics; status bar, splash, icon, safe areas, Android back button; native share sheet; deep/universal links for tournaments, guest passes and club invites.
+- Store requirements: in-app account deletion plus data export; privacy policy and terms in-app and public; persistent secure session; accessibility for older users (system font scaling, ≥16px body, high contrast).
+- Release: build/version scripts, step-by-step store guide (Apple, TestFlight, Play Console, listing, privacy questionnaire), automatic store screenshots with Playwright; document what needs a store release vs a web/API deploy (no OTA for native code).
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { clubTimeOfDay } from "@ficc/shared";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
 import { motion } from "motion/react";
@@ -11,6 +12,7 @@ import { TicketCard } from "@/components/booking/ticket-card";
 import { EloHero } from "@/components/dashboard/elo-hero";
 import { InviteList } from "@/components/dashboard/invite-list";
 import { ResultApprovals } from "@/components/dashboard/result-approvals";
+import { useClub } from "@/components/providers/club-provider";
 import { useSession } from "@/components/providers/session-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
 import { PageHeader } from "@/components/shell/page-header";
@@ -25,12 +27,13 @@ import { api } from "@/lib/api";
 import { listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
-function greeting(): string {
-  const hour = Number(clubTimeOfDay().slice(0, 2));
-  if (hour < 5) return "Boa noite";
-  if (hour < 12) return "Bom dia";
-  if (hour < 18) return "Boa tarde";
-  return "Boa noite";
+/** Part of the day at the club, for the greeting. */
+function dayPart(timeZone: string): "night" | "morning" | "afternoon" {
+  const hour = Number(clubTimeOfDay(new Date(), timeZone).slice(0, 2));
+  if (hour < 5) return "night";
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "night";
 }
 
 function Section({
@@ -58,6 +61,8 @@ function Section({
 }
 
 export default function MemberDashboard() {
+  const t = useTranslations("dashboard");
+  const club = useClub();
   const { user } = useSession();
   const client = useQueryClient();
   const bookings = useQuery({ queryKey: queryKeys.bookingsMine, queryFn: api.bookings.mine });
@@ -93,8 +98,14 @@ export default function MemberDashboard() {
   return (
     <>
       <PageHeader
-        title="Início"
-        subtitle={user ? `${greeting()}, ${user.name.split(" ")[0]}` : " "}
+        title={t("title")}
+        subtitle={
+          user && club
+            ? t(`greeting.${dayPart(club.timezone)}`, {
+                name: user.name.split(" ")[0] ?? user.name,
+              })
+            : " "
+        }
         actions={
           <>
             <NotificationBell />
@@ -107,7 +118,7 @@ export default function MemberDashboard() {
           <div className="space-y-6">
             {user ? <EloHero userId={user.id} /> : <Skeleton className="h-[15.5rem] rounded-xl" />}
             {approvals.length > 0 ? (
-              <Section title="Resultados para aprovar" count={approvals.length}>
+              <Section title={t("approvals")} count={approvals.length}>
                 <ResultApprovals matches={approvals} />
               </Section>
             ) : null}
@@ -115,20 +126,15 @@ export default function MemberDashboard() {
 
           <div className="space-y-6">
             {invites.length > 0 ? (
-              <Section title="Convites" count={invites.length}>
-                <p className="-mt-1 text-caption text-muted-foreground">
-                  Deslize para a direita para confirmar, para a esquerda para recusar.
-                </p>
+              <Section title={t("invites")} count={invites.length}>
+                <p className="-mt-1 text-caption text-muted-foreground">{t("swipeHint")}</p>
                 <InviteList invites={invites} />
               </Section>
             ) : null}
 
-            <Section title="Próximos jogos">
+            <Section title={t("upcoming")}>
               {bookings.isError ? (
-                <ErrorState
-                  message="Não foi possível carregar suas reservas."
-                  onRetry={() => void bookings.refetch()}
-                />
+                <ErrorState message={t("upcomingFailed")} onRetry={() => void bookings.refetch()} />
               ) : bookings.isLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-[8.5rem] rounded-lg" />
@@ -137,9 +143,9 @@ export default function MemberDashboard() {
               ) : upcoming.length === 0 ? (
                 <EmptyState
                   icon={CalendarPlus}
-                  title="Nenhum jogo marcado"
-                  description="Escolha um horário livre e chame seus parceiros."
-                  action={<ButtonLink href="/app/courts">Reservar quadra</ButtonLink>}
+                  title={t("emptyTitle")}
+                  description={t("emptyDescription")}
+                  action={<ButtonLink href="/app/courts">{t("book")}</ButtonLink>}
                 />
               ) : (
                 <ul className="space-y-3">
@@ -155,7 +161,10 @@ export default function MemberDashboard() {
                         type="button"
                         whileTap={tap}
                         className="block w-full rounded-lg text-left"
-                        aria-label={`Reserva ${booking.court.name}, ${booking.slot.startTime}. Ver detalhes`}
+                        aria-label={t("openBooking", {
+                          court: booking.court.name,
+                          time: booking.slot.startTime,
+                        })}
                         onClick={() =>
                           setInfoTarget({
                             date: booking.date,

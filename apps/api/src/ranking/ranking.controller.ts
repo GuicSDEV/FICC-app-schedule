@@ -22,7 +22,7 @@ export class RankingController {
   leaderboard(
     @Query(new ZodValidationPipe(leaderboardQuerySchema)) query: LeaderboardQuery,
   ): Promise<LeaderboardResponse> {
-    return this.ranking.leaderboard(query.category);
+    return this.ranking.leaderboard(query.category, query.sport);
   }
 
   @Get("players/:id")

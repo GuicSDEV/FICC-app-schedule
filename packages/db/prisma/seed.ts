@@ -1,29 +1,37 @@
-// Development seed: wipes every table, then loads the real club setup (courts, slot grid,
-// coaches, lesson template) plus fictional members and a history of confirmed matches.
+// Development seed: wipes every table, then creates the FICC club (settings, categories) and
+// loads its real setup (courts, slot grid, coaches, lesson template) plus fictional members and
+// a history of confirmed matches. Everything after the club row goes through the same tenant
+// extension the API uses, so every row gets FICC's clubId.
 // Run with `pnpm db:seed`. Deterministic: the same data every run, dated relative to today.
 
-import { CATEGORY_LABELS, DEFAULT_SLOT_GRID, ELO_INITIAL_RATING } from "@ficc/shared";
+import { timeToMinutes, slotEndTime } from "@ficc/shared";
 import { hash } from "argon2";
 
 import {
   BookingType,
-  type Category,
   LessonAuditAction,
   LessonStatus,
   MatchStatus,
+  MatchType,
   Prisma,
   PrismaClient,
   Role,
+  Sport,
   TeamSide,
+  tenantExtension,
 } from "../src";
 import {
   COACHES,
   type CoachKey,
   COURTS,
   type CourtName,
+  FICC_CATEGORIES,
+  FICC_CLUB,
+  FICC_SETTINGS,
+  FICC_SLOT_GRID,
   LESSON_TEMPLATE,
   LESSON_WEEKDAYS,
-  LESSON_WINDOW_WEEKS,
+  LESSON_WINDOW_DAYS,
   MEMBERS,
   STAFF,
   UNCLAIMED_MEMBERSHIPS,
@@ -36,7 +44,11 @@ import { printTable } from "./seed/report";
 const RANDOM_SEED = 0xf1cc;
 const DEFAULT_SEED_PASSWORD = "ficc1234";
 
-const prisma = new PrismaClient();
+const base = new PrismaClient();
+let clubId: string | undefined;
+/** Scoped to FICC once the club row exists (see tenantExtension in src/tenant.ts). */
+const prisma = base.$extends(tenantExtension(() => clubId));
+type SeedClient = typeof prisma;
 
 function lookup<K, V>(map: ReadonlyMap<K, V>, key: K): V {
   const value = map.get(key);
@@ -46,12 +58,12 @@ function lookup<K, V>(map: ReadonlyMap<K, V>, key: K): V {
 
 /** Empties every application table (keeps Prisma's migration history). */
 async function resetDatabase(): Promise<void> {
-  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
+  const tables = await base.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
     WHERE schemaname = current_schema() AND tablename <> '_prisma_migrations'`;
   if (tables.length === 0) return;
   const list = tables.map(({ tablename }) => `"${tablename.replaceAll('"', '""')}"`).join(", ");
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+  await base.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
 }
 
 async function main(): Promise<void> {
@@ -60,13 +72,21 @@ async function main(): Promise<void> {
   }
 
   const now = new Date();
-  const today = clubToday(now);
+  const today = clubToday(now, FICC_CLUB.timezone);
   const random = createRandom(RANDOM_SEED);
   const password = process.env.SEED_PASSWORD ?? DEFAULT_SEED_PASSWORD;
   // Every seeded account shares one development password, so hash it once.
   const passwordHash = await hash(password);
 
   await resetDatabase();
+
+  // ── The club, its rules and categories ────────────────────────────────────
+  const club = await base.club.create({
+    data: { ...FICC_CLUB, settings: { create: { values: FICC_SETTINGS } } },
+  });
+  clubId = club.id;
+  const categories = await prisma.category.createManyAndReturn({ data: [...FICC_CATEGORIES] });
+  const categoryIds = new Map(categories.map((category) => [category.key, category.id]));
 
   // ── Courts and slot grid ──────────────────────────────────────────────────
   const courts = await prisma.court.createManyAndReturn({
@@ -76,7 +96,7 @@ async function main(): Promise<void> {
   const courtSurfaces = new Map(courts.map((court) => [court.name as CourtName, court.surface]));
 
   const slots = await prisma.timeSlot.createManyAndReturn({
-    data: DEFAULT_SLOT_GRID.map((slot) => ({ ...slot })),
+    data: FICC_SLOT_GRID.map((slot) => ({ ...slot })),
   });
   const slotIds = new Map(slots.map((slot) => [slot.startTime, slot.id]));
 
@@ -112,7 +132,7 @@ async function main(): Promise<void> {
   }
 
   // ── Lesson series and their occurrences for the rolling window ────────────
-  const windowEnd = addDays(today, LESSON_WINDOW_WEEKS * 7 - 1);
+  const windowEnd = addDays(today, LESSON_WINDOW_DAYS - 1);
   const lessonDates: IsoDate[] = [];
   for (let date = today; date <= windowEnd; date = addDays(date, 1)) {
     if (LESSON_WEEKDAYS.includes(weekdayOf(date))) lessonDates.push(date);
@@ -188,19 +208,42 @@ async function main(): Promise<void> {
       role: Role.MEMBER,
       membershipId: member.membershipId,
       name: member.name,
-      categories: [...member.categories],
       passwordHash,
-      elo: ratedMatches.finalRatings.get(member.membershipId) ?? ELO_INITIAL_RATING,
     })),
   });
   const memberIds = new Map(members.map((user) => [user.membershipId!, user.id]));
   const memberId = (membershipId: string) => lookup(memberIds, membershipId);
+  await prisma.userCategory.createMany({
+    data: MEMBERS.flatMap((member) =>
+      member.categories.map((key) => ({
+        userId: memberId(member.membershipId),
+        categoryId: lookup(categoryIds, key),
+      })),
+    ),
+  });
+  const ratedMatchCount = new Map<string, number>();
+  for (const match of ratedMatches.matches) {
+    for (const rating of match.ratings) {
+      const key = rating.member.membershipId;
+      ratedMatchCount.set(key, (ratedMatchCount.get(key) ?? 0) + 1);
+    }
+  }
+  await prisma.playerRating.createMany({
+    data: MEMBERS.map((member) => ({
+      userId: memberId(member.membershipId),
+      sport: Sport.TENNIS,
+      elo: ratedMatches.finalRatings.get(member.membershipId) ?? FICC_SETTINGS.eloInitialRating,
+      matches: ratedMatchCount.get(member.membershipId) ?? 0,
+    })),
+  });
 
   // ── Confirmed matches with their rating history ───────────────────────────
   for (const match of ratedMatches.matches) {
     await prisma.match.create({
       data: {
-        type: match.type,
+        format: match.format,
+        type: MatchType.RANKED,
+        sport: Sport.TENNIS,
         status: MatchStatus.CONFIRMED,
         playedOn: toDbDate(match.playedOn),
         surface: lookup(courtSurfaces, match.court),
@@ -229,6 +272,7 @@ async function main(): Promise<void> {
         eloHistory: {
           create: match.ratings.map((rating) => ({
             userId: memberId(rating.member.membershipId),
+            sport: Sport.TENNIS,
             before: rating.before,
             after: rating.after,
             delta: rating.delta,
@@ -239,7 +283,7 @@ async function main(): Promise<void> {
     });
   }
 
-  const checks = await runIntegrityChecks(members[0]!.id);
+  const checks = await runIntegrityChecks(prisma, members[0]!.id);
   await printSummary({ today, windowEnd, password, checks });
 
   if (checks.some((check) => !check.passed)) {
@@ -253,8 +297,29 @@ interface IntegrityCheck {
   detail: string;
 }
 
-async function runIntegrityChecks(anyMemberId: string): Promise<IntegrityCheck[]> {
+async function runIntegrityChecks(
+  prisma: SeedClient,
+  anyMemberId: string,
+): Promise<IntegrityCheck[]> {
   const checks: IntegrityCheck[] = [];
+
+  // FICC's grid: 8 slots in order, never overlapping, a lunch gap and the last ending at 22:15.
+  const grid = await prisma.timeSlot.findMany({ orderBy: { sortOrder: "asc" } });
+  const overlapping = grid.filter(
+    (slot, index) =>
+      index > 0 && timeToMinutes(slotEndTime(grid[index - 1]!)) > timeToMinutes(slot.startTime),
+  );
+  const gridOk =
+    grid.length === 8 &&
+    overlapping.length === 0 &&
+    slotEndTime(grid[1]!) === "11:15" &&
+    grid[2]!.startTime === "14:45" &&
+    slotEndTime(grid.at(-1)!) === "22:15";
+  checks.push({
+    name: "Slot grid: 8 slots of 75 min, no overlap, ends 22:15",
+    passed: gridOk,
+    detail: grid.map((slot) => slot.startTime).join(" "),
+  });
 
   const [scheduledLessons, lessonOccupancies] = await Promise.all([
     prisma.lesson.count({ where: { status: LessonStatus.SCHEDULED } }),
@@ -268,7 +333,7 @@ async function runIntegrityChecks(anyMemberId: string): Promise<IntegrityCheck[]
 
   const [{ outsideAllowed }] = await prisma.$queryRaw<[{ outsideAllowed: number }]>`
     SELECT count(*)::int AS "outsideAllowed" FROM "Lesson" l
-    WHERE NOT EXISTS (
+    WHERE l."clubId" = ${clubId} AND NOT EXISTS (
       SELECT 1 FROM "CoachCourt" cc WHERE cc."coachId" = l."coachId" AND cc."courtId" = l."courtId"
     )`;
   checks.push({
@@ -315,23 +380,29 @@ async function runIntegrityChecks(anyMemberId: string): Promise<IntegrityCheck[]
   });
 
   const history = await prisma.eloHistory.findMany({
+    where: { sport: Sport.TENNIS },
     orderBy: [{ userId: "asc" }, { createdAt: "asc" }],
   });
-  const users = await prisma.user.findMany({ where: { role: Role.MEMBER } });
+  const users = await prisma.user.findMany({
+    where: { role: Role.MEMBER },
+    include: { ratings: { where: { sport: Sport.TENNIS } } },
+  });
   const historyByUser = new Map<string, typeof history>();
   for (const row of history) {
     historyByUser.set(row.userId, [...(historyByUser.get(row.userId) ?? []), row]);
   }
   const brokenChains = users.filter((user) => {
-    let rating = ELO_INITIAL_RATING;
-    for (const row of historyByUser.get(user.id) ?? []) {
+    let rating = FICC_SETTINGS.eloInitialRating;
+    const rows = historyByUser.get(user.id) ?? [];
+    for (const row of rows) {
       if (row.before !== rating) return true;
       rating = row.after;
     }
-    return rating !== user.elo;
+    const current = user.ratings[0];
+    return !current || rating !== current.elo || current.matches !== rows.length;
   });
   checks.push({
-    name: "Elo history chains from 1200 to each member's Elo",
+    name: "Elo history chains from 1200 to each member's rating",
     passed: brokenChains.length === 0,
     detail: `${users.length - brokenChains.length}/${users.length} members consistent`,
   });
@@ -408,8 +479,11 @@ async function printSummary({
     prisma.validMembershipId.findMany({ include: { user: true } }),
     prisma.user.findMany({
       where: { role: Role.MEMBER },
-      include: { matchPlayers: { include: { match: true } } },
-      orderBy: [{ elo: "desc" }, { name: "asc" }],
+      include: {
+        matchPlayers: { include: { match: true } },
+        ratings: { where: { sport: Sport.TENNIS } },
+        categories: { include: { category: true } },
+      },
     }),
     prisma.match.findMany(),
     prisma.matchSet.count(),
@@ -421,18 +495,20 @@ async function printSummary({
       .filter((court) => court.surface === surface)
       .map((court) => court.name)
       .join(", ")} ${label}`;
-  const perCategory = (Object.keys(CATEGORY_LABELS) as Category[])
-    .map((category) => {
-      const count = members.filter((member) => member.categories.includes(category)).length;
-      return `${CATEGORY_LABELS[category]} ${count}`;
-    })
-    .join(" · ");
-  const singles = matches.filter((match) => match.type === "SINGLES").length;
+  const eloOf = (member: (typeof members)[number]) => member.ratings[0]?.elo ?? 0;
+  members.sort((a, b) => eloOf(b) - eloOf(a) || a.name.localeCompare(b.name));
+  const perCategory = FICC_CATEGORIES.map((category) => {
+    const count = members.filter((member) =>
+      member.categories.some((entry) => entry.category.key === category.key),
+    ).length;
+    return `${category.name} ${count}`;
+  }).join(" · ");
+  const singles = matches.filter((match) => match.format === "SINGLES").length;
   const autoApproved = matches.filter((match) => match.confirmation === "AUTO_APPROVED").length;
   const playedDates = matches.map((match) => match.playedOn.toISOString().slice(0, 10)).sort();
   const claimed = validIds.filter((entry) => entry.user).length;
 
-  console.log(`\nFICC seed complete · club date ${today} (America/Sao_Paulo)`);
+  console.log(`\n${FICC_CLUB.name} seed complete · club date ${today} (${FICC_CLUB.timezone})`);
 
   printTable(
     "Seeded data",
@@ -458,7 +534,7 @@ async function printSummary({
       [
         "Lessons",
         lessonCount,
-        `${today} → ${windowEnd} (${LESSON_WINDOW_WEEKS} weeks), all scheduled`,
+        `${today} → ${windowEnd} (${LESSON_WINDOW_DAYS / 7} weeks), all scheduled`,
       ],
       ["Slot occupancies", occupancyCount, "one per scheduled lesson"],
       ["Lesson audit log", auditCount, "SERIES_CREATED by the admin"],
@@ -466,6 +542,12 @@ async function printSummary({
         "Valid membership IDs",
         validIds.length,
         `${claimed} registered · ${validIds.length - claimed} free for sign-up`,
+      ],
+      ["Club", 1, `${FICC_CLUB.name} (${FICC_CLUB.slug}) · ${FICC_CLUB.locale} · settings stored`],
+      [
+        "Categories",
+        FICC_CATEGORIES.length,
+        FICC_CATEGORIES.map((category) => category.name).join(" · "),
       ],
       ["Members", members.length, perCategory],
       [
@@ -506,8 +588,8 @@ async function printSummary({
         index + 1,
         member.name,
         member.membershipId ?? "",
-        member.categories.map((category) => CATEGORY_LABELS[category]).join(", "),
-        member.elo,
+        member.categories.map((entry) => entry.category.name).join(", "),
+        eloOf(member),
         `${wins}-${member.matchPlayers.length - wins}`,
       ];
     }),
@@ -530,4 +612,4 @@ main()
     console.error(error);
     process.exitCode = 1;
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => base.$disconnect());

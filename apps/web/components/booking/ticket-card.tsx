@@ -1,24 +1,22 @@
-import { type BookingDetail, SURFACE_LABELS } from "@ficc/shared";
+import type { BookingDetail } from "@ficc/shared";
 import { Clock3, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { formatDayTitle } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 const STUB_WIDTH = "6rem";
 
 /** Status line for a booking from the viewer's point of view. */
-export function bookingStatusBadge(booking: BookingDetail) {
-  if (booking.status === "CANCELLED") return <Badge tone="danger">Cancelada</Badge>;
-  if (booking.status === "CONFIRMED") return <Badge tone="ballSoft">Confirmada</Badge>;
+export function BookingStatusBadge({ booking }: { booking: BookingDetail }) {
+  const t = useTranslations("ticket");
+  if (booking.status === "CANCELLED") return <Badge tone="danger">{t("cancelled")}</Badge>;
+  if (booking.status === "CONFIRMED") return <Badge tone="ballSoft">{t("confirmed")}</Badge>;
   const waiting = booking.players.filter((player) => player.status === "PENDING").length;
-  return (
-    <Badge tone="warning">
-      {waiting === 1 ? "Falta 1 confirmar" : `Faltam ${waiting} confirmar`}
-    </Badge>
-  );
+  return <Badge tone="warning">{t("waiting", { count: waiting })}</Badge>;
 }
 
 /**
@@ -37,6 +35,8 @@ export function TicketCard({
   status?: boolean;
   className?: string;
 }) {
+  const t = useTranslations();
+  const format = useFormat();
   const surface = booking.court.surface;
   return (
     <div
@@ -53,12 +53,14 @@ export function TicketCard({
         )}
       >
         <span className="text-caption font-medium tracking-[0.14em] uppercase opacity-85">
-          Quadra
+          {t("common.court")}
         </span>
         <span className="font-display text-display leading-none font-bold">
           {booking.court.name.replace(/^Q/, "")}
         </span>
-        <span className="text-caption font-medium opacity-90">{SURFACE_LABELS[surface]}</span>
+        <span className="text-caption font-medium opacity-90">
+          {t(`labels.surface.${surface}`)}
+        </span>
       </div>
 
       {/* Perforation: two notches and a dashed edge between stub and body. */}
@@ -77,7 +79,7 @@ export function TicketCard({
         <div className="space-y-3 p-4">
           <div className="min-w-0">
             <p className="truncate font-display text-title leading-tight font-semibold">
-              {formatDayTitle(booking.date)}
+              {format.dayTitle(booking.date)}
             </p>
             <p className="mt-0.5 flex items-center gap-1.5 text-small whitespace-nowrap text-muted-foreground">
               <Clock3 aria-hidden className="size-3.5 shrink-0" />
@@ -86,10 +88,14 @@ export function TicketCard({
               </span>
               <span aria-hidden>·</span>
               <Users aria-hidden className="size-3.5 shrink-0" />
-              {booking.type === "SINGLES" ? "Simples" : "Duplas"}
+              {booking.type === "SINGLES" ? t("common.singles") : t("common.doubles")}
             </p>
           </div>
-          {status ? <div className="flex">{bookingStatusBadge(booking)}</div> : null}
+          {status ? (
+            <div className="flex">
+              <BookingStatusBadge booking={booking} />
+            </div>
+          ) : null}
           <ul className="flex flex-wrap gap-x-3 gap-y-2">
             {booking.players.map((player) => (
               <li
@@ -103,7 +109,9 @@ export function TicketCard({
                 <span className="max-w-[9rem] truncate text-small">
                   {player.user.name.split(" ")[0]}
                 </span>
-                {player.status === "PENDING" ? <span className="sr-only">(aguardando)</span> : null}
+                {player.status === "PENDING" ? (
+                  <span className="sr-only">{t("ticket.pendingPlayer")}</span>
+                ) : null}
               </li>
             ))}
           </ul>

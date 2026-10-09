@@ -1,8 +1,12 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { z } from "zod";
 
-import { CLUB_TIMEZONE } from "./constants";
 import type { Weekday } from "./enums";
+
+/**
+ * Every club-local computation takes the club's IANA time zone (`Club.timezone`, e.g.
+ * "America/Sao_Paulo") explicitly, so no club's zone is baked into the code.
+ */
 
 /**
  * Club-local calendar date, "YYYY-MM-DD". All arithmetic is done in UTC on the date string, so
@@ -19,20 +23,18 @@ export function isIsoDate(value: string): boolean {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-export const isoDateSchema = z
-  .string()
-  .refine(isIsoDate, { message: "Data inválida (use AAAA-MM-DD)" });
+export const isoDateSchema = z.string().refine(isIsoDate, { message: "validation.invalidDate" });
 
 const WEEKDAYS_BY_UTC_DAY: readonly Weekday[] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 /** Today's date at the club. */
-export function clubToday(now: Date = new Date()): IsoDate {
-  return formatInTimeZone(now, CLUB_TIMEZONE, "yyyy-MM-dd");
+export function clubToday(now: Date, timeZone: string): IsoDate {
+  return formatInTimeZone(now, timeZone, "yyyy-MM-dd");
 }
 
 /** "HH:mm" right now at the club. */
-export function clubTimeOfDay(now: Date = new Date()): string {
-  return formatInTimeZone(now, CLUB_TIMEZONE, "HH:mm");
+export function clubTimeOfDay(now: Date, timeZone: string): string {
+  return formatInTimeZone(now, timeZone, "HH:mm");
 }
 
 export function addDays(date: IsoDate, days: number): IsoDate {
@@ -76,11 +78,11 @@ export function fromDbDate(value: Date): IsoDate {
 }
 
 /** The UTC instant of a club-local date and "HH:mm" time. */
-export function clubInstant(date: IsoDate, time: string): Date {
-  return fromZonedTime(`${date}T${time}:00`, CLUB_TIMEZONE);
+export function clubInstant(date: IsoDate, time: string, timeZone: string): Date {
+  return fromZonedTime(`${date}T${time}:00`, timeZone);
 }
 
 /** Last millisecond of a club-local day (e.g. when a guest pass expires). */
-export function endOfClubDay(date: IsoDate): Date {
-  return new Date(clubInstant(addDays(date, 1), "00:00").getTime() - 1);
+export function endOfClubDay(date: IsoDate, timeZone: string): Date {
+  return new Date(clubInstant(addDays(date, 1), "00:00", timeZone).getTime() - 1);
 }

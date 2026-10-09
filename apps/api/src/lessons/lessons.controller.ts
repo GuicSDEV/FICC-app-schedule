@@ -108,7 +108,7 @@ export class CoachController {
   }
 
   private coachIdOf(user: RequestUser): string {
-    if (!user.coachId) throw forbidden("NOT_A_COACH", "Conta sem perfil de professor.");
+    if (!user.coachId) throw forbidden("NOT_A_COACH", "api.notACoach");
     return user.coachId;
   }
 }

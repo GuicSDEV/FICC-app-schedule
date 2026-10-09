@@ -28,14 +28,14 @@ describe("Realtime gateway", () => {
     await ctx.close();
   });
   beforeEach(async () => {
-    await resetDatabase(ctx.prisma);
-    club = await seedClub(ctx.prisma);
+    await resetDatabase(ctx);
+    club = await seedClub(ctx);
   });
 
   async function connectAs(membershipId: string): Promise<Socket> {
     const login = await ctx
       .http()
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ kind: "member", membershipId, password: TEST_PASSWORD })
       .expect(200);
     const cookie = (login.headers["set-cookie"] as unknown as string[])
@@ -80,7 +80,7 @@ describe("Realtime gateway", () => {
 
     const agent = await ctx.loginMember(ana.membershipId!);
     await agent
-      .post("/api/bookings")
+      .post("/api/v1/bookings")
       .send({
         courtId: club.courts.Q4.id,
         timeSlotId: club.slots["21:00"]!.id,

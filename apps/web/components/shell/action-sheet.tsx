@@ -3,29 +3,15 @@
 import { CalendarPlus, ClipboardList, type LucideIcon, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Sheet } from "@/components/ui/sheet";
 import { listItemVariants, tap } from "@/lib/motion";
 
-const ACTIONS: { href: string; label: string; description: string; icon: LucideIcon }[] = [
-  {
-    href: "/app/courts",
-    label: "Reservar quadra",
-    description: "Escolha dia, horário e quem joga",
-    icon: CalendarPlus,
-  },
-  {
-    href: "/app/matches/report",
-    label: "Lançar resultado",
-    description: "O adversário confirma e o Elo atualiza",
-    icon: ClipboardList,
-  },
-  {
-    href: "/app/guests?new=1",
-    label: "Convidado",
-    description: "Passe de um dia com QR para a portaria",
-    icon: UserPlus,
-  },
+const ACTIONS: { href: string; key: "book" | "report" | "guest"; icon: LucideIcon }[] = [
+  { href: "/app/courts", key: "book", icon: CalendarPlus },
+  { href: "/app/matches/report", key: "report", icon: ClipboardList },
+  { href: "/app/guests?new=1", key: "guest", icon: UserPlus },
 ];
 
 /** The central "+" menu: book a court, report a result, invite a guest. */
@@ -36,9 +22,10 @@ export function ActionSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("shell.actions");
   const router = useRouter();
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="O que vamos fazer?">
+    <Sheet open={open} onOpenChange={onOpenChange} title={t("title")}>
       <ul className="space-y-2">
         {ACTIONS.map((action, index) => (
           <motion.li
@@ -61,8 +48,10 @@ export function ActionSheet({
                 <action.icon className="size-6" />
               </span>
               <span className="min-w-0">
-                <span className="block font-display text-title font-semibold">{action.label}</span>
-                <span className="block text-small text-muted-foreground">{action.description}</span>
+                <span className="block font-display text-title font-semibold">{t(action.key)}</span>
+                <span className="block text-small text-muted-foreground">
+                  {t(`${action.key}Description`)}
+                </span>
               </span>
             </motion.button>
           </motion.li>

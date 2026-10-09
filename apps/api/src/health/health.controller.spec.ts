@@ -1,14 +1,13 @@
 import { Test } from "@nestjs/testing";
-import { CLUB_TIMEZONE } from "@ficc/shared";
 
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaBaseService } from "../prisma/prisma.service";
 import { HealthController } from "./health.controller";
 
 describe("HealthController", () => {
   async function createController(queryRaw: jest.Mock): Promise<HealthController> {
     const moduleRef = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [{ provide: PrismaService, useValue: { $queryRaw: queryRaw } }],
+      providers: [{ provide: PrismaBaseService, useValue: { $queryRaw: queryRaw } }],
     }).compile();
     return moduleRef.get(HealthController);
   }
@@ -22,7 +21,6 @@ describe("HealthController", () => {
       status: "ok",
       service: "api",
       database: "up",
-      timezone: CLUB_TIMEZONE,
     });
     expect(Number.isNaN(Date.parse(health.time))).toBe(false);
   });

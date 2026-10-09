@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { spring, tap } from "@/lib/motion";
@@ -25,6 +26,7 @@ export function Sidebar({
   header?: ReactNode;
   footer?: ReactNode;
 }) {
+  const t = useTranslations("nav");
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -65,13 +67,13 @@ export function Sidebar({
           type="button"
           whileTap={tap}
           onClick={toggle}
-          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          aria-label={collapsed ? t("expand") : t("collapse")}
           className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground"
         >
           {collapsed ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
         </motion.button>
       </div>
-      <nav aria-label="Navegação" className="flex flex-1 flex-col gap-1">
+      <nav aria-label={t("sidebar")} className="flex flex-1 flex-col gap-1">
         {items.map((item) => {
           const active = isActive(pathname, item);
           const Icon = item.icon;
@@ -80,7 +82,7 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? t(`items.${item.label}`) : undefined}
               className={cn(
                 "relative flex h-11 items-center gap-3 rounded-full px-3.5 text-small font-medium transition-tokens outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -94,7 +96,9 @@ export function Sidebar({
                 />
               ) : null}
               <Icon className={cn("relative size-5 shrink-0", active && "text-accent-ink")} />
-              <span className={cn("relative truncate", collapsed && "sr-only")}>{item.label}</span>
+              <span className={cn("relative truncate", collapsed && "sr-only")}>
+                {t(`items.${item.label}`)}
+              </span>
             </Link>
           );
         })}

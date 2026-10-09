@@ -1,14 +1,12 @@
 "use client";
 
-import {
-  type CoachSummary,
-  type CourtSummary,
-  type SlotSummary,
-  SURFACE_LABELS,
-} from "@ficc/shared";
+import type { CoachSummary, CourtSummary, SlotSummary } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, Lock } from "lucide-react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
+
+import { useClub } from "@/components/providers/club-provider";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +16,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { formatDayTitle } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useLastDefined } from "@/lib/use-last-defined";
@@ -42,6 +40,9 @@ export function CoachSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const target = useLastDefined(requested);
+  const t = useTranslations();
+  const format = useFormat();
+  const club = useClub();
   const coachId = target?.coach.id;
   const profile = useQuery({
     queryKey: queryKeys.coach(coachId ?? ""),
@@ -50,7 +51,7 @@ export function CoachSheet({
   });
 
   return (
-    <Sheet open={requested !== null} onOpenChange={onOpenChange} title="Aula do clube">
+    <Sheet open={requested !== null} onOpenChange={onOpenChange} title={t("coachSheet.title")}>
       {target ? (
         <div className="space-y-6">
           <div className="flex items-center gap-4">
@@ -64,18 +65,22 @@ export function CoachSheet({
               <p className="truncate font-display text-headline font-semibold">
                 {target.coach.displayName}
               </p>
-              <p className="text-small text-muted-foreground">Professor · FICC</p>
+              <p className="text-small text-muted-foreground">
+                {t("coachSheet.role", { club: club?.name ?? "" })}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 rounded-lg border border-lesson/30 bg-lesson-soft p-3 text-lesson-ink">
             <Lock aria-hidden className="size-5 shrink-0" />
             <p className="min-w-0 flex-1 text-small">
-              <span className="font-medium">{formatDayTitle(target.date)}</span>,{" "}
-              <span className="num">
-                {target.slot.startTime}–{target.slot.endTime}
-              </span>{" "}
-              na {target.court.name}. Horário reservado para aula.
+              {t("coachSheet.when", {
+                day: format.dayTitle(target.date),
+                start: target.slot.startTime,
+                end: target.slot.endTime,
+                court: target.court.name,
+              })}{" "}
+              {t("coachSheet.slotTaken")}
             </p>
             <FavoriteToggle
               courtId={target.court.id}
@@ -87,14 +92,14 @@ export function CoachSheet({
 
           {profile.isError ? (
             <ErrorState
-              message="Não foi possível carregar o perfil."
+              message={t("coachSheet.loadFailed")}
               onRetry={() => void profile.refetch()}
             />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border border-border bg-surface-2 p-4">
-                  <SectionLabel>Aulas na semana</SectionLabel>
+                  <SectionLabel>{t("coachSheet.lessonsThisWeek")}</SectionLabel>
                   {profile.data ? (
                     <NumberTicker
                       value={profile.data.lessonsThisWeek}
@@ -106,14 +111,14 @@ export function CoachSheet({
                   )}
                 </div>
                 <div className="rounded-lg border border-border bg-surface-2 p-4">
-                  <SectionLabel>Quadras</SectionLabel>
+                  <SectionLabel>{t("coachSheet.courts")}</SectionLabel>
                   <div className="mt-2 flex min-h-10 flex-wrap content-start gap-1.5">
                     {profile.data
                       ? profile.data.courts.map((court) => (
                           <Badge
                             key={court.id}
                             tone={court.surface === "HARTRU" ? "hartru" : "saibro"}
-                            title={SURFACE_LABELS[court.surface]}
+                            title={t(`labels.surface.${court.surface}`)}
                           >
                             {court.name}
                           </Badge>
@@ -126,7 +131,7 @@ export function CoachSheet({
               </div>
 
               <div className="space-y-2">
-                <SectionLabel>Próximas aulas</SectionLabel>
+                <SectionLabel>{t("coachSheet.upcoming")}</SectionLabel>
                 <ul className="space-y-2">
                   {profile.data
                     ? profile.data.upcoming.map((lesson, index) => (
@@ -139,7 +144,7 @@ export function CoachSheet({
                           className="flex h-12 items-center gap-3 rounded-md bg-surface-2 px-3 text-small"
                         >
                           <CalendarClock aria-hidden className="size-4 text-lesson-ink" />
-                          <span className="flex-1">{formatDayTitle(lesson.date)}</span>
+                          <span className="flex-1">{format.dayTitle(lesson.date)}</span>
                           <span className="num">{lesson.slot.startTime}</span>
                           <span className="num text-muted-foreground">{lesson.court.name}</span>
                         </motion.li>
@@ -147,7 +152,7 @@ export function CoachSheet({
                     : [0, 1, 2].map((index) => <Skeleton key={index} className="h-12" />)}
                   {profile.data && profile.data.upcoming.length === 0 ? (
                     <li className="text-small text-muted-foreground">
-                      Nenhuma outra aula nos próximos 7 dias.
+                      {t("coachSheet.noUpcoming")}
                     </li>
                   ) : null}
                 </ul>

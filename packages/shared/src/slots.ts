@@ -1,22 +1,5 @@
 import { clubInstant, type IsoDate } from "./dates";
 
-/** Every court slot lasts 75 minutes (the grid is not hourly). */
-export const SLOT_DURATION_MINUTES = 75;
-
-/** Default daily start times, club local time (America/Sao_Paulo). */
-export const DEFAULT_SLOT_START_TIMES = [
-  "08:30",
-  "10:00",
-  "14:45",
-  "16:00",
-  "17:15",
-  "18:30",
-  "19:45",
-  "21:00",
-] as const;
-
-export type DefaultSlotStartTime = (typeof DEFAULT_SLOT_START_TIMES)[number];
-
 export interface SlotDefinition {
   /** "HH:mm", club local time. */
   startTime: string;
@@ -24,16 +7,6 @@ export interface SlotDefinition {
   /** 1-based display order. */
   sortOrder: number;
 }
-
-/**
- * The club's default slot grid. It seeds the `TimeSlot` table, which admins can edit later;
- * at runtime the database is the source of truth.
- */
-export const DEFAULT_SLOT_GRID: readonly SlotDefinition[] = Object.freeze(
-  DEFAULT_SLOT_START_TIMES.map((startTime, index) =>
-    Object.freeze({ startTime, durationMinutes: SLOT_DURATION_MINUTES, sortOrder: index + 1 }),
-  ),
-);
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -68,27 +41,37 @@ export function slotEndTime(slot: SlotTiming): string {
 }
 
 /** UTC instant when a slot starts on a club-local date. */
-export function slotStartsAt(date: IsoDate, slot: Pick<SlotDefinition, "startTime">): Date {
-  return clubInstant(date, slot.startTime);
+export function slotStartsAt(
+  date: IsoDate,
+  slot: Pick<SlotDefinition, "startTime">,
+  timeZone: string,
+): Date {
+  return clubInstant(date, slot.startTime, timeZone);
 }
 
 /** UTC instant when a slot ends on a club-local date. */
-export function slotEndsAt(date: IsoDate, slot: SlotTiming): Date {
-  return new Date(slotStartsAt(date, slot).getTime() + slot.durationMinutes * 60_000);
+export function slotEndsAt(date: IsoDate, slot: SlotTiming, timeZone: string): Date {
+  return new Date(slotStartsAt(date, slot, timeZone).getTime() + slot.durationMinutes * 60_000);
 }
 
 /** A slot is past once it has started: it can no longer be booked or scheduled. */
 export function isSlotPast(
   date: IsoDate,
   slot: Pick<SlotDefinition, "startTime">,
-  now: Date = new Date(),
+  now: Date,
+  timeZone: string,
 ): boolean {
-  return slotStartsAt(date, slot).getTime() <= now.getTime();
+  return slotStartsAt(date, slot, timeZone).getTime() <= now.getTime();
 }
 
 /** True once the slot has fully ended (e.g. a match on it may be reported). */
-export function hasSlotEnded(date: IsoDate, slot: SlotTiming, now: Date = new Date()): boolean {
-  return slotEndsAt(date, slot).getTime() <= now.getTime();
+export function hasSlotEnded(
+  date: IsoDate,
+  slot: SlotTiming,
+  now: Date,
+  timeZone: string,
+): boolean {
+  return slotEndsAt(date, slot, timeZone).getTime() <= now.getTime();
 }
 
 /** True when [startsAt, endsAt) overlaps the slot; a null end means open-ended. */
@@ -96,9 +79,10 @@ export function overlapsSlot(
   window: { startsAt: Date; endsAt: Date | null },
   date: IsoDate,
   slot: SlotTiming,
+  timeZone: string,
 ): boolean {
-  const start = slotStartsAt(date, slot).getTime();
-  const end = slotEndsAt(date, slot).getTime();
+  const start = slotStartsAt(date, slot, timeZone).getTime();
+  const end = slotEndsAt(date, slot, timeZone).getTime();
   return (
     window.startsAt.getTime() < end && (window.endsAt === null || window.endsAt.getTime() > start)
   );

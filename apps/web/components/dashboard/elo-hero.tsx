@@ -3,6 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Trophy } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+
+import { useClub } from "@/components/providers/club-provider";
 
 import { Sparkline } from "@/components/charts/sparkline";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +14,7 @@ import { CourtLines } from "@/components/ui/court-lines";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import { formatDelta } from "@/lib/format";
+import { formatDelta } from "@/lib/use-format";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +23,8 @@ const SPARK_POINTS = 20;
 
 /** Giant Elo with a ticker, 30-day trend, record and a sparkline of the recent history. */
 export function EloHero({ userId }: { userId: string }) {
+  const t = useTranslations("dashboard.elo");
+  const club = useClub();
   const profile = useQuery({
     queryKey: queryKeys.player(userId),
     queryFn: () => api.ranking.profile(userId),
@@ -33,7 +38,7 @@ export function EloHero({ userId }: { userId: string }) {
 
   return (
     <section
-      aria-label="Seu Elo"
+      aria-label={t("label")}
       className="grain relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-card"
     >
       <CourtLines className="opacity-[0.05]" />
@@ -43,11 +48,15 @@ export function EloHero({ userId }: { userId: string }) {
       />
       <div className="relative">
         <div className="flex items-center justify-between gap-3">
-          <SectionLabel>Seu Elo</SectionLabel>
+          <SectionLabel>{t("label")}</SectionLabel>
           {data ? (
             <Link href="/app/ranking" className="rounded-full">
               <Badge tone="neutral">
-                <Trophy aria-hidden /> <span className="num">#{data.rank}</span> no ranking
+                <Trophy aria-hidden />{" "}
+                {t.rich("rank", {
+                  rank: data.rank,
+                  num: (chunks) => <span className="num">{chunks}</span>,
+                })}
               </Badge>
             </Link>
           ) : (
@@ -82,7 +91,11 @@ export function EloHero({ userId }: { userId: string }) {
                 <TrendingDown aria-hidden className="size-3.5" />
               ) : null}
               <span className="num">{formatDelta(trend)}</span>
-              <span className="font-medium opacity-80">30 dias</span>
+              {club ? (
+                <span className="font-medium opacity-80">
+                  {t("trendDays", { days: club.settings.rankingTrendDays })}
+                </span>
+              ) : null}
             </span>
           ) : null}
         </div>
@@ -91,14 +104,16 @@ export function EloHero({ userId }: { userId: string }) {
           {data ? (
             <>
               <span>
-                <span className="num font-semibold text-foreground">{data.wins}</span> vitórias
+                <span className="num font-semibold text-foreground">{data.wins}</span>{" "}
+                {t("wins", { count: data.wins })}
               </span>
               <span>
-                <span className="num font-semibold text-foreground">{data.losses}</span> derrotas
+                <span className="num font-semibold text-foreground">{data.losses}</span>{" "}
+                {t("losses", { count: data.losses })}
               </span>
               <span>
                 <span className="num font-semibold text-foreground">{data.winRate}%</span>{" "}
-                aproveitamento
+                {t("winRate")}
               </span>
             </>
           ) : (

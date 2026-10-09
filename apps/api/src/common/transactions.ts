@@ -1,13 +1,19 @@
-import { Prisma, PrismaClient } from "@ficc/db";
+import { Prisma } from "@ficc/db";
 
-export type Tx = Prisma.TransactionClient;
+import type { TenantPrismaClient } from "../prisma/prisma.service";
+
+/** The club-scoped client inside an interactive transaction. */
+export type Tx = Omit<
+  TenantPrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
+>;
 
 /**
  * Runs `work` in a SERIALIZABLE transaction and retries on serialization conflicts (P2034), so
  * rules checked by reading (player busy, booking limit) hold under concurrent requests.
  */
 export async function serializable<T>(
-  prisma: PrismaClient,
+  prisma: TenantPrismaClient,
   work: (tx: Tx) => Promise<T>,
   attempts = 4,
 ): Promise<T> {

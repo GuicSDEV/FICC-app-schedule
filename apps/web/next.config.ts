@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Monorepo root (Next runs with apps/web as its working directory).
 const workspaceRoot = path.resolve(process.cwd(), "../..");
@@ -15,4 +16,6 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: workspaceRoot,
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
+export default withNextIntl(nextConfig);

@@ -13,6 +13,8 @@ import { PrismaService } from "../prisma/prisma.service";
 export interface AccessPayload {
   sub: string;
   role: Role;
+  /** Club the session belongs to; a token is only valid for that club. */
+  cid: string;
 }
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -27,11 +29,14 @@ export class TokensService {
     private readonly clock: Clock,
   ) {}
 
-  signAccess(user: { id: string; role: Role }): string {
-    return this.jwt.sign({ sub: user.id, role: user.role } satisfies AccessPayload, {
-      secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }),
-      expiresIn: this.config.get("ACCESS_TOKEN_TTL_MINUTES", { infer: true }) * 60,
-    });
+  signAccess(user: { id: string; role: Role; clubId: string }): string {
+    return this.jwt.sign(
+      { sub: user.id, role: user.role, cid: user.clubId } satisfies AccessPayload,
+      {
+        secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }),
+        expiresIn: this.config.get("ACCESS_TOKEN_TTL_MINUTES", { infer: true }) * 60,
+      },
+    );
   }
 
   verifyAccess(token: string): AccessPayload | null {
@@ -58,18 +63,15 @@ export class TokensService {
     userAgent?: string,
   ): Promise<{ userId: string; refreshToken: string }> {
     const now = this.clock.now();
-    const stored = await this.prisma.refreshToken.findUnique({
+    const stored = await this.prisma.refreshToken.findFirst({
       where: { tokenHash: sha256(token) },
     });
     if (!stored || stored.expiresAt <= now) {
-      throw unauthorized("REFRESH_INVALID", "Sua sessão expirou. Entre novamente.");
+      throw unauthorized("REFRESH_INVALID", "api.sessionExpired");
     }
     if (stored.revokedAt) {
       await this.revokeFamily(stored.familyId);
-      throw unauthorized(
-        "REFRESH_REUSED",
-        "Sua sessão foi encerrada por segurança. Entre novamente.",
-      );
+      throw unauthorized("REFRESH_REUSED", "api.sessionRevoked");
     }
     const revoked = await this.prisma.refreshToken.updateMany({
       where: { id: stored.id, revokedAt: null },
@@ -77,17 +79,14 @@ export class TokensService {
     });
     if (revoked.count === 0) {
       await this.revokeFamily(stored.familyId);
-      throw unauthorized(
-        "REFRESH_REUSED",
-        "Sua sessão foi encerrada por segurança. Entre novamente.",
-      );
+      throw unauthorized("REFRESH_REUSED", "api.sessionRevoked");
     }
     const refreshToken = await this.createRefresh(stored.userId, stored.familyId, userAgent);
     return { userId: stored.userId, refreshToken };
   }
 
   async revokeByToken(token: string): Promise<void> {
-    const stored = await this.prisma.refreshToken.findUnique({
+    const stored = await this.prisma.refreshToken.findFirst({
       where: { tokenHash: sha256(token) },
     });
     if (stored) await this.revokeFamily(stored.familyId);

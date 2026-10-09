@@ -91,7 +91,7 @@ export class NotificationsService {
     });
     if (result.count === 0) {
       const exists = await this.prisma.notification.count({ where: { id, userId } });
-      if (!exists) throw notFound("NOTIFICATION_NOT_FOUND", "Notificação não encontrada.");
+      if (!exists) throw notFound("NOTIFICATION_NOT_FOUND", "api.notificationNotFound");
     }
   }
 

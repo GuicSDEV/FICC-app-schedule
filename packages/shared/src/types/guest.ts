@@ -4,10 +4,12 @@ import type { IsoDateTime, PlayerSummary } from "./common";
 
 export interface GuestPassItem {
   id: string;
-  guestName: string;
+  /** Null once the guest's data was anonymized after the club's retention period (LGPD). */
+  guestName: string | null;
   documentType: GuestDocumentType;
-  /** Masked, e.g. ***.456.789-**. */
-  documentMasked: string;
+  /** Masked, e.g. ***.456.789-**; null once anonymized. */
+  documentMasked: string | null;
+  anonymized: boolean;
   visitDate: IsoDate;
   status: GuestPassStatus;
   usedAt: IsoDateTime | null;
@@ -32,7 +34,7 @@ export interface GatePassView {
 export interface GateScanResponse {
   result: GateScanResult;
   accepted: boolean;
-  /** pt-BR headline for the full-screen result. */
+  /** Headline for the full-screen result, in the club's locale. */
   message: string;
   scannedAt: IsoDateTime;
   pass: GatePassView | null;
