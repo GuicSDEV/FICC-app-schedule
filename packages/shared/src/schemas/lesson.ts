@@ -57,6 +57,8 @@ export type CancelLessonInput = z.infer<typeof cancelLessonSchema>;
 /** Move a lesson (court, slot, date) and/or change its details. */
 export const updateLessonSchema = z
   .object({
+    /** Admin only: reassign the lesson to another coach. */
+    coachId: idSchema.optional(),
     courtId: idSchema.optional(),
     timeSlotId: idSchema.optional(),
     date: isoDateSchema.optional(),
@@ -77,3 +79,21 @@ export type CopyWeekInput = z.infer<typeof copyWeekSchema>;
 
 export const agendaQuerySchema = z.object({ date: isoDateSchema });
 export type AgendaQuery = z.infer<typeof agendaQuerySchema>;
+
+/** Lessons between two dates (max ~9 weeks), optionally for one coach (admins). */
+export const lessonsQuerySchema = z
+  .object({ from: isoDateSchema, to: isoDateSchema, coachId: idSchema.optional() })
+  .refine((value) => value.to >= value.from, { message: "Intervalo inválido", path: ["to"] })
+  .refine((value) => Date.parse(value.to) - Date.parse(value.from) <= 62 * 86_400_000, {
+    message: "Intervalo máximo de 9 semanas",
+    path: ["to"],
+  });
+export type LessonsQuery = z.infer<typeof lessonsQuerySchema>;
+
+export const lessonAuditQuerySchema = z.object({
+  lessonId: idSchema.optional(),
+  seriesId: idSchema.optional(),
+  coachId: idSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type LessonAuditQuery = z.infer<typeof lessonAuditQuerySchema>;

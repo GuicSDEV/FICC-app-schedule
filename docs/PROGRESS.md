@@ -11,7 +11,7 @@ and what still needs a human to check.
 | 1     | Database                              | Done        | `9501ffb`       |
 | 2     | Shared package                        | Done        | `feat(phase-2)` |
 | 3     | API core: auth, schedule, bookings    | Done        | `feat(phase-3)` |
-| 4     | API: coaches, lessons, maintenance    | Not started |                 |
+| 4     | API: coaches, lessons, maintenance    | Done        | `feat(phase-4)` |
 | 5     | API: matches, Elo, ranking, guests    | Not started |                 |
 | 6     | Frontend foundation (design + motion) | Not started |                 |
 | 7     | Member: dashboard, calendar, booking  | Not started |                 |
@@ -66,6 +66,23 @@ and what still needs a human to check.
   slot are covered by an e2e test (exactly one wins).
 - **e2e tests** run against a separate `ficc_test` database with a fake clock fixed on
   Monday 2030-03-04 09:00 (club time); scheduled jobs are disabled and called directly.
+- **Coaches cannot teach two lessons in the same slot** (on different courts), checked with the
+  same transaction as the slot claim.
+- **Weekly series skip taken dates:** the first lesson must be free; later occurrences that are
+  booked, frozen or clash are skipped and reported (`skippedDates`). The nightly generator does
+  the same and never re-creates a date that already has an occurrence (cancelled ones included).
+- **"Cancel this and all future"** sets the series `endDate` to the day before (never before its
+  start) and cancels every later scheduled occurrence.
+- **Moving a lesson to another date** detaches it from its series (it becomes a one-off);
+  changing only court or slot keeps the series link. Admins can also reassign the coach.
+- **Undo:** a cancelled occurrence can be restored while its slot is still free.
+- **SLOT_OPENED** is only sent for freed slots within the next 14 days, so ending a series does not
+  flood watchers.
+- **Freeze banner data** (`GET /freezes/active`) includes freezes that start within 24 hours,
+  flagged `active: false`. Impacted members and coaches get `COURT_FROZEN` / `COURT_UNFROZEN`.
+  Open-ended freezes list affected items for the next 8 weeks.
+- **Deactivating a coach** disables the login, revokes sessions and stops series generation; their
+  existing lessons stay for the admin to cancel or reassign.
 - **shadcn/ui was initialized by hand** because the sandbox blocks `ui.shadcn.com`; the files
   match what the CLI generates.
 

@@ -3,12 +3,15 @@ import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 
+import { AdminModule } from "./admin/admin.module";
 import { AuthModule } from "./auth/auth.module";
 import { BookingsModule } from "./bookings/bookings.module";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { CommonModule } from "./common/common.module";
 import { validateEnv } from "./config/env";
+import { FreezesModule } from "./freezes/freezes.module";
 import { HealthModule } from "./health/health.module";
+import { LessonsModule } from "./lessons/lessons.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RealtimeModule } from "./realtime/realtime.module";
@@ -34,6 +37,9 @@ import { UsersModule } from "./users/users.module";
     UsersModule,
     ClubScheduleModule,
     BookingsModule,
+    LessonsModule,
+    FreezesModule,
+    AdminModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

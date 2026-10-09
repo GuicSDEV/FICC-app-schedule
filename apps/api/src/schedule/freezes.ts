@@ -1,5 +1,7 @@
 import { Prisma } from "@ficc/db";
 
+import { slotEndsAt, slotStartsAt } from "@ficc/shared";
+
 import type { Tx } from "../common/transactions";
 
 export const freezeWithCourts = {
@@ -19,4 +21,17 @@ export function freezesOverlapping(client: Tx, from: Date, to: Date): Promise<Fr
     include: freezeWithCourts,
     orderBy: { startsAt: "asc" },
   });
+}
+
+/** True when an active freeze covers this court during the slot on that date. */
+export async function isCourtFrozen(
+  client: Tx,
+  courtId: string,
+  date: string,
+  slot: { startTime: string; durationMinutes: number },
+): Promise<boolean> {
+  const startsAt = slotStartsAt(date, slot);
+  const endsAt = slotEndsAt(date, slot);
+  const freezes = await freezesOverlapping(client, startsAt, endsAt);
+  return freezes.some((freeze) => freeze.courts.some((entry) => entry.courtId === courtId));
 }

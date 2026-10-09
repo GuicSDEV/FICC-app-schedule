@@ -15,7 +15,6 @@ import {
   fromDbDate,
   isSlotPast,
   type MyBookingsResponse,
-  overlapsSlot,
   slotEndsAt,
   slotStartsAt,
   toDbDate,
@@ -27,7 +26,7 @@ import { playerSelect, toCourtSummary, toPlayerSummary, toSlotSummary } from "..
 import { isUniqueViolation, serializable, type Tx } from "../common/transactions";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { freezesOverlapping } from "../schedule/freezes";
+import { isCourtFrozen } from "../schedule/freezes";
 import { SlotEventsService } from "../schedule/slot-events.service";
 
 /** A member may hold at most this many future active bookings (docs/SPEC.md, Court Booking). */
@@ -104,12 +103,7 @@ export class BookingsService {
       }
 
       const startsAt = slotStartsAt(input.date, slot);
-      const endsAt = slotEndsAt(input.date, slot);
-      const frozen = (await freezesOverlapping(tx, startsAt, endsAt)).some(
-        (freeze) =>
-          freeze.courts.some((entry) => entry.courtId === court.id) &&
-          overlapsSlot(freeze, input.date, slot),
-      );
+      const frozen = await isCourtFrozen(tx, court.id, input.date, slot);
       if (frozen) throw conflict("COURT_FROZEN", `A ${court.name} está interditada nesse horário.`);
 
       const playerIds = [creatorId, ...input.playerIds];
