@@ -17,7 +17,7 @@ and what still needs a human to check.
 | 7     | Member: dashboard, calendar, booking  | Done                                | `feat(phase-7)`   |
 | 7.5   | Multi-club-ready foundation           | Done                                | `feat(phase-7.5)` |
 | 8     | Member: matches, ranking, H2H, guests | Done                                | `feat(phase-8)`   |
-| 9     | Coach, gate, admin screens            | Not started                         |                   |
+| 9     | Coach, gate, admin screens            | Done                                | `feat(phase-9)`   |
 | 9.5   | Tournaments & circuits                | Not started                         |                   |
 | 9.8   | FICC operations adjustments           | Not started                         |                   |
 | 10    | PWA, polish, QA                       | Not started                         |                   |
@@ -218,6 +218,25 @@ Phases 11 and 12.
   with the Web Share API (files); browsers without file sharing download it instead. The image
   uses the fixed SPEC palette so it looks the same whatever theme the sender uses.
 
+- **Coach area:** Agenda (allowed courts, own lessons listed above the grid with swipe-left to
+  cancel that day and a 5 s undo in the toast), Quadras (whole club, read-only except own lessons
+  and free slots on allowed courts) and Perfil. Undo restores the lesson only while its slot is
+  still free; if a member took it in between, the toast shows the API's message.
+- **One lesson form and one actions sheet for coaches and admins** (`lessonApi(mode)` picks the
+  routes); admins also pick or reassign the coach, which limits the courts to that coach's.
+- **Gate scanner** uses `@zxing/browser` (loaded on demand) on the rear camera; the same code is
+  ignored for 4 s and scanning pauses while a result is on screen. Accepted results close by
+  themselves after 5 s; refusals wait for a tap. Camera starts are chained so a late start never
+  clears the video of the next one (it happened with React's double-run effects).
+- **Gate result colors** are their own tokens (`--gate-accepted`, `--gate-refused`), the same in
+  both themes, so white text keeps AA contrast.
+- **Freeze bulk cancel preselects** everything for a freeze with an end time, but only today's
+  items for an open-ended freeze (its list covers the next 8 weeks); select all / none is one tap.
+- **Admin pages use a non-sticky header** because the admin shell already has a sticky tab row on
+  phones.
+- **Dispute "correct the score"** takes the score as text ("6-4, 3-6, [10-8]", side A first),
+  parsed with the sport's rules.
+
 ## Known issues
 
 - None open.
@@ -238,3 +257,5 @@ Phases 11 and 12.
   generated and downloaded (headless Chromium has no share sheet).
 - QR card tilt from device orientation on a real phone (iOS needs a permission prompt, so there it
   tilts only with touch).
+- Gate camera scanning on real phones (iOS Safari and Android Chrome) and in the gate's lighting;
+  verified here with Chromium's fake camera playing a QR video (accepted, then "already used").

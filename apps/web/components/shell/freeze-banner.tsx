@@ -33,6 +33,7 @@ export function FreezeBanner() {
               reason: labels(freeze.reason),
               courts: freeze.courtNames.join(", "),
               active: String(freeze.active),
+              count: freeze.courtNames.length,
             })
           : ""
       }
