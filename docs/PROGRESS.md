@@ -379,6 +379,10 @@ Phases 11 and 12.
   (history points at them). A start time still in a weekday grid, a future date exception, a
   future booking or lesson, or a running series cannot be retired. Grids, date exceptions and new
   slots are checked so two slots of one day never overlap (`findOverlap` in `@ficc/shared`).
+- **Root `.env` in the web app:** `next.config.ts` reloads the root `.env` with
+  `loadEnvConfig(root, …, forceReload)`. Without the force flag @next/env returned its cached
+  (empty) result under `pnpm dev`/`pnpm build`, so `NEXT_PUBLIC_API_URL` silently fell back to
+  `http://localhost:4000` (invisible locally, broke phone testing over the LAN).
 - **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
   id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
   server-rendered (no `useSearchParams` bailout).

@@ -7,8 +7,10 @@ import createNextIntlPlugin from "next-intl/plugin";
 // Monorepo root (Next runs with apps/web as its working directory).
 const workspaceRoot = path.resolve(process.cwd(), "../..");
 
-// Load the shared root .env (apps/web/.env, if present, still takes precedence).
-loadEnvConfig(workspaceRoot);
+// Load the shared root .env (apps/web/.env, if present, still takes precedence). Next has already
+// loaded apps/web's env by now and @next/env caches that result, so force a reload: otherwise the
+// root .env is silently skipped under `pnpm dev`/`pnpm build` and NEXT_PUBLIC_* fall back to defaults.
+loadEnvConfig(workspaceRoot, undefined, undefined, true);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
