@@ -1,0 +1,17 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 10 blocks dependency install scripts unless they are allowed here.
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver
+
+ignoredBuiltDependencies:
+  - "@nestjs/core"
+  # Jest watch mode only; prebuilt binaries ship as optional dependencies.
+  - "@parcel/watcher"

@@ -1,0 +1,14 @@
+// Prisma schema for the FICC tennis club.
+// Models are added in the data-model phase (see docs/SPEC.md, "DATA MODEL").
+
+generator client {
+  provider = "prisma-client-js"
+  // Generated inside this package so every consumer imports it from @ficc/db
+  // and Turborepo can cache it as a build output.
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

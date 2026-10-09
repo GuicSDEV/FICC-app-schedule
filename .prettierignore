@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+**/dist/
+**/.next/
+**/.turbo/
+**/coverage/
+**/generated/
+**/migrations/
+# Kept verbatim as written by the product owner
+docs/SPEC.md
+# Third-party Claude Code skills
+.claude/

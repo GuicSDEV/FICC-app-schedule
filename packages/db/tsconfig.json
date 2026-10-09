@@ -1,0 +1,7 @@
+{
+  "extends": "@ficc/typescript-config/node-library.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src", "prisma"]
+}
