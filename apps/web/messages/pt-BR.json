@@ -593,7 +593,12 @@
     "loadFailed": "Não foi possível carregar o ranking.",
     "emptyTitle": "Ninguém nesta categoria",
     "emptyDescription": "Quando houver jogadores, eles aparecem aqui.",
-    "updated": "Atualizado {when}"
+    "updated": "Atualizado {when}",
+    "search": "Buscar sócio no ranking",
+    "searchPlaceholder": "Buscar sócio pelo nome",
+    "clearSearch": "Limpar busca",
+    "searchResults": "Resultado da busca",
+    "searchCount": "{count, plural, =0 {Nenhum sócio encontrado} one {# sócio encontrado} other {# sócios encontrados}}"
   },
   "h2h": {
     "title": "Confronto direto",
@@ -1548,7 +1553,7 @@
       "generate": "Sortear chave",
       "regenerate": "Sortear de novo",
       "regenerateTitle": "Sortear a chave de novo?",
-      "regenerateDescription": "O rascunho atual, com as trocas feitas, é descartado.",
+      "regenerateDescription": "Um novo sorteio é feito: os cabeças de chave (e quem tem bye) continuam protegidos e os demais mudam de lugar. O rascunho atual, com as trocas feitas, é descartado.",
       "swap": "Trocar posições",
       "swapPickFirst": "Toque no primeiro jogador que vai trocar de lugar.",
       "swapPickSecond": "Agora toque em quem fica no lugar dele.",
@@ -1557,7 +1562,7 @@
       "swapped": "Posições trocadas",
       "published": "Chave publicada! Os jogadores foram avisados.",
       "emptyTitle": "Chave ainda não sorteada",
-      "emptyDescription": "Os cabeças de chave saem do Elo ou do circuito; os byes vão para os melhores.",
+      "emptyDescription": "Os cabeças de chave saem do Elo ou do circuito e os byes vão para os melhores; os demais são sorteados.",
       "needEntries": "São necessárias ao menos 2 inscrições confirmadas.",
       "groups": "Grupos",
       "knockout": "Mata-mata"
@@ -1874,6 +1879,10 @@
       "guestDataRetentionDays": {
         "label": "Retenção dos dados de convidados (dias)",
         "hint": "Depois disso nome e documento são anonimizados (LGPD)."
+      },
+      "partnerRequestMaxOpen": {
+        "label": "Pedidos de parceiro abertos por sócio",
+        "hint": "Quantos pedidos “Procuro parceiro” um sócio pode ter ao mesmo tempo."
       }
     },
     "exceptions": {
@@ -2028,5 +2037,33 @@
     "close": "Fechar",
     "yourTurn": "É a sua vez! A quadra {court} está guardada para você.",
     "lostPlace": "Você saiu da fila desta quadra."
+  },
+  "partners": {
+    "title": "Procurando parceiro",
+    "hint": "Sócios sem companheiro para este dia. Toque em Jogar para reservar uma quadra com eles.",
+    "empty": "Ninguém procurando parceiro neste dia.",
+    "you": "Você",
+    "elo": "Elo {elo}",
+    "type": {
+      "SINGLES": "Simples",
+      "DOUBLES": "Duplas"
+    },
+    "play": "Jogar",
+    "cancel": "Cancelar",
+    "cancelled": "Pedido cancelado",
+    "post": "Procuro parceiro",
+    "pill": "{count, plural, one {# sócio procurando parceiro} other {# sócios procurando parceiro}} neste dia",
+    "askTitle": "Procuro parceiro",
+    "askDescription": "Os outros sócios veem seu pedido neste dia. Quem quiser jogar reserva a quadra com você e você recebe o convite para confirmar.",
+    "askSubmit": "Avisar os sócios",
+    "time": "Horário",
+    "pickTime": "Escolha um horário.",
+    "noTimes": "Não há quadra livre neste dia.",
+    "note": "Recado (opcional)",
+    "notePlaceholder": "Ex.: jogo de nível intermediário, gosto de bater bola",
+    "noteHint": "{left, plural, one {# caractere restante} other {# caracteres restantes}}",
+    "posted": "Pronto! Os sócios já veem que você procura parceiro.",
+    "noCourt": "Não há mais quadra livre às {time}.",
+    "askFromBooking": "Sem parceiro? Avise os outros sócios"
   }
 }

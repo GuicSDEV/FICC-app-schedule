@@ -86,6 +86,8 @@ export const clubSettingsSchema = z.object({
    * it wait in line and get it if the first one gives up. Seconds the court is kept.
    */
   slotHoldSeconds: z.number().int().min(30).max(600),
+  /** Open "looking for a partner" requests one member may have at the same time. */
+  partnerRequestMaxOpen: z.number().int().min(1).max(10),
   /** Bookings one member may hold on the same day. */
   maxBookingsPerDay: z.number().int().min(1).max(10),
   freePlay: freePlaySettingsSchema,
@@ -125,6 +127,7 @@ export const DEFAULT_CLUB_SETTINGS: ClubSettings = {
   bookingOpening: null,
   maxBookingsPerDay: 1,
   slotHoldSeconds: 120,
+  partnerRequestMaxOpen: 3,
   freePlay: { queueEnabled: true, claimMinutes: 5, sessionMinutes: 75 },
   signupRequiresApproval: true,
   dependentsEnabled: false,

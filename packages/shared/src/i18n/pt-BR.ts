@@ -99,6 +99,12 @@ export const ptBR = {
     holderNotRegistered: "O titular {holder} ainda não tem cadastro no clube.",
     bookingNotOpenYet: "As reservas para este dia abrem {when}.",
     slotHeld: "Outro sócio está reservando esta quadra agora. Se ele desistir, ela fica livre.",
+    partnerRequestExists: "Você já está procurando parceiro para esse horário.",
+    partnerRequestLimit:
+      "Você já tem {max, plural, one {# pedido aberto} other {# pedidos abertos}} de parceiro. Cancele um para fazer outro.",
+    partnerRequestNoCourt: "Nenhuma quadra livre nesse horário. Escolha outro.",
+    partnerRequestNotFound: "Pedido de parceiro não encontrado.",
+    slotNotInDay: "Esse horário não existe neste dia.",
     maxBookingsPerDay: "{name} já tem {max, plural, one {# reserva} other {# reservas}} neste dia.",
     bookingSuspended: "Reservas suspensas até {until} por faltas.",
     bookingSuspendedPlayer: "{name} está com as reservas suspensas por faltas.",

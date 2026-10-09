@@ -10,6 +10,7 @@ import {
   roundRobin,
   snakeGroups,
 } from "./groups";
+import { drawSeedCount, groupPots, knockoutPots, shuffleWithinPots } from "./lots";
 import { circuitRanking, DEFAULT_POINTS_TABLE, placementOf } from "./points";
 import { autoSchedule, fitsRestrictions, NO_RESTRICTIONS, type OpenSlot } from "./schedule";
 
@@ -48,6 +49,61 @@ describe("knockout seeding", () => {
       "SEMIFINAL",
       "FINAL",
     ]);
+  });
+});
+
+describe("draw lots", () => {
+  /** Deterministic stand-in for Math.random. */
+  const sequence = (...values: number[]) => {
+    let index = 0;
+    return () => values[index++ % values.length]!;
+  };
+  const field = (count: number) => Array.from({ length: count }, (_, index) => `S${index + 1}`);
+
+  it("protects the seeds and the byes and draws the rest", () => {
+    expect(drawSeedCount(4)).toBe(2);
+    expect(drawSeedCount(12)).toBe(3);
+    // 12 entries: 4 byes (more than the 3 seeds), so the top 4 are protected.
+    expect(knockoutPots(12)).toEqual([1, 1, 2, 8]);
+    expect(knockoutPots(16)).toEqual([1, 1, 2, 12]);
+    expect(knockoutPots(32)).toEqual([1, 1, 2, 4, 24]);
+    expect(knockoutPots(4)).toEqual([1, 1, 2]);
+    expect(knockoutPots(3)).toEqual([1, 1, 1]);
+    expect(knockoutPots(2)).toEqual([1, 1]);
+  });
+
+  it("only moves entries inside their pot", () => {
+    const drawn = shuffleWithinPots(field(12), knockoutPots(12), sequence(0));
+    expect(drawn.slice(0, 2)).toEqual(["S1", "S2"]);
+    expect(drawn.slice(2, 4).sort()).toEqual(["S3", "S4"]);
+    expect(drawn.slice(4).sort()).toEqual(field(12).slice(4).sort());
+    expect(drawn).not.toEqual(field(12));
+    // The byes still go to the 4 best rated, whatever the lot.
+    const byes = knockoutFirstRound(drawn).filter((pair) => pair.a === null || pair.b === null);
+    expect(byes.map((pair) => pair.a ?? pair.b).sort()).toEqual(["S1", "S2", "S3", "S4"]);
+  });
+
+  it("gives a different draw on another lot", () => {
+    const pots = knockoutPots(16);
+    const draws = new Set(
+      [0, 0.25, 0.5, 0.75].map((value) =>
+        shuffleWithinPots(field(16), pots, sequence(value, 0.9, 0.1)).join(),
+      ),
+    );
+    expect(draws.size).toBeGreaterThan(1);
+    // A source that always picks the last place keeps the seed order.
+    expect(shuffleWithinPots(field(16), pots, () => 0.999_999)).toEqual(field(16));
+  });
+
+  it("draws group pots row by row so every group keeps one entry per level", () => {
+    expect(groupPots(8, 2)).toEqual([1, 1, 2, 2, 2]);
+    expect(groupPots(10, 3)).toEqual([1, 1, 1, 3, 3, 1]);
+    const drawn = shuffleWithinPots(field(8), groupPots(8, 2), sequence(0));
+    const groups = snakeGroups(drawn, 2);
+    expect(groups[0]![0]).toBe("S1");
+    expect(groups[1]![0]).toBe("S2");
+    const level = (entry: string) => Math.floor((Number(entry.slice(1)) - 1) / 2);
+    for (const group of groups) expect(group.map(level)).toEqual([0, 1, 2, 3]);
   });
 });
 

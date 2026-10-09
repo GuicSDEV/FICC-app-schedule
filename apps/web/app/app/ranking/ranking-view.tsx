@@ -2,7 +2,7 @@
 
 import type { LeaderboardEntry, LeaderboardResponse } from "@ficc/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Swords, Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, Search, Swords, Trophy, X } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -16,12 +16,14 @@ import { CategoryTabs } from "@/components/ranking/category-tabs";
 import { Podium } from "@/components/ranking/podium";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { duration, enter, popVariants, spring, staggerDelay, transitions } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { matchesName } from "@/lib/search";
 import { formatDelta, useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
@@ -157,6 +159,7 @@ export function RankingView() {
   const club = useClub();
   const { user } = useSession();
   const [category, setCategory] = useState(ALL);
+  const [term, setTerm] = useState("");
   const categories = useQuery({
     queryKey: queryKeys.categories,
     queryFn: api.categories,
@@ -189,6 +192,8 @@ export function RankingView() {
     ...(categories.data ?? []).map((item) => ({ value: item.key, label: item.name })),
   ];
   const entries = data?.entries ?? [];
+  const searching = term.trim().length > 0;
+  const found = searching ? entries.filter((entry) => matchesName(entry.player.name, term)) : [];
   const podium = entries.slice(0, 3);
   const rest = entries.slice(3);
 
@@ -214,7 +219,52 @@ export function RankingView() {
             <Swords /> {t("h2h")}
           </ButtonLink>
 
-          {board.isError ? (
+          <div role="search" className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              type="search"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder={t("searchPlaceholder")}
+              aria-label={t("search")}
+              autoComplete="off"
+              enterKeyHint="search"
+              className="pr-12 pl-11 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searching ? (
+              <button
+                type="button"
+                onClick={() => setTerm("")}
+                aria-label={t("clearSearch")}
+                className="absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+
+          {searching && data ? (
+            <section aria-label={t("searchResults")} className="space-y-2">
+              <p className="text-small text-muted-foreground" aria-live="polite">
+                {t("searchCount", { count: found.length })}
+              </p>
+              {found.length > 0 ? (
+                <ol className="space-y-2">
+                  {found.map((entry, index) => (
+                    <LeaderboardRow
+                      key={entry.player.id}
+                      entry={entry}
+                      index={index}
+                      mine={entry.player.id === user?.id}
+                    />
+                  ))}
+                </ol>
+              ) : null}
+            </section>
+          ) : board.isError ? (
             <ErrorState message={t("loadFailed")} onRetry={() => void board.refetch()} />
           ) : !data ? (
             <div className="space-y-3">

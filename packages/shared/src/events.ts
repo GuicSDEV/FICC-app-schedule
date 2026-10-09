@@ -14,6 +14,8 @@ export const SOCKET_EVENTS = {
   slotHoldsChanged: "slot-holds.changed",
   /** Personal: the viewer's own hold or place in line changed (their turn, or the court was booked). */
   slotHoldUpdated: "slot-hold.updated",
+  /** Club-wide: someone posted, withdrew or found a partner for a request on this date. */
+  partnerRequestsChanged: "partner-requests.changed",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
@@ -82,4 +84,8 @@ export interface SlotHoldInfo {
 
 export interface SlotHoldsChangedEvent extends ScheduleCellRef {
   hold: SlotHoldInfo | null;
+}
+
+export interface PartnerRequestsChangedEvent {
+  date: IsoDate;
 }

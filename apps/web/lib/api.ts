@@ -86,6 +86,8 @@ import type {
   SlotFavoriteInput,
   SlotFavoriteItem,
   SlotHoldInput,
+  PartnerRequestItem,
+  CreatePartnerRequestInput,
   SlotHoldView,
   StaffMemberItem,
   StaffRoleItem,
@@ -237,6 +239,12 @@ export const api = {
       return view && "status" in view ? (view as SlotHoldView) : null;
     },
     release: () => request<void>("/slot-holds", { method: "DELETE" }),
+  },
+  partnerRequests: {
+    list: (date: string) => request<PartnerRequestItem[]>("/partner-requests", { query: { date } }),
+    create: (input: CreatePartnerRequestInput) =>
+      post<PartnerRequestItem>("/partner-requests", input),
+    cancel: (id: string) => request<void>(`/partner-requests/${id}`, { method: "DELETE" }),
   },
   scheduleExceptions: {
     list: (from: string, to: string) =>

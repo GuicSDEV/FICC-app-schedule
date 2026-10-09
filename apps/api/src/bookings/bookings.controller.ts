@@ -1,14 +1,19 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
 import { BookingCancelReason, Role } from "@ficc/db";
 import {
   type BookingDetail,
   type CreateBookingInput,
   createBookingSchema,
+  type CreatePartnerRequestInput,
+  createPartnerRequestSchema,
   type MemberNoShows,
   type MyBookingsResponse,
   type NoShowInput,
   type NoShowItem,
   noShowSchema,
+  type PartnerRequestItem,
+  type PartnerRequestsQuery,
+  partnerRequestsQuerySchema,
   type SlotFavoriteInput,
   type SlotFavoriteItem,
   slotFavoriteSchema,
@@ -29,6 +34,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { BookingsService } from "./bookings.service";
 import { FavoritesService } from "./favorites.service";
 import { NoShowsService } from "./no-shows.service";
+import { PartnerRequestsService } from "./partner-requests.service";
 import { SlotHoldsService } from "./slot-holds.service";
 
 @Controller("bookings")
@@ -169,5 +175,35 @@ export class SlotHoldsController {
   @SkipAudit()
   release(@CurrentUser() user: RequestUser): Promise<void> {
     return this.holds.release(user.id);
+  }
+}
+
+/** "Looking for a partner" requests: members with nobody to play with at a date + slot. */
+@Controller("partner-requests")
+@Roles(Role.MEMBER)
+export class PartnerRequestsController {
+  constructor(private readonly requests: PartnerRequestsService) {}
+
+  @Get()
+  list(
+    @CurrentUser() user: RequestUser,
+    @Query(new ZodValidationPipe(partnerRequestsQuerySchema)) query: PartnerRequestsQuery,
+  ): Promise<PartnerRequestItem[]> {
+    return this.requests.list(user.id, query.date);
+  }
+
+  @Post()
+  @RateLimit({ name: "partner-request", limit: 5, windowMs: 60_000 })
+  create(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(createPartnerRequestSchema)) body: CreatePartnerRequestInput,
+  ): Promise<PartnerRequestItem> {
+    return this.requests.create(user.id, body);
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  cancel(@CurrentUser() user: RequestUser, @Param("id") id: string): Promise<void> {
+    return this.requests.cancel(user.id, id);
   }
 }

@@ -401,6 +401,32 @@ Phases 11 and 12.
   check-in, booking), no timer job needed. Covered by `apps/api/test/slot-holds.e2e-spec.ts`
   (incl. 12 simultaneous taps → exactly one holder, positions 1–11) and the browser journey
   `apps/web/e2e/slot-hold.spec.ts` (two members: hold → waiting sheet → hand-over).
+- **Tournament redraw is a real lot (bug: "Sortear de novo" rebuilt the same draw):** the draw
+  used to be fully deterministic (seed → Elo → sign-up order). Now the field is drawn within pots,
+  as in tennis (`shuffleWithinPots`, `knockoutPots`, `groupPots` in `@ficc/shared`): seeds 1–2
+  fixed, 3–4 drawn between their places, then 5–8…; the protected part is the seeds or, when there
+  are more byes than seeds, everyone who gets a bye (byes still go to the best rated); everyone
+  else is one pot. Groups keep one head per group and draw each later snake row as a pot, so every
+  group still gets one entry per strength level. Randomness comes from a crypto-backed `Random`
+  provider (`apps/api/src/common/random.ts`); tests swap it for `FakeRandom` (seed order unless a
+  test plays a sequence), like `Clock`.
+- **"Procuro parceiro" (partner requests, asked by the club):** a member with nobody to play with
+  posts a date + time (singles or doubles, optional note up to 140 characters) from the courts
+  page or from the booking sheet ("Sem parceiro? Avise os outros sócios", which also gives back the
+  court they were keeping). Others see the day's requests in a card under the calendar (a pill
+  above the calendar jumps to it) and tap "Jogar": the app keeps a free court at that time
+  (preferring the surface filter) and opens the booking with the poster already chosen; the poster
+  gets the usual booking invitation. Any booking that includes the poster at that date + time
+  closes the request (MATCHED), whoever made it. `PartnerRequest` table (partial unique index: one
+  OPEN request per member + date + slot; `startsAt` makes past requests disappear without a job);
+  posting needs a bookable time with at least one free court, a member who could play then (same
+  suspension/busy/limit rules as booking) and fewer than `partnerRequestMaxOpen` open requests
+  (ClubSettings, default 3, in the rules form). Live via `partner-requests.changed`. Covered by
+  `apps/api/test/partner-requests.e2e-spec.ts` and the browser journey `apps/web/e2e/partners.spec.ts`.
+  If the invited poster declines, the request stays closed (they can post again).
+- **Ranking search:** a search box on `/app/ranking` filters the current board by name on the
+  device (accents and case ignored, every typed word must match), showing each member's position;
+  tapping a result opens their profile. Every active member is on the board, so no API call.
 - **Smaller wins:** socket.io is loaded after the first paint (and reconnects only when the user
   id changes, not on every profile refetch); Geist Mono is no longer preloaded; the login page is
   server-rendered (no `useSearchParams` bailout).
@@ -425,8 +451,9 @@ Phases 11 and 12.
   member; coach cancels a lesson → member books the freed slot; report → opponent approves → Elo
   moves by the same amount both ways; gate scans a guest pass QR through Chromium's fake camera
   (accepted, then refused as already used); a tapped court kept for one member while another
-  waits and takes over when the first gives up. The global setup reseeds and relaxes the booking
-  opening rule so the journeys do not depend on the time of day. 13/13 pass.
+  waits and takes over when the first gives up; a member asks for a partner and another books a
+  court with them; the ranking search opens a profile. The global setup reseeds and relaxes the booking
+  opening rule so the journeys do not depend on the time of day. 15/15 pass.
 - **Verified here:** service worker active and controlling; ranking reloaded offline from cache
   with the offline banner; logout empties the API cache; manifest served with the club's name; no
   hydration errors on the member, coach and gate pages.

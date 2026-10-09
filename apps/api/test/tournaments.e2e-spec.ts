@@ -31,6 +31,7 @@ describe("Tournaments", () => {
 
   beforeEach(async () => {
     ctx.clock.reset();
+    ctx.random.reset();
     await resetDatabase(ctx);
     club = await seedClub(ctx);
     await createStaff(ctx.prisma, Role.ADMIN, "admin@ficc.test", "Administração");
@@ -170,6 +171,35 @@ describe("Tournaments", () => {
     expect(first[0]!.a!.name).toBe("Jogador 01");
     expect(first[1]).toMatchObject({ a: { name: "Jogador 08" }, b: { name: "Jogador 09" } });
     expect(generated.rounds[1]!.matches[0]!.a!.name).toBe("Jogador 01");
+
+    // "Sortear de novo" is a new lot: the byes stay with the 4 best rated, the rest moves.
+    const pairsOf = (view: DrawView) =>
+      view.rounds[0]!.matches.map((match) => `${match.a?.name ?? "-"} x ${match.b?.name ?? "-"}`);
+    ctx.random.use(0, 0.4, 0.8, 0.2, 0.6);
+    const redrawn = (
+      await admin$
+        .post(`/api/v1/tournaments/${tournament.id}/draws/${categoryId}/generate`)
+        .expect(200)
+    ).body as DrawView;
+    expect(pairsOf(redrawn)).not.toEqual(pairsOf(generated));
+    expect(redrawn.rounds[0]!.matches[0]!.a!.name).toBe("Jogador 01");
+    expect(
+      redrawn.rounds[0]!.matches.filter((match) => match.outcome === "BYE")
+        .map((match) => (match.a ?? match.b)!.name)
+        .sort(),
+    ).toEqual(["Jogador 01", "Jogador 02", "Jogador 03", "Jogador 04"]);
+    // Seeds are still the best rated, wherever the lot put them.
+    const seedOf = (view: DrawView, name: string) =>
+      view.rounds[0]!.matches.flatMap((match) => [match.a, match.b]).find((e) => e?.name === name)
+        ?.seed;
+    expect(["Jogador 01", "Jogador 02", "Jogador 03"].map((name) => seedOf(redrawn, name))).toEqual(
+      [1, 2, 3],
+    );
+    // Back to the seed-order lot for the rest of the journey.
+    ctx.random.reset();
+    await admin$
+      .post(`/api/v1/tournaments/${tournament.id}/draws/${categoryId}/generate`)
+      .expect(200);
 
     // Players see nothing until it is published; then they are notified.
     const player$ = await ctx.loginMember(players[5]!.membershipId!);

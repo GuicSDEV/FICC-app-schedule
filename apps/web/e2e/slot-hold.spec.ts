@@ -24,7 +24,9 @@ test("a tapped court is kept for its member; the next one waits and gets it when
 }) => {
   await login(page, { member: "108122" });
   await openDay(page);
-  const free = page.locator('button[aria-label*="livre"][aria-disabled="false"]').first();
+  const free = page
+    .locator(`[data-day="${inTwoDays}"] button[aria-label*="livre"][aria-disabled="false"]`)
+    .first();
   const label = (await free.getAttribute("aria-label")) ?? "";
   const court = /Quadra (Q\d)/.exec(label)?.[1];
   expect(court).toBeTruthy();
@@ -40,7 +42,9 @@ test("a tapped court is kept for its member; the next one waits and gets it when
   await expect(page.getByText("Quadra guardada para você")).toBeVisible();
 
   // The other calendar shows it as being booked, and tapping it opens the waiting screen.
-  const held = otherPage.locator(`button[aria-label^="Quadra ${court}, outro sócio"]`).first();
+  const held = otherPage
+    .locator(`[data-day="${inTwoDays}"] button[aria-label^="Quadra ${court}, outro sócio"]`)
+    .first();
   await expect(held).toBeVisible();
   await held.click();
   await expect(

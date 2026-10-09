@@ -11,6 +11,7 @@ import {
   type NewsUpdatedEvent,
   type SlotHoldsChangedEvent,
   type SlotHoldUpdatedEvent,
+  type PartnerRequestsChangedEvent,
 } from "@ficc/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
@@ -32,6 +33,7 @@ interface SocketEvents {
   [SOCKET_EVENTS.newsUpdated]: NewsUpdatedEvent;
   [SOCKET_EVENTS.slotHoldsChanged]: SlotHoldsChangedEvent;
   [SOCKET_EVENTS.slotHoldUpdated]: SlotHoldUpdatedEvent;
+  [SOCKET_EVENTS.partnerRequestsChanged]: PartnerRequestsChangedEvent;
 }
 
 type Listener<E extends keyof SocketEvents> = (payload: SocketEvents[E]) => void;
@@ -122,6 +124,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
             cell.timeSlotId === event.timeSlotId,
           (cell) => ({ ...cell, hold: event.hold }),
         );
+      });
+      connection.on(SOCKET_EVENTS.partnerRequestsChanged, (event: PartnerRequestsChangedEvent) => {
+        void client.invalidateQueries({ queryKey: queryKeys.partnerRequests(event.date) });
       });
       connection.on(SOCKET_EVENTS.newsUpdated, () => {
         void client.invalidateQueries({ queryKey: queryKeys.news });

@@ -5,7 +5,7 @@ import type {
   BookingStatus,
   BookingType,
 } from "../enums";
-import type { CourtSummary, IsoDateTime, SlotSummary } from "./common";
+import type { CourtSummary, IsoDateTime, PlayerSummary, SlotSummary } from "./common";
 import type { SlotAlternative } from "./operations";
 import type { BookingPlayerInfo } from "./schedule";
 
@@ -69,4 +69,20 @@ export interface SlotHoldUpdatedEvent {
   /** PROMOTED: it is the viewer's turn now; TAKEN: someone booked the court. */
   reason: "PROMOTED" | "TAKEN" | "RELEASED";
   alternatives: SlotAlternative[];
+}
+
+/** An open "looking for a partner" request (GET /partner-requests?date=). */
+export interface PartnerRequestItem {
+  id: string;
+  player: PlayerSummary;
+  date: IsoDate;
+  timeSlotId: string;
+  startTime: string;
+  endTime: string;
+  /** SINGLES: one opponent wanted; DOUBLES: the poster joins a doubles game. */
+  type: BookingType;
+  note: string | null;
+  /** Posted by the viewer (they can withdraw it). */
+  mine: boolean;
+  createdAt: IsoDateTime;
 }

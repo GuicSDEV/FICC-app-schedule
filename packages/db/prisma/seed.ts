@@ -4,7 +4,7 @@
 // extension the API uses, so every row gets FICC's clubId.
 // Run with `pnpm db:seed`. Deterministic: the same data every run, dated relative to today.
 
-import { DEFAULT_STAFF_ROLES, timeToMinutes, slotEndTime } from "@ficc/shared";
+import { DEFAULT_STAFF_ROLES, timeToMinutes, slotEndTime, slotStartsAt } from "@ficc/shared";
 import { hash } from "argon2";
 
 import {
@@ -37,6 +37,7 @@ import {
   LESSON_WINDOW_DAYS,
   MEMBERS,
   NEWS_POSTS,
+  PARTNER_REQUESTS,
   PENDING_SIGNUP,
   STAFF,
   UNCLAIMED_MEMBERSHIPS,
@@ -360,6 +361,30 @@ async function main(): Promise<void> {
           "secretaria@ficc.test",
         ),
         publishedAt: new Date(now.getTime() - post.daysAgo * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  // ── Looking for a partner: members with nobody to play with ──────────────
+  const requestDays: IsoDate[] = [];
+  for (let date = addDays(today, 1); requestDays.length < 2; date = addDays(date, 1)) {
+    if (!["SAT", "SUN"].includes(weekdayOf(date))) requestDays.push(date);
+  }
+  const evening = slots
+    .filter((slot) => (FICC_WEEKDAY_TIMES as readonly string[]).includes(slot.startTime))
+    .sort((a, b) => b.sortOrder - a.sortOrder)
+    .slice(0, 2);
+  for (const [index, request] of PARTNER_REQUESTS.entries()) {
+    const date = requestDays[index % requestDays.length]!;
+    const slot = evening[index % evening.length]!;
+    await prisma.partnerRequest.create({
+      data: {
+        userId: memberId(request.membershipId),
+        date: toDbDate(date),
+        timeSlotId: slot.id,
+        type: request.type,
+        note: request.note,
+        startsAt: slotStartsAt(date, slot, FICC_CLUB.timezone),
       },
     });
   }

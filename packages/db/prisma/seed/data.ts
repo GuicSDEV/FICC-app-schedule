@@ -269,3 +269,14 @@ export const MATCH_COUNTS = { singles: 30, doubles: 10 } as const;
 
 /** Days between consecutive seeded matches (the last one is yesterday). */
 export const MATCH_SPACING_DAYS = 3;
+
+/** Open "looking for a partner" requests on the next weekdays (evening slots). */
+export const PARTNER_REQUESTS: {
+  membershipId: string;
+  type: "SINGLES" | "DOUBLES";
+  note: string | null;
+}[] = [
+  { membershipId: "110087", type: "SINGLES", note: "Nível intermediário, gosto de jogar sets." },
+  { membershipId: "102344", type: "DOUBLES", note: "Falta um para fechar a dupla." },
+  { membershipId: "108903", type: "SINGLES", note: null },
+];

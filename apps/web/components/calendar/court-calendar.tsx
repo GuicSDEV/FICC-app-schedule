@@ -51,7 +51,7 @@ export function CourtCalendar({
   const cells = new Map(day.cells.map((cell) => [cellKey(cell), cell]));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-day={day.date}>
       {/* Court header (wide screens): the chips there are wide enough to drop their own labels. */}
       <div className="hidden grid-cols-[4.5rem_1fr] gap-3 md:grid" aria-hidden>
         <span />

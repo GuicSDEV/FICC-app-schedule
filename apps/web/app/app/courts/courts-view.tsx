@@ -4,6 +4,7 @@ import {
   addDays,
   type BookingDetail,
   clubToday,
+  type PartnerRequestItem,
   type ScheduleCell,
   type SlotHoldView,
   SOCKET_EVENTS,
@@ -19,6 +20,14 @@ import { type BookingInfoTarget, BookingInfoSheet } from "@/components/booking/b
 import { type BookingTarget, BookingSheet } from "@/components/booking/booking-sheet";
 import { CoachSheet, type LessonTarget } from "@/components/booking/coach-sheet";
 import { type HoldWait, HoldWaitSheet } from "@/components/booking/hold-wait-sheet";
+import {
+  type PartnerRequestDraft,
+  PartnerRequestSheet,
+} from "@/components/booking/partner-request-sheet";
+import {
+  PartnerRequestsCard,
+  PartnerRequestsPill,
+} from "@/components/booking/partner-requests-card";
 import {
   CalendarLegend,
   CourtCalendar,
@@ -39,6 +48,7 @@ import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { enter, fadeVariants, haptic } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { bookableCells } from "@/lib/free-courts";
 import { cellKey } from "@/lib/schedule-cache";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
@@ -77,6 +87,7 @@ export function CourtsView() {
   const [infoTarget, setInfoTarget] = useState<BookingInfoTarget | null>(null);
   const [wait, setWait] = useState<HoldWait | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const [partnerDraft, setPartnerDraft] = useState<PartnerRequestDraft | null>(null);
   const errorMessage = useErrorMessage();
 
   const courts = useQuery({
@@ -219,6 +230,45 @@ export function CourtsView() {
     }
   }
 
+  /** "Jogar" on a request: keep a free court at that time and open the booking with them in it. */
+  function playWith(request: PartnerRequestItem) {
+    const day = schedule.data;
+    if (!day || day.date !== request.date) return;
+    if (!day.plan.bookingOpen) {
+      toast(t("dayPlan.notOpenToast"));
+      return;
+    }
+    const free = bookableCells(day, user?.id, now, request.timeSlotId);
+    const cell =
+      free.find(
+        (entry) =>
+          filter === "ALL" ||
+          day.courts.find((court) => court.id === entry.courtId)?.surface === filter,
+      ) ?? free[0];
+    const court = day.courts.find((entry) => entry.id === cell?.courtId);
+    const slot = day.slots.find((entry) => entry.id === request.timeSlotId);
+    if (!cell || !court || !slot) {
+      toast(t("partners.noCourt", { time: request.startTime }));
+      return;
+    }
+    void startBooking({
+      date: request.date,
+      court,
+      slot,
+      favorite: cell.favorite,
+      partners: [request.player],
+      type: request.type,
+    });
+  }
+
+  const canPost = Boolean(
+    schedule.data &&
+    schedule.data.date === date &&
+    schedule.data.plan.mode === "BOOKING" &&
+    !schedule.data.plan.closed &&
+    schedule.data.plan.inWindow,
+  );
+
   const suspendedUntil =
     user?.bookingSuspendedUntil && Date.parse(user.bookingSuspendedUntil) > now.getTime()
       ? user.bookingSuspendedUntil
@@ -269,6 +319,7 @@ export function CourtsView() {
         {schedule.data && schedule.data.date === date ? (
           <DayPlanBanner date={date} plan={schedule.data.plan} isToday={date === today} />
         ) : null}
+        <PartnerRequestsPill date={date} viewerId={user?.id} />
         <AnimatePresence mode="wait" initial={false}>
           {schedule.isError ? (
             <motion.div
@@ -317,12 +368,28 @@ export function CourtsView() {
           )}
         </AnimatePresence>
         <CalendarLegend />
+        <PartnerRequestsCard
+          date={date}
+          canPost={canPost}
+          onPost={() => schedule.data && setPartnerDraft({ day: schedule.data })}
+          onPlay={playWith}
+        />
       </section>
 
       <BookingSheet
         target={bookingTarget}
         onOpenChange={(open) => !open && closeBookingSheet()}
         onBooked={onBooked}
+        onAskPartner={(target, type) => {
+          const day = schedule.data;
+          if (day?.date === target.date) {
+            setPartnerDraft({ day, timeSlotId: target.slot.id, type });
+          }
+        }}
+      />
+      <PartnerRequestSheet
+        draft={partnerDraft}
+        onOpenChange={(open) => !open && setPartnerDraft(null)}
       />
       <HoldWaitSheet
         wait={wait}

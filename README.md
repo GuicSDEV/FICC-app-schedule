@@ -16,9 +16,10 @@ Brazilian Portuguese.
 
 - **Members** (`/app`): dashboard with their Elo, bookings and invitations; court calendar with
   live updates, booking with partners (a tapped court is kept for the member while they pick a
-  partner; others wait in line and get it if they give up), favourite slots and the booking-opening countdown; "Courts
+  partner; others wait in line and get it if they give up), "Procuro parceiro" requests for members
+  with nobody to play with, favourite slots and the booking-opening countdown; "Courts
   now" for free-play days (check-in, digital queue); match reports with opponent approval and Elo;
-  ranking, head-to-head and profiles; guest passes with QR; tournaments and circuits; the club's
+  ranking (with a member search), head-to-head and profiles; guest passes with QR; tournaments and circuits; the club's
   news board ("Mural").
 - **Coaches** (`/coach`): their agenda, swipe to cancel a lesson (one day or the series) with undo,
   the courts calendar.
@@ -141,7 +142,7 @@ To run a script in one package only: `pnpm --filter @ficc/api test`.
 - **Browser journeys** (`pnpm test:browser`, Playwright in `apps/web/e2e`): login for each role,
   booking with a partner, a coach cancelling a lesson and a member booking the freed slot,
   reporting a match → opponent approval → Elo, a court kept on tap handed to the member waiting
-  for it, and the gate scanning a guest pass QR through a
+  for it, a partner request answered with a booking, the ranking search, and the gate scanning a guest pass QR through a
   fake camera. They run against the production builds and **reseed the development database**:
 
   ```bash

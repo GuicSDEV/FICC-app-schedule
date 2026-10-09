@@ -341,6 +341,7 @@ model Club {
   checkIns             CourtCheckIn[]
   queueEntries         CourtQueueEntry[]
   slotHolds            SlotHold[]
+  partnerRequests      PartnerRequest[]
   staffRoles           StaffRole[]
   auditLogs            AuditLog[]
   noShows              NoShow[]
@@ -438,6 +439,7 @@ model User {
   checkInsCreated            CourtCheckIn[]           @relation("CheckInCreatedBy")
   queueEntries               CourtQueueEntry[]
   slotHolds                  SlotHold[]
+  partnerRequests            PartnerRequest[]
   noShows                    NoShow[]                 @relation("NoShowUser")
   noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
   newsPosts                  NewsPost[]
@@ -585,6 +587,7 @@ model TimeSlot {
   favorites         SlotFavorite[]
   tournamentMatches TournamentMatch[]
   slotHolds         SlotHold[]
+  partnerRequests   PartnerRequest[]
 
   @@unique([clubId, startTime])
 }
@@ -733,15 +736,17 @@ model Booking {
   createdAt    DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
 
-  club        Club            @relation(fields: [clubId], references: [id], onDelete: Restrict)
-  court       Court           @relation(fields: [courtId], references: [id], onDelete: Restrict)
-  timeSlot    TimeSlot        @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
-  createdBy   User            @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  players     BookingPlayer[]
-  occupancy   SlotOccupancy?
-  matches     Match[]
-  guestPasses GuestPass[]
-  noShows     NoShow[]
+  club            Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  court           Court            @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  timeSlot        TimeSlot         @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  createdBy       User             @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  players         BookingPlayer[]
+  occupancy       SlotOccupancy?
+  matches         Match[]
+  guestPasses     GuestPass[]
+  noShows         NoShow[]
+  /// "Looking for a partner" requests this booking answered.
+  partnerRequests PartnerRequest[]
 
   @@index([date, courtId])
   @@index([status, expiresAt])
@@ -1421,6 +1426,40 @@ model SlotHold {
 
   @@unique([clubId, userId])
   @@index([courtId, date, timeSlotId, createdAt])
+}
+
+enum PartnerRequestStatus {
+  OPEN
+  /// The member got into a booking at that date + slot (usually with someone who answered).
+  MATCHED
+  CANCELLED
+}
+
+/// A member with no partner asks others to play with them at a date + slot (any free court).
+/// One OPEN request per member + date + slot (partial unique index in the migration SQL).
+model PartnerRequest {
+  id         String               @id @default(cuid())
+  clubId     String               @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId     String
+  date       DateTime             @db.Date
+  timeSlotId String
+  type       BookingType
+  note       String?
+  /// Start of the slot, so past requests drop out of every list without a job.
+  startsAt   DateTime             @db.Timestamptz(3)
+  status     PartnerRequestStatus @default(OPEN)
+  /// The booking that answered it (MATCHED).
+  bookingId  String?
+  closedAt   DateTime?            @db.Timestamptz(3)
+  createdAt  DateTime             @default(now()) @db.Timestamptz(3)
+
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+  booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([date, status])
+  @@index([userId, status])
 }
 
 /// Editable group of permissions (Secretaria, Diretoria…).

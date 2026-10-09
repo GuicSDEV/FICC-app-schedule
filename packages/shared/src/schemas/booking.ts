@@ -40,6 +40,21 @@ export const slotHoldSchema = z.object({
 });
 export type SlotHoldInput = z.infer<typeof slotHoldSchema>;
 
+/** Maximum length of the note on a "looking for a partner" request. */
+export const PARTNER_NOTE_MAX = 140;
+
+/** A member with no partner asks others to play at a date and time (any free court). */
+export const createPartnerRequestSchema = z.object({
+  date: isoDateSchema,
+  timeSlotId: idSchema,
+  type: bookingTypeSchema,
+  note: z.string().trim().max(PARTNER_NOTE_MAX).optional(),
+});
+export type CreatePartnerRequestInput = z.infer<typeof createPartnerRequestSchema>;
+
+export const partnerRequestsQuerySchema = z.object({ date: isoDateSchema });
+export type PartnerRequestsQuery = z.infer<typeof partnerRequestsQuerySchema>;
+
 export const scheduleQuerySchema = z.object({
   date: isoDateSchema,
   surface: surfaceSchema.optional(),

@@ -1,21 +1,26 @@
 import { Injectable } from "@nestjs/common";
 import { EntryStatus, TeamSide, TournamentStatus } from "@ficc/db";
 import {
+  drawSeedCount,
   type DrawView,
   type GroupResult,
   groupCount,
+  groupPots,
   groupStandings,
   knockoutFirstRound,
+  knockoutPots,
   knockoutSeedsFromGroups,
   roundCount,
   roundName,
   snakeGroups,
   roundRobin,
+  shuffleWithinPots,
 } from "@ficc/shared";
 
 import type { RequestUser } from "../common/auth.decorators";
 import { Clock } from "../common/clock";
 import { conflict, notFound, unprocessable } from "../common/domain.exception";
+import { Random } from "../common/random";
 import { serializable, type Tx } from "../common/transactions";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -73,6 +78,7 @@ export class DrawService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
+    private readonly random: Random,
     private readonly access: TournamentContextService,
     private readonly entries: EntriesService,
     private readonly tournaments: TournamentsService,
@@ -80,7 +86,10 @@ export class DrawService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  /** Builds (or rebuilds) the draft draw of a category from its confirmed entries. */
+  /**
+   * Builds (or rebuilds) the draft draw of a category from its confirmed entries. Seeds and byes
+   * keep their protected places; everyone else is drawn by lot, a new lot on every call.
+   */
   async generate(viewer: RequestUser, categoryId: string): Promise<DrawView> {
     const tournamentId = await this.access.tournamentOfCategory(categoryId);
     await this.access.assertCanManage(viewer, tournamentId);
@@ -107,22 +116,26 @@ export class DrawService {
         (ratings.get(b.id) ?? 0) - (ratings.get(a.id) ?? 0) ||
         a.createdAt.getTime() - b.createdAt.getTime(),
     );
-    const ids = seeded.map((entry) => entry.id);
+    const ranked = seeded.map((entry) => entry.id);
+    const knockout = category.drawFormat === "SINGLE_ELIMINATION";
+    const groupTotal = groupCount(ranked.length, category.groupSize);
+    const pots = knockout ? knockoutPots(ranked.length) : groupPots(ranked.length, groupTotal);
+    const ids = shuffleWithinPots(ranked, pots, () => this.random.next());
 
     await serializable(this.prisma, async (tx) => {
       await this.clear(tx, categoryId);
-      // Seeds shown in the draw: the top quarter of the field (at least 2).
-      const seeds = Math.max(2, Math.floor(ids.length / 4));
-      for (const [index, id] of ids.entries()) {
+      // Seeds shown in the draw: the top quarter of the field (at least 2), by rank.
+      const seeds = drawSeedCount(ranked.length);
+      for (const [index, id] of ranked.entries()) {
         await tx.tournamentEntry.update({
           where: { id },
           data: { seed: index < seeds ? index + 1 : null },
         });
       }
-      if (category.drawFormat === "SINGLE_ELIMINATION") {
+      if (knockout) {
         await this.createKnockout(tx, { tournamentId, categoryId }, this.positions(ids));
       } else {
-        const groups = snakeGroups(ids, groupCount(ids.length, category.groupSize));
+        const groups = snakeGroups(ids, groupTotal);
         for (const [index, members] of groups.entries()) {
           await this.createGroup(
             tx,

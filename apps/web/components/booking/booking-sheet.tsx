@@ -12,7 +12,7 @@ import {
   type SlotSummary,
 } from "@ficc/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Timer } from "lucide-react";
+import { Timer, UsersRound } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -46,6 +46,9 @@ export interface BookingTarget {
   favorite: boolean;
   /** The court is kept for the member until `expiresAt` (server clock) while they book it. */
   hold?: { expiresAt: string; serverNow: string };
+  /** Players already chosen (answering a "looking for a partner" request) and the game type. */
+  partners?: PlayerSummary[];
+  type?: BookingType;
 }
 
 /**
@@ -57,10 +60,13 @@ export function BookingSheet({
   target: requested,
   onOpenChange,
   onBooked,
+  onAskPartner,
 }: {
   target: BookingTarget | null;
   onOpenChange: (open: boolean) => void;
   onBooked: (booking: BookingDetail) => void;
+  /** The member has nobody to play with: ask the other members instead (closes this sheet). */
+  onAskPartner?: (target: BookingTarget, type: BookingType) => void;
 }) {
   const t = useTranslations();
   const format = useFormat();
@@ -91,8 +97,8 @@ export function BookingSheet({
   // Fresh form every time the sheet opens on a slot.
   useEffect(() => {
     if (requested) {
-      setType("SINGLES");
-      setPlayers([]);
+      setType(requested.type ?? "SINGLES");
+      setPlayers(requested.partners ?? []);
       setError(null);
       setBooked(null);
       setAlternatives([]);
@@ -343,6 +349,19 @@ export function BookingSheet({
             />
             {type === "DOUBLES" ? (
               <p className="-mt-3 text-small text-muted-foreground">{t("booking.doublesHint")}</p>
+            ) : null}
+            {onAskPartner && players.length === 0 ? (
+              <Button
+                variant="outline"
+                block
+                className="-mt-2 h-auto min-h-12 py-3 whitespace-normal"
+                onClick={() => {
+                  onAskPartner(target, type);
+                  close(false);
+                }}
+              >
+                <UsersRound /> {t("partners.askFromBooking")}
+              </Button>
             ) : null}
             <FieldError>{error}</FieldError>
             {alternatives.length > 0 ? (

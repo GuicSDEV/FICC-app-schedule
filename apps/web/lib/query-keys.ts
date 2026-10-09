@@ -49,6 +49,8 @@ export const queryKeys = {
   },
   scheduleExceptions: (from: string, to: string) => ["schedule-exceptions", from, to] as const,
   freePlay: ["free-play"] as const,
+  partnerRequests: (date?: string) =>
+    date ? (["partner-requests", date] as const) : (["partner-requests"] as const),
   news: ["news"] as const,
   gateScans: ["gate", "scans"] as const,
   tournaments: {

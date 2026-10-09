@@ -33,6 +33,7 @@ import { isUniqueViolation, serializable, type Tx } from "../common/transactions
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { NoShowsService } from "./no-shows.service";
+import { PartnerRequestStore } from "./partner-request.store";
 import { SlotHoldStore } from "./slot-hold.store";
 import { DayPlanService } from "../schedule/day-plan.service";
 import { freezesOverlapping, isCourtFrozen } from "../schedule/freezes";
@@ -94,6 +95,7 @@ export class BookingsService {
     private readonly plans: DayPlanService,
     private readonly noShows: NoShowsService,
     private readonly holds: SlotHoldStore,
+    private readonly partnerRequests: PartnerRequestStore,
   ) {}
 
   /**
@@ -207,6 +209,13 @@ export class BookingsService {
       invitedBy: creator,
     });
     this.slotEvents.changed("booking.created", [booking]);
+    // Members who were looking for a partner at this time found one.
+    await this.partnerRequests.closeMatched(
+      booking.players.map((player) => player.userId),
+      input.date,
+      input.timeSlotId,
+      booking.id,
+    );
     // Whoever was waiting for this court is told right away, with other free options.
     await this.holds.clearBooked(
       slotKey,
@@ -495,12 +504,26 @@ export class BookingsService {
           : await this.alternatives(input.date, input.timeSlotId, input.courtId),
       );
     }
+    await this.assertMemberCanPlay(tx, userId, input.date, input.timeSlotId, now);
+  }
+
+  /**
+   * The member could play at this date + slot: not suspended, not in another booking then, under
+   * the active and daily booking limits.
+   */
+  async assertMemberCanPlay(
+    tx: Tx,
+    userId: string,
+    date: string,
+    timeSlotId: string,
+    now: Date,
+  ): Promise<void> {
     const me = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
     const nameOf = () => me?.name ?? "";
     await this.assertNotSuspended(tx, userId, [userId], now, nameOf);
-    await this.assertPlayersFree(tx, [userId], input.date, input.timeSlotId, nameOf);
+    await this.assertPlayersFree(tx, [userId], date, timeSlotId, nameOf);
     await this.assertBookingLimit(tx, [userId], now, nameOf);
-    await this.assertDailyLimit(tx, [userId], input.date, nameOf);
+    await this.assertDailyLimit(tx, [userId], date, nameOf);
   }
 
   /** No player may be in two active bookings at the same date + slot (on any court). */

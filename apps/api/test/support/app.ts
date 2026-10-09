@@ -7,12 +7,14 @@ import type TestAgent from "supertest/lib/agent";
 import { API_PREFIX } from "../../src/api-prefix";
 import { AppModule } from "../../src/app.module";
 import { Clock } from "../../src/common/clock";
+import { Random } from "../../src/common/random";
 import { configureApp } from "../../src/configure-app";
 import { PrismaBaseService } from "../../src/prisma/prisma.service";
 import { ClubResolver, type ClubRequestInfo } from "../../src/tenancy/club-resolver";
 import { ClubsService } from "../../src/tenancy/clubs.service";
 import { runWithTenant, tenantOrUndefined } from "../../src/tenancy/tenant-context";
 import { FakeClock } from "./fake-clock";
+import { FakeRandom } from "./fake-random";
 import { TEST_PASSWORD } from "./fixtures";
 
 /** Header the e2e tests use to address a club other than the default one. */
@@ -36,6 +38,8 @@ export interface TestContext {
   /** Club-scoped client for fixtures: the current test club (see useClub). */
   prisma: ReturnType<typeof scopedClient>;
   clock: FakeClock;
+  /** Lots (tournament draws): seed order unless a test plays a sequence. */
+  random: FakeRandom;
   /** URL path for an API route, e.g. api("/auth/login") → "/api/v1/auth/login". */
   api: (path: string) => string;
   /** Club the fixtures (and inClub) work with. */
@@ -59,9 +63,12 @@ function scopedClient(base: PrismaBaseService, clubId: () => string | undefined)
 
 export async function createTestApp(options: { listen?: boolean } = {}): Promise<TestContext> {
   const clock = new FakeClock();
+  const random = new FakeRandom();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(Clock)
     .useValue(clock)
+    .overrideProvider(Random)
+    .useValue(random)
     .overrideProvider(ClubResolver)
     .useClass(TestClubResolver)
     .compile();
@@ -95,6 +102,7 @@ export async function createTestApp(options: { listen?: boolean } = {}): Promise
     base,
     prisma: scopedClient(base, () => currentClubId),
     clock,
+    random,
     api,
     useClub: (clubId) => {
       currentClubId = clubId;
