@@ -66,8 +66,12 @@ QUEUE_PREFIX=ficc
 No serviço **web** → **Variables**:
 
 ```
+PORT=3000
 API_INTERNAL_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:4000
 ```
+
+(Sem o `PORT=3000`, o Railway injeta outra porta, o web escuta nela e o domínio, que aponta para a
+3000, responde **502 Bad Gateway**.)
 
 Não crie `NEXT_PUBLIC_API_URL` no web: vazio é o certo em produção.
 
@@ -140,6 +144,8 @@ da api subir; se uma falhar, a versão anterior continua no ar.
 
 ## Problemas comuns
 
+- **Endereço do web responde 502 Bad Gateway:** confira `PORT=3000` nas variáveis do web e se o
+  log do build diz que usou o Dockerfile (Settings → Config-as-code → `/apps/web/railway.json`).
 - **api não sobe, log com `Invalid environment configuration`:** falta variável ou uma chave é a do
   exemplo/repetida. A mensagem diz qual.
 - **Login volta para a tela de login:** confira `API_INTERNAL_URL` no web (precisa do `:4000`) e
