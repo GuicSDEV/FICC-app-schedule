@@ -64,3 +64,13 @@ export const guestSuspensionSchema = z.object({
   reason: z.string().trim().min(3, { message: "Informe o motivo" }).max(300),
 });
 export type GuestSuspensionInput = z.infer<typeof guestSuspensionSchema>;
+
+export const adminGuestPassesQuerySchema = z.object({
+  hostId: idSchema.optional(),
+  /** Pass id whose document to filter by (documents are never sent in clear to admins). */
+  documentOf: idSchema.optional(),
+});
+export type AdminGuestPassesQuery = z.infer<typeof adminGuestPassesQuerySchema>;
+
+export const adminMembersQuerySchema = z.object({ q: z.string().trim().max(60).optional() });
+export type AdminMembersQuery = z.infer<typeof adminMembersQuerySchema>;

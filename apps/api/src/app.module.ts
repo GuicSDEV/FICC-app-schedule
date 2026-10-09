@@ -10,10 +10,13 @@ import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { CommonModule } from "./common/common.module";
 import { validateEnv } from "./config/env";
 import { FreezesModule } from "./freezes/freezes.module";
+import { GuestsModule } from "./guests/guests.module";
 import { HealthModule } from "./health/health.module";
 import { LessonsModule } from "./lessons/lessons.module";
+import { MatchesModule } from "./matches/matches.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { RankingModule } from "./ranking/ranking.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { ClubScheduleModule } from "./schedule/schedule.module";
 import { UsersModule } from "./users/users.module";
@@ -40,6 +43,9 @@ import { UsersModule } from "./users/users.module";
     LessonsModule,
     FreezesModule,
     AdminModule,
+    MatchesModule,
+    RankingModule,
+    GuestsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

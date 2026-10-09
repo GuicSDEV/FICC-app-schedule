@@ -12,7 +12,7 @@ and what still needs a human to check.
 | 2     | Shared package                        | Done        | `feat(phase-2)` |
 | 3     | API core: auth, schedule, bookings    | Done        | `feat(phase-3)` |
 | 4     | API: coaches, lessons, maintenance    | Done        | `feat(phase-4)` |
-| 5     | API: matches, Elo, ranking, guests    | Not started |                 |
+| 5     | API: matches, Elo, ranking, guests    | Done        | `feat(phase-5)` |
 | 6     | Frontend foundation (design + motion) | Not started |                 |
 | 7     | Member: dashboard, calendar, booking  | Not started |                 |
 | 8     | Member: matches, ranking, H2H, guests | Not started |                 |
@@ -83,6 +83,24 @@ and what still needs a human to check.
   Open-ended freezes list affected items for the next 8 weeks.
 - **Deactivating a coach** disables the login, revokes sessions and stops series generation; their
   existing lessons stay for the admin to cancel or reassign.
+- **Elo is applied on confirmation** (opponent approval, 48 h auto-approve or admin resolution)
+  using the players' ratings at that moment, in one serializable transaction. The
+  `MATCH_CONFIRMED` notification carries the personal before/after/delta and overall rank movement
+  for the celebration screen.
+- **Who approves:** any player on the side opposite the reporter. Results can be reported up to 30
+  days after the match, never for future dates.
+- **Booking-linked reports** must use exactly the booking's players and date, and a booking can only
+  be reported once (voided matches excepted). Court and surface come from the booking.
+- **Leaderboards rank by Elo** (ties share a rank) and include members without matches (0-0); the
+  trend is the sum of Elo changes in the last 30 days. H2H counts every confirmed match where the
+  two played on opposite sides (singles and doubles), with scores shown from player A's view.
+- **Guest QR tokens** are HS256 JWTs (`GUEST_PASS_SECRET`) holding only the pass id and expiring at
+  the end of the visit date (club time). Gate check order: signature → cancelled → already used →
+  date → blocked document → suspended host; the single entry is an atomic ACTIVE → USED update.
+  Expired and early passes both report `WRONG_DATE`.
+- **Admins never receive document numbers:** lists are masked and blocking from a list uses the
+  pass id (`POST /admin/guests/blocks/from-pass/:passId`). Passes can be created up to 60 days
+  ahead; blocked documents are refused at creation too.
 - **shadcn/ui was initialized by hand** because the sandbox blocks `ui.shadcn.com`; the files
   match what the CLI generates.
 

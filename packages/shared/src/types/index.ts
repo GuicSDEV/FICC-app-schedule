@@ -4,3 +4,5 @@ export * from "./notification";
 export * from "./schedule";
 export * from "./freeze";
 export * from "./lesson";
+export * from "./guest";
+export * from "./match";
