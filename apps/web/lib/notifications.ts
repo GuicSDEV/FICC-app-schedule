@@ -39,6 +39,15 @@ export function useNotificationCopy() {
             tone: "ball",
           };
         }
+        case "FRIEND_RANKING_ADDED": {
+          const { rankingName, addedBy, rankingId } = item.payload;
+          return {
+            title: t("FRIEND_RANKING_ADDED.title"),
+            body: t("FRIEND_RANKING_ADDED.body", { name: addedBy, ranking: rankingName }),
+            href: `/app/ranking/friends/${rankingId}`,
+            tone: "ball",
+          };
+        }
         case "BOOKING_PLAYER_LEFT": {
           const { playerName, courtName, date, startTime } = item.payload;
           return {

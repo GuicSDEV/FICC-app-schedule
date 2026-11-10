@@ -22,6 +22,7 @@ import { useSession } from "@/components/providers/session-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
 import { PageHeader } from "@/components/shell/page-header";
 import { CategoryTabs } from "@/components/ranking/category-tabs";
+import { FriendRankingsCard } from "@/components/ranking/friend-rankings";
 import { Podium } from "@/components/ranking/podium";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
@@ -243,6 +244,7 @@ export function RankingView() {
           <ButtonLink href="/app/ranking/h2h" variant="secondary" block>
             <Swords /> {t("h2h")}
           </ButtonLink>
+          <FriendRankingsCard />
 
           <div role="search" className="relative">
             <Search

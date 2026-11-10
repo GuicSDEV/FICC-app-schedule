@@ -201,6 +201,7 @@ enum NotificationType {
   NEWS_POSTED
   BOOKING_SUSPENDED
   BOOKING_PLAYER_LEFT
+  FRIEND_RANKING_ADDED
 }
 
 // ── Club operations (Phase 9.8) ──────────────────────────────────────────────
@@ -345,6 +346,7 @@ model Club {
   partnerRequests      PartnerRequest[]
   rankingSeasons       RankingSeason[]
   seasonStandings      SeasonStanding[]
+  friendRankings       FriendRanking[]
   staffRoles           StaffRole[]
   auditLogs            AuditLog[]
   noShows              NoShow[]
@@ -449,6 +451,8 @@ model User {
   slotHolds                  SlotHold[]
   partnerRequests            PartnerRequest[]
   seasonStandings            SeasonStanding[]
+  friendRankingsOwned        FriendRanking[]          @relation("FriendRankingOwner")
+  friendRankings             FriendRankingMember[]
   noShows                    NoShow[]                 @relation("NoShowUser")
   noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
   newsPosts                  NewsPost[]
@@ -1508,6 +1512,49 @@ model SeasonStanding {
 
   @@unique([seasonId, userId])
   @@index([seasonId, rank])
+}
+
+enum FriendRankingScope {
+  /// Only matches where every player is in the ranking (head to head among friends).
+  AMONG_MEMBERS
+  /// Every confirmed match each member plays.
+  ALL_MATCHES
+}
+
+enum FriendRankingPeriod {
+  /// One table per calendar month (club time zone).
+  MONTHLY
+  /// Since the ranking was created.
+  SINCE_START
+}
+
+/// A private ranking a member creates with friends: who won the most matches.
+model FriendRanking {
+  id        String              @id @default(cuid())
+  clubId    String              @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  ownerId   String
+  name      String
+  scope     FriendRankingScope
+  period    FriendRankingPeriod
+  createdAt DateTime            @default(now()) @db.Timestamptz(3)
+
+  club    Club                  @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  owner   User                  @relation("FriendRankingOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members FriendRankingMember[]
+
+  @@index([ownerId])
+}
+
+model FriendRankingMember {
+  rankingId String
+  userId    String
+  joinedAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  ranking FriendRanking @relation(fields: [rankingId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([rankingId, userId])
+  @@index([userId])
 }
 
 /// Editable group of permissions (Secretaria, Diretoria…).

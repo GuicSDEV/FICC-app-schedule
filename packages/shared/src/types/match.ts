@@ -1,3 +1,4 @@
+import type { FriendRankingPeriod, FriendRankingScope } from "../schemas/ranking";
 import type { IsoDate } from "../dates";
 import type {
   MatchConfirmation,
@@ -172,4 +173,39 @@ export interface H2HResponse {
   meetings: number;
   lastMeetings: H2HMeeting[];
   surfaces: Record<Surface, { played: number; aWins: number; bWins: number }>;
+}
+
+/** A private ranking in the member's list. */
+export interface FriendRankingSummary {
+  id: string;
+  name: string;
+  scope: FriendRankingScope;
+  period: FriendRankingPeriod;
+  ownerId: string;
+  members: number;
+  /** The viewer's place in the current table (null when they have no match in it yet). */
+  myRank: number | null;
+  leader: PlayerSummary | null;
+}
+
+export interface FriendRankingEntry {
+  rank: number;
+  player: PlayerSummary;
+  wins: number;
+  losses: number;
+  matches: number;
+  /** 0–100, rounded. */
+  winRate: number;
+}
+
+export interface FriendRankingDetail {
+  id: string;
+  name: string;
+  scope: FriendRankingScope;
+  period: FriendRankingPeriod;
+  ownerId: string;
+  createdAt: IsoDateTime;
+  /** The month shown ("YYYY-MM") for a monthly ranking, else null. */
+  month: string | null;
+  entries: FriendRankingEntry[];
 }

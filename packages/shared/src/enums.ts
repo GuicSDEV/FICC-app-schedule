@@ -144,6 +144,7 @@ export const NOTIFICATION_TYPES = [
   "NEWS_POSTED",
   "BOOKING_SUSPENDED",
   "BOOKING_PLAYER_LEFT",
+  "FRIEND_RANKING_ADDED",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

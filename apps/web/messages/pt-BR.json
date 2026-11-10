@@ -240,6 +240,10 @@
     "BOOKING_SUSPENDED": {
       "title": "Reservas suspensas",
       "body": "{count} faltas em {days} dias: novas reservas liberadas em {until}."
+    },
+    "FRIEND_RANKING_ADDED": {
+      "title": "Você entrou num ranking de amigos",
+      "body": "{name} colocou você no ranking “{ranking}”."
     }
   },
   "states": {
@@ -2149,5 +2153,56 @@
     "record": "{wins}V · {losses}D",
     "loadFailed": "Não foi possível carregar as temporadas.",
     "back": "Ranking"
+  },
+  "friendRankings": {
+    "title": "Rankings de amigos",
+    "hint": "Crie um ranking só seu e dos seus amigos para ver quem ganha mais.",
+    "empty": "Você ainda não está em nenhum ranking de amigos.",
+    "create": "Criar ranking com amigos",
+    "createTitle": "Novo ranking de amigos",
+    "name": "Nome do ranking",
+    "namePlaceholder": "Ex.: Turma de quinta",
+    "scope": "O que conta",
+    "scopes": {
+      "AMONG_MEMBERS": "Só jogos entre nós",
+      "ALL_MATCHES": "Todos os jogos"
+    },
+    "scopeHints": {
+      "AMONG_MEMBERS": "Conta só partidas em que todos os jogadores estão no ranking.",
+      "ALL_MATCHES": "Conta toda partida que cada um jogar, contra qualquer sócio."
+    },
+    "period": "Período",
+    "periods": {
+      "MONTHLY": "Por mês",
+      "SINCE_START": "Desde a criação"
+    },
+    "friends": "Amigos",
+    "save": "Criar ranking",
+    "created": "Ranking criado",
+    "members": "{count, plural, one {# pessoa} other {# pessoas}}",
+    "leader": "Liderando: {name}",
+    "noLeader": "Ninguém venceu ainda",
+    "myRank": "Você está em {rank}º",
+    "record": "{wins}V · {losses}D · {rate}%",
+    "noMatches": "Sem jogos",
+    "monthOf": "{month}",
+    "sinceStart": "Desde {date}",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "manage": "Gerenciar",
+    "manageTitle": "Gerenciar ranking",
+    "addFriends": "Adicionar amigos",
+    "addConfirm": "{count, plural, one {Adicionar # amigo} other {Adicionar # amigos}}",
+    "added": "Amigos adicionados",
+    "remove": "Tirar {name}",
+    "saveChanges": "Salvar alterações",
+    "saved": "Ranking atualizado",
+    "leave": "Sair do ranking",
+    "left": "Você saiu do ranking",
+    "delete": "Excluir ranking",
+    "deleteConfirm": "Excluir de vez",
+    "deleted": "Ranking excluído",
+    "owner": "criador",
+    "loadFailed": "Não foi possível carregar o ranking."
   }
 }

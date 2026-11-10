@@ -66,6 +66,11 @@ export function useFormat() {
         day: format.dateTime(asDay(date), { day: "numeric", timeZone: "UTC" }),
         month: clean(format.dateTime(asDay(date), { month: "short", timeZone: "UTC" })),
       }),
+      /** "Março de 2030" for a calendar month (any day of it). */
+      monthYear: (date: IsoDate) =>
+        upperFirst(
+          format.dateTime(asDay(date), { month: "long", year: "numeric", timeZone: "UTC" }),
+        ),
       number: (value: number) => format.number(value),
       delta: formatDelta,
     };

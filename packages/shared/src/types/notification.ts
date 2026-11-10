@@ -77,6 +77,7 @@ export interface NotificationPayloads {
   BOOKING_SUSPENDED: { until: IsoDateTime; count: number; windowDays: number };
   /** A player added to a booking made alone declined; the court stays booked. */
   BOOKING_PLAYER_LEFT: SlotRef & { bookingId: string; playerName: string };
+  FRIEND_RANKING_ADDED: { rankingId: string; rankingName: string; addedBy: string };
 }
 
 interface TournamentRef {

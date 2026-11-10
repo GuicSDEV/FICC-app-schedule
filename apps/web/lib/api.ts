@@ -56,6 +56,10 @@ import type {
   MemberNoShows,
   MemberBookingRules,
   SeasonListItem,
+  FriendRankingSummary,
+  FriendRankingDetail,
+  CreateFriendRankingInput,
+  UpdateFriendRankingInput,
   SeasonDetail,
   SeasonSummary,
   StartSeasonInput,
@@ -320,6 +324,18 @@ export const api = {
     eloHistory: (id: string) => request<EloPoint[]>(`/players/${id}/elo-history`),
     h2h: (a: string, b: string) => request<H2HResponse>("/h2h", { query: { a, b } }),
     seasons: () => request<SeasonListItem[]>("/ranking/seasons"),
+    friends: () => request<FriendRankingSummary[]>("/friend-rankings"),
+    friend: (id: string, month?: string) =>
+      request<FriendRankingDetail>(`/friend-rankings/${id}`, { query: { month } }),
+    createFriends: (input: CreateFriendRankingInput) =>
+      post<FriendRankingDetail>("/friend-rankings", input),
+    updateFriends: (id: string, input: UpdateFriendRankingInput) =>
+      patch<FriendRankingDetail>(`/friend-rankings/${id}`, input),
+    addFriends: (id: string, userIds: string[]) =>
+      post<FriendRankingDetail>(`/friend-rankings/${id}/members`, { userIds }),
+    removeFriend: (id: string, userId: string) =>
+      request<void>(`/friend-rankings/${id}/members/${userId}`, { method: "DELETE" }),
+    deleteFriends: (id: string) => request<void>(`/friend-rankings/${id}`, { method: "DELETE" }),
     season: (id: string) => request<SeasonDetail>(`/ranking/seasons/${id}`),
   },
   guests: {
