@@ -104,6 +104,11 @@ export const clubSettingsSchema = z.object({
   signupRequiresApproval: z.boolean(),
   /** Holder + dependents memberships ("1234-01", "1234-02"), each with its own login and rating. */
   dependentsEnabled: z.boolean(),
+  /**
+   * Matrículas shorter than this get leading zeros (FICC: 5, so "123" is "00123"); members may
+   * type the short form. Null = matrículas are used as typed.
+   */
+  membershipIdLength: z.number().int().min(3).max(10).nullable(),
   /** Cancelling less than this many minutes before the slot counts as a late cancellation. */
   lateCancellationMinutes: z
     .number()
@@ -141,6 +146,7 @@ export const DEFAULT_CLUB_SETTINGS: ClubSettings = {
   freePlay: { queueEnabled: true, claimMinutes: 5, sessionMinutes: 75 },
   signupRequiresApproval: true,
   dependentsEnabled: false,
+  membershipIdLength: null,
   lateCancellationMinutes: 120,
   noShowPenalty: { enabled: false, count: 3, windowDays: 30, suspensionDays: 7 },
 };

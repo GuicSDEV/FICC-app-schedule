@@ -17,6 +17,7 @@ import {
   type MemberCategoriesInput,
   memberCategoriesSchema,
   normalizeMembershipId,
+  padMembershipId,
   parseMembershipCsv,
 } from "@ficc/shared";
 
@@ -34,7 +35,7 @@ import { playerSelect, toPlayerSummary } from "../common/mappers";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { serializable } from "../common/transactions";
 import { PrismaService } from "../prisma/prisma.service";
-import { tenant } from "../tenancy/tenant-context";
+import { clubSettings, tenant } from "../tenancy/tenant-context";
 
 @Controller("admin")
 @Roles(Role.ADMIN)
@@ -60,7 +61,7 @@ export class AdminMembersController {
           ? {
               OR: [
                 { name: { contains: query.q, mode: "insensitive" as const } },
-                ...(digits ? [{ membershipId: { startsWith: digits } }] : []),
+                ...(digits ? [{ membershipId: { contains: digits } }] : []),
               ],
             }
           : {}),
@@ -228,7 +229,18 @@ export class AdminMembersController {
   async importMemberships(
     @Body(new ZodValidationPipe(importMembershipsSchema)) body: ImportMembershipsInput,
   ): Promise<MembershipImportResult> {
-    const { rows, errors } = parseMembershipCsv(body.csv);
+    const parsed = parseMembershipCsv(body.csv);
+    // Short matrículas get the club's leading zeros ("123" → "00123"); later rows win.
+    const length = clubSettings().membershipIdLength;
+    const rows = [
+      ...new Map(
+        parsed.rows.map((row) => {
+          const membershipId = padMembershipId(row.membershipId, length);
+          return [membershipId, { ...row, membershipId }] as const;
+        }),
+      ).values(),
+    ];
+    const { errors } = parsed;
     const existing = new Set(
       (
         await this.prisma.validMembershipId.findMany({

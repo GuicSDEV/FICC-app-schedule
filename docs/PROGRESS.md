@@ -483,6 +483,10 @@ Phases 11 and 12.
 
 - Matrículas accept 3 to 10 digits (FICC is moving to 5 digits; older ones have 3 or 4) and are
   shown without dots up to 5 digits.
+- `membershipIdLength` (ClubSettings; FICC: 5) pads short matrículas with leading zeros on
+  sign-up, login and list import ("123" → "00123"), so members may type the short form; searches
+  match without the zeros. Migration `20261111120000_membership_id_length` sets it for FICC and pads
+  its stored list (accounts follow by cascade). Not editable in the admin settings yet.
 - The app is named **FICC Tênis** (club name + sport; manifest name and short name).
 - Colors follow the club's logo, softened at the owner's request: navy `#05103C` background in the
   dark theme (default) and lime `#C4F252` as `--ball` (logo: `#01035A` / `#B8FF01`); the light theme uses a navy-tinted off-white with navy text. Coach violet,

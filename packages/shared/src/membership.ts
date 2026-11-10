@@ -18,6 +18,17 @@ export function isValidMembershipId(normalized: string, dependents = false): boo
   return /^\d{3,10}$/.test(normalized);
 }
 
+/**
+ * Pads a normalized matrícula with leading zeros to the club's length ("123" → "00123" for 5);
+ * a dependent's suffix is kept ("123-01" → "00123-01"). Longer ones are left as they are.
+ */
+export function padMembershipId(normalized: string, length: number | null): string {
+  if (!length) return normalized;
+  const [holder = "", suffix] = normalized.split("-");
+  const padded = holder.padStart(length, "0");
+  return suffix === undefined ? padded : `${padded}-${suffix}`;
+}
+
 /** The holder's matrícula of a dependent ("1234-01" → "1234"); itself for a holder. */
 export function holderMembershipId(normalized: string): string {
   return normalized.split("-")[0]!;

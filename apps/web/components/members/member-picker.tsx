@@ -61,7 +61,8 @@ export function MemberPicker({
       !hidden.has(player.id) &&
       (query === "" ||
         matchesName(player.name, query) ||
-        (digits.length >= 2 && (player.membershipId ?? "").startsWith(digits))),
+        (digits.length >= 2 &&
+          (player.membershipId ?? "").replace(/^0+/, "").startsWith(digits.replace(/^0+/, "")))),
   );
   const options = matching.slice(0, MAX_ROWS);
   const showList = open && !full;

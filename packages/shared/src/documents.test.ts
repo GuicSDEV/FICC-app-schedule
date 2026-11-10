@@ -14,6 +14,7 @@ import {
   initialsOf,
   isValidMembershipId,
   normalizeMembershipId,
+  padMembershipId,
 } from "./membership";
 
 describe("documents", () => {
@@ -56,6 +57,14 @@ describe("membership ids", () => {
     expect(formatMembershipId("123")).toBe("123");
     expect(formatMembershipId("12345")).toBe("12345");
     expect(formatMembershipId("10")).toBe("10");
+  });
+
+  it("pads short matrículas with zeros to the club's length", () => {
+    expect(padMembershipId("123", 5)).toBe("00123");
+    expect(padMembershipId("1234", 5)).toBe("01234");
+    expect(padMembershipId("104218", 5)).toBe("104218");
+    expect(padMembershipId("123-01", 5)).toBe("00123-01");
+    expect(padMembershipId("123", null)).toBe("123");
   });
 
   it("handles dependents' matrículas (holder + dependents mode)", () => {

@@ -38,6 +38,8 @@ export const FICC_WEEKEND_TIMES = [
 
 export const FICC_SETTINGS: ClubSettings = {
   ...DEFAULT_CLUB_SETTINGS,
+  // Matrículas have 5 digits; older 3- and 4-digit ones get leading zeros.
+  membershipIdLength: 5,
   scheduleGrids: {
     MON: [...FICC_WEEKDAY_TIMES],
     TUE: [...FICC_WEEKDAY_TIMES],

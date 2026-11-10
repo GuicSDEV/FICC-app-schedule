@@ -106,6 +106,47 @@ describe("Auth", () => {
       });
     });
 
+    it("completes short matrículas with the club's leading zeros", async () => {
+      await ctx.prisma.clubSettings.update({
+        where: { clubId: ctx.currentClubId() },
+        data: {
+          values: {
+            ...DEFAULT_CLUB_SETTINGS,
+            signupRequiresApproval: false,
+            membershipIdLength: 5,
+          },
+        },
+      });
+      ctx.invalidateClubs();
+      await createStaff(ctx.prisma, Role.ADMIN, "admin@ficc.test");
+      const admin = await ctx.loginStaff("admin@ficc.test");
+      // The club's list may come with the old 3- and 4-digit numbers.
+      const imported = await admin
+        .post("/api/v1/admin/memberships/import")
+        .send({ csv: "matricula,nome\n123,Ana Lima\n4567,Bia Souza\n00123,Ana Lima" })
+        .expect(201);
+      expect(imported.body).toMatchObject({ created: 2 });
+      const listed = await ctx.prisma.validMembershipId.findMany({
+        orderBy: { membershipId: "asc" },
+      });
+      expect(listed.map((row) => row.membershipId)).toEqual(["00123", "04567"]);
+
+      // Members sign up and log in with the short or the full number.
+      const registered = await ctx
+        .http()
+        .post("/api/v1/auth/register")
+        .send({ membershipId: "123", name: "Ana Lima", password: TEST_PASSWORD })
+        .expect(201);
+      expect(registered.body.membershipId).toBe("00123");
+      for (const typed of ["123", "0123", "00123"]) {
+        await ctx
+          .http()
+          .post("/api/v1/auth/login")
+          .send({ kind: "member", membershipId: typed, password: TEST_PASSWORD })
+          .expect(200);
+      }
+    });
+
     it.each([Role.ADMIN, Role.GATE, Role.COACH])("logs %s staff in by email", async (role) => {
       await createStaff(ctx.prisma, role, `${role.toLowerCase()}@ficc.test`);
       const agent = await ctx.loginStaff(`${role.toLowerCase()}@ficc.test`);

@@ -5,6 +5,7 @@ import {
   holderMembershipId,
   isDependentMembershipId,
   type LoginInput,
+  padMembershipId,
   permissionsOf,
   type RegisterInput,
   type SignupStatusResponse,
@@ -58,6 +59,10 @@ export class AuthService {
     userAgent?: string,
   ): Promise<Session | SignupStatusResponse> {
     const settings = clubSettings();
+    input = {
+      ...input,
+      membershipId: padMembershipId(input.membershipId, settings.membershipIdLength),
+    };
     const dependent = isDependentMembershipId(input.membershipId);
     if (dependent) {
       if (!settings.dependentsEnabled) {
@@ -120,7 +125,11 @@ export class AuthService {
     // Logins are unique per club; the tenant extension adds the current club to the filter.
     const user = await this.prisma.user.findFirst({
       where:
-        input.kind === "member" ? { membershipId: input.membershipId } : { email: input.email },
+        input.kind === "member"
+          ? {
+              membershipId: padMembershipId(input.membershipId, clubSettings().membershipIdLength),
+            }
+          : { email: input.email },
       include: authUserInclude(),
     });
     const valid = user?.isActive && (await verify(user.passwordHash, input.password));

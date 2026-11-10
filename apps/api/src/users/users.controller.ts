@@ -44,7 +44,7 @@ export class MembersController {
         isActive: true,
         OR: [
           { name: { contains: query.q, mode: "insensitive" } },
-          ...(digits.length >= 2 ? [{ membershipId: { startsWith: digits } }] : []),
+          ...(digits.length >= 2 ? [{ membershipId: { contains: digits } }] : []),
         ],
       },
       select: playerSelect(),
