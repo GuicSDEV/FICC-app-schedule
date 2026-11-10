@@ -22,7 +22,7 @@ and what still needs a human to check.
 | 9.8   | FICC operations adjustments           | Done                                | `feat(phase-9.8)` |
 | 10    | PWA, polish, QA                       | Done                                | `feat(phase-10)`  |
 | 11    | SaaS extensibility & feature workflow | On hold — waiting for club approval |                   |
-| 12    | Native apps (App Store & Google Play) | On hold — waiting for club approval |                   |
+| 12    | Native apps (App Store & Google Play) | Done (store upload pending)         | `feat(phase-12)`  |
 
 Execution order: 7.5 → 8 → 9 → 9.5 → 9.8 → 10. Work stops after Phase 10 until the club approves
 Phases 11 and 12.
@@ -612,7 +612,25 @@ in Decisions) · ⏸ on hold by the product owner.
 
 **SaaS extensibility (Phase 11)** — ⏸ on hold, waiting for club approval.
 
-**Native apps (Phase 12)** — ⏸ on hold, waiting for club approval (Capacitor notes in the README).
+**Native apps (Phase 12)** — done; guide in [`docs/MOBILE.md`](MOBILE.md).
+
+- Decision (product owner): ONE app named **FICC Tênis** (`br.com.ficctenis.app`), published on the
+  owner's own Apple and Google accounts, for FICC only (not the multi-club branded app the phase
+  first described; Phase 11 stays on hold).
+- Capacitor 8 in `apps/mobile` (iOS with Swift Package Manager, Android with Gradle). The app opens
+  the deployed web app (`APP_URL` at `cap sync`, `errorPath` offline page); web deploys reach the
+  app without a store release. Only native changes (plugins, icons, permissions, config) need one.
+- Native: Firebase push (`DeviceToken`, `FcmNotificationChannel` over FCM HTTP v1 with a signed
+  service-account JWT, no SDK; the plugin is built in only when both Firebase files exist so iOS
+  does not crash without them), haptics, share sheet (guest pass image through Filesystem),
+  status bar per theme, Android back button, app links (`/.well-known/*` from env), notification
+  taps opening their screen, Dynamic Type on iPhone. The gate QR uses the existing camera page
+  (getUserMedia works in both web views); the ML Kit plugin was dropped (no SPM support).
+- Store rules: `DELETE /account` (password, cancels upcoming bookings, clears personal data,
+  `deletedAt`, matrícula free again; history under "Ex-sócio"), public `/privacidade` and
+  `/termos`, sliding refresh session (recommend `REFRESH_TOKEN_TTL_DAYS=90`).
+- Release: `version:set` keeps Android/iOS versions and build numbers in step; `screenshots`
+  renders store screenshots (iPhone 6.9", 6.5", Android) from the demo with Playwright.
 
 **Data model** — ✅ every listed model, plus `SlotOccupancy`, `RefreshToken`, `CourtFreezeCourt`,
 tenancy, tournament, operations and audit models; enums, indexes, unique slot constraint, CHECKs.
@@ -626,6 +644,9 @@ tenancy, tournament, operations and audit models; enums, indexes, unique slot co
 
 ## Needs manual check
 
+- Phase 12: the iOS project building and running in Xcode and the Android project in Android
+  Studio (neither could be built here: no Xcode or Android SDK in the container); push on real
+  phones once Firebase is set up; app links with the club's domain; Dynamic Type at large sizes.
 - Feel of gestures (swipe cards, pull-to-refresh, bottom sheets) and haptics on a real phone;
   verified here only with Playwright touch emulation at 390 px.
 - iOS safe areas (notch / home indicator) on a real device.

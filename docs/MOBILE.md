@@ -126,3 +126,93 @@ Confira em `https://app.ficc.com.br/.well-known/assetlinks.json` e
 - Botão voltar do Android navegando pelas telas (e saindo do app na primeira).
 - Leitura de QR na portaria com a câmera (a mesma tela do site, com a permissão da câmera do app).
 - Links do site abrindo no app (com domínio próprio, acima).
+
+## Publicar nas lojas
+
+### Contas (uma vez)
+
+- **Apple Developer Program:** [developer.apple.com/programs](https://developer.apple.com/programs)
+  → Enroll como pessoa física, US$ 99/ano. Na loja aparece o seu nome como vendedor.
+- **Google Play Console:** [play.google.com/console](https://play.google.com/console) → conta
+  pessoal, US$ 25 uma vez. Contas pessoais novas precisam de um **teste fechado com 12 testadores
+  por 14 dias** antes de publicar em produção: convide sócios do clube.
+
+### Antes de cada versão
+
+```bash
+git pull && pnpm install
+pnpm --filter @ficc/mobile version:set 1.0.0   # 1.0.1, 1.1.0… a cada envio
+APP_URL=https://app.ficc.com.br pnpm --filter @ficc/mobile sync
+```
+
+O `APP_URL` precisa ser o endereço **de produção** (o app aponta para ele para sempre).
+
+### iPhone (App Store Connect)
+
+1. [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → **Apps → +** → nome
+   **FICC Tênis**, idioma Português (Brasil), bundle ID `br.com.ficctenis.app`, SKU `ficc-tenis`.
+2. `pnpm --filter @ficc/mobile open:ios` → no Xcode, alvo **App → Signing & Capabilities** →
+   **Team**: a sua conta; marque **Automatically manage signing**.
+3. Topo do Xcode: escolha **Any iOS Device (arm64)** → menu **Product → Archive** → na janela que
+   abre, **Distribute App → App Store Connect → Upload**.
+4. Em uns 15 minutos o build aparece em **TestFlight**: instale no seu iPhone pelo app TestFlight
+   e teste. Depois, em **Distribuição**, escolha o build, preencha a ficha (abaixo) e
+   **Enviar para revisão**.
+
+### Android (Google Play)
+
+1. Gere a chave de assinatura uma vez e **guarde muito bem** (sem ela não dá para atualizar o
+   app):
+
+   ```bash
+   keytool -genkey -v -keystore ~/ficc-tenis-upload.jks -keyalg RSA -keysize 2048 \
+     -validity 10000 -alias upload
+   ```
+
+2. `pnpm --filter @ficc/mobile open:android` → **Build → Generate Signed App Bundle or APK → Android
+   App Bundle** → escolha o `.jks` → **release**. O arquivo sai em
+   `android/app/release/app-release.aab`.
+3. Play Console → **Criar app** (FICC Tênis, app, gratuito) → **Testes → Teste fechado** → envie o
+   `.aab`, adicione os testadores e, depois dos 14 dias, **Produção**.
+4. Deixe a assinatura do app com o Google (**Play App Signing**, padrão) e copie o SHA-256 de
+   **Integridade do app** para `APP_LINKS_ANDROID_SHA256` (links que abrem o app).
+
+### Ficha da loja
+
+- **Nome:** FICC Tênis · **Subtítulo (Apple):** Quadras, aulas e ranking do clube
+- **Descrição:** Reserve quadras do Foz do Iguaçu Country Clube, convide parceiros, marque aulas,
+  lance resultados e acompanhe o ranking Elo, os torneios e os avisos do clube. Exclusivo para
+  sócios do FICC.
+- **Categoria:** Esportes · **Classificação:** Livre / 4+
+- **Política de privacidade:** `https://app.ficc.com.br/privacidade`
+- **Prints:** gere com o comando abaixo (demo com dados fictícios) e envie as pastas
+  `iphone-6.9` e `iphone-6.5` na Apple e `android-phone` no Google:
+
+  ```bash
+  APP_URL=https://<demo>.up.railway.app SHOT_PASSWORD=demo1234 pnpm --filter @ficc/mobile screenshots
+  ```
+
+  Saem em `apps/mobile/store/screenshots/` (fora do Git).
+
+- **Conta para a revisão:** a Apple e o Google precisam entrar no app. Crie na produção um sócio de
+  teste (matrícula e senha) e informe em **Informações de revisão** (Apple) e **Acesso ao app**
+  (Google), com a nota: “Use a aba Sócio com a matrícula e a senha acima.”
+
+### Privacidade nas lojas (questionários)
+
+Responda com base na [política](/privacidade):
+
+- **Dados coletados:** nome, identificador do usuário (matrícula), foto (opcional), conteúdo do
+  usuário (reservas, partidas), identificador do aparelho (push). Todos **vinculados à pessoa**,
+  usados para **funcionalidade do app**. **Nenhum** para rastreamento ou publicidade.
+- **Google (Segurança dos dados):** dados criptografados em trânsito: sim. O usuário pode pedir a
+  exclusão: sim (no app, Perfil → Excluir minha conta; e pela URL da política).
+- **Apple:** “Não usamos dados para rastrear” (sem App Tracking Transparency).
+
+### O que precisa de nova versão na loja
+
+| Mudança                                                 | Como chega ao celular    |
+| ------------------------------------------------------- | ------------------------ |
+| Telas, textos, regras, cores do site, API, banco        | Deploy normal no Railway |
+| Ícone, tela de abertura, nome do app, permissões        | Nova versão nas lojas    |
+| Plugins nativos novos, `capacitor.config.ts`, `APP_URL` | Nova versão nas lojas    |

@@ -9,7 +9,9 @@
     "sync:android": "cap sync android",
     "sync:ios": "cap sync ios",
     "open:android": "cap open android",
-    "open:ios": "cap open ios"
+    "open:ios": "cap open ios",
+    "version:set": "node scripts/version.mjs",
+    "screenshots": "node scripts/store-screenshots.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.0"
