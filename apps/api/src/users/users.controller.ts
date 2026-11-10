@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { Role } from "@ficc/db";
+import { Role, UserStatus } from "@ficc/db";
 import {
   type MemberSearchQuery,
   memberSearchQuerySchema,
@@ -23,7 +23,8 @@ export class MembersController {
   @Get()
   async directory(): Promise<PlayerSummary[]> {
     const members = await this.prisma.user.findMany({
-      where: { role: Role.MEMBER, isActive: true },
+      // Sign-ups still waiting for approval cannot be invited yet.
+      where: { role: Role.MEMBER, isActive: true, status: UserStatus.ACTIVE },
       select: playerSelect(),
       orderBy: { name: "asc" },
     });
