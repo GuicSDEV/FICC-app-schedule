@@ -1095,14 +1095,12 @@
         "title": "Regras de reserva deste sócio",
         "hint": "Deixe em branco para seguir a regra do clube. Use para quem organiza grupos, por exemplo.",
         "perDay": "Reservas no mesmo dia",
-        "active": "Reservas marcadas ao mesmo tempo",
         "clubRule": "Clube: {value}",
         "alone": "Pode reservar sem informar os jogadores",
         "aloneHint": "A reserva fica confirmada na hora no nome dele; os jogadores podem ser adicionados depois.",
         "save": "Salvar regras",
         "saved": "Regras do sócio salvas",
-        "perDayHint": "Quantas ele pode ter num único dia.",
-        "activeHint": "Total de reservas futuras, somando todos os dias."
+        "perDayHint": "Quantas ele pode ter num único dia."
       },
       "classes": "Classes no ranking"
     },
@@ -1871,10 +1869,6 @@
       "bookingWindowDays": {
         "label": "Janela de reservas (dias)",
         "hint": "Hoje e os próximos dias que podem ser reservados."
-      },
-      "maxActiveBookings": {
-        "label": "Reservas ativas por sócio",
-        "hint": "Reservas futuras que um sócio pode ter ao mesmo tempo."
       },
       "maxBookingsPerDay": {
         "label": "Reservas por sócio no mesmo dia",

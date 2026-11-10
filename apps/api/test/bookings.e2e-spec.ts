@@ -175,7 +175,16 @@ describe("Bookings", () => {
       });
     });
 
-    it("allows at most 2 future active bookings per member", async () => {
+    it("allows at most 2 future active bookings per member when the club sets that limit", async () => {
+      // No limit by default; this club sets 2.
+      const settings = await ctx.base.clubSettings.findFirstOrThrow({
+        where: { clubId: ctx.currentClubId() },
+      });
+      await ctx.base.clubSettings.update({
+        where: { clubId: settings.clubId },
+        data: { values: { ...(settings.values as object), maxActiveBookings: 2 } },
+      });
+      ctx.invalidateClubs();
       const agent = await ctx.loginMember(ana.membershipId!);
       await agent
         .post("/api/v1/bookings")

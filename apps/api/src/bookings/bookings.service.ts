@@ -652,8 +652,8 @@ export class BookingsService {
   }
 
   /**
-   * Every player may hold at most the club's maxActiveBookings future active bookings, or the
-   * limit the admin set for them.
+   * Every player may hold at most the club's maxActiveBookings future active bookings (when the
+   * club sets one), or the limit the admin set for them.
    */
   private async assertBookingLimit(
     tx: Tx,
@@ -661,27 +661,30 @@ export class BookingsService {
     now: Date,
     nameOf: (id: string) => string,
   ): Promise<void> {
-    const [rows, limits] = await Promise.all([
-      tx.bookingPlayer.findMany({
-        where: {
-          userId: { in: playerIds },
-          status: { not: BookingPlayerStatus.DECLINED },
-          booking: {
-            status: { in: ACTIVE_STATUSES },
-            date: { gte: toDbDate(clubToday(now, clubTimeZone())) },
-          },
+    const limits = await this.memberLimits(tx, playerIds);
+    const maxOf = (userId: string) =>
+      limits.get(userId)?.activeBookingsLimit ?? clubSettings().maxActiveBookings;
+    // No limit for anyone here (the club has none and no member has their own): nothing to count.
+    const limited = playerIds.filter((userId) => maxOf(userId) !== null);
+    if (limited.length === 0) return;
+    const rows = await tx.bookingPlayer.findMany({
+      where: {
+        userId: { in: limited },
+        status: { not: BookingPlayerStatus.DECLINED },
+        booking: {
+          status: { in: ACTIVE_STATUSES },
+          date: { gte: toDbDate(clubToday(now, clubTimeZone())) },
         },
-        include: { booking: { include: { timeSlot: true } } },
-      }),
-      this.memberLimits(tx, playerIds),
-    ]);
-    for (const userId of playerIds) {
+      },
+      include: { booking: { include: { timeSlot: true } } },
+    });
+    for (const userId of limited) {
       const future = rows.filter(
         (row) =>
           row.userId === userId &&
           !isSlotPast(fromDbDate(row.booking.date), row.booking.timeSlot, now, clubTimeZone()),
       );
-      const max = limits.get(userId)?.activeBookingsLimit ?? clubSettings().maxActiveBookings;
+      const max = maxOf(userId)!;
       if (future.length >= max) {
         throw unprocessable("BOOKING_LIMIT", {
           key: "api.bookingLimit",

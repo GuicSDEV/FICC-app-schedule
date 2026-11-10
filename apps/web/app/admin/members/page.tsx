@@ -322,8 +322,9 @@ function ApprovalsPanel() {
 
 /** A member's details: status, dependents and no-show history. */
 /**
- * Exceptions to the club's booking rules for one member: their own daily and active limits
- * (empty = the club's rule) and permission to book without naming the players.
+ * Exceptions to the club's booking rules for one member: their own daily limit (empty = the
+ * club's rule) and permission to book without naming the players. A stored active-bookings
+ * limit (API) is kept as it is.
  */
 function BookingRulesForm({ member }: { member: AdminMemberItem }) {
   const t = useTranslations("admin.members.bookingRules");
@@ -332,19 +333,17 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
   const errorMessage = useErrorMessage();
   const issueMessage = useIssueMessage();
   const [perDay, setPerDay] = useState("");
-  const [active, setActive] = useState("");
   const [alone, setAlone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     setPerDay(member.bookingRules.bookingsPerDay?.toString() ?? "");
-    setActive(member.bookingRules.activeBookings?.toString() ?? "");
     setAlone(member.bookingRules.canBookAlone);
     setError(null);
   }, [member]);
 
   const value = {
     bookingsPerDay: perDay.trim() === "" ? null : Number(perDay),
-    activeBookings: active.trim() === "" ? null : Number(active),
+    activeBookings: member.bookingRules.activeBookings,
     canBookAlone: alone,
   };
   const save = useMutation({
@@ -371,7 +370,7 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
     <section className="space-y-3">
       <SectionLabel>{t("title")}</SectionLabel>
       <p className="text-small text-muted-foreground">{t("hint")}</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3">
         <Field label={t("perDay")} hint={t("perDayHint")} htmlFor="rules-per-day">
           <Input
             id="rules-per-day"
@@ -383,19 +382,6 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
             value={perDay}
             placeholder={t("clubRule", { value: club?.settings.maxBookingsPerDay ?? "" })}
             onChange={(event) => setPerDay(event.target.value)}
-          />
-        </Field>
-        <Field label={t("active")} hint={t("activeHint")} htmlFor="rules-active">
-          <Input
-            id="rules-active"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={20}
-            className="num"
-            value={active}
-            placeholder={t("clubRule", { value: club?.settings.maxActiveBookings ?? "" })}
-            onChange={(event) => setActive(event.target.value)}
           />
         </Field>
       </div>

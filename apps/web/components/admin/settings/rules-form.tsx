@@ -32,7 +32,6 @@ import { SlotCatalogue } from "./slot-catalogue";
 const NUMBER_FIELDS = {
   booking: [
     "bookingWindowDays",
-    "maxActiveBookings",
     "maxBookingsPerDay",
     "bookingConfirmationMinutes",
     "lateCancellationMinutes",

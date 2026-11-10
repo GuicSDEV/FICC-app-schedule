@@ -83,7 +83,7 @@ describe("Multi-club isolation", () => {
       timezone: "America/Sao_Paulo",
       locale: "pt-BR",
       sports: ["TENNIS"],
-      settings: { bookingWindowDays: 14, maxActiveBookings: 2, eloKFactor: 32 },
+      settings: { bookingWindowDays: 14, maxActiveBookings: null, eloKFactor: 32 },
     });
 
     const staff = await ctx.loginStaff("admin@clube.test", other.slug);

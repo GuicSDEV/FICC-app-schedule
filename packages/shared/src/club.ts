@@ -44,8 +44,11 @@ export const clubSettingsSchema = z.object({
   primarySport: sportSchema,
   /** Members can book today and the next N − 1 days. */
   bookingWindowDays: z.number().int().min(1).max(60),
-  /** Future PENDING/CONFIRMED bookings a member may hold at once. */
-  maxActiveBookings: z.number().int().min(1).max(10),
+  /**
+   * Future PENDING/CONFIRMED bookings a member may hold at once; null = no limit (the daily limit
+   * and the booking opening already pace members, as at FICC).
+   */
+  maxActiveBookings: z.number().int().min(1).max(30).nullable(),
   /** Time the other players have to confirm a booking (capped at the slot start). */
   bookingConfirmationMinutes: z
     .number()
@@ -116,7 +119,7 @@ export type ClubSettings = z.infer<typeof clubSettingsSchema>;
 export const DEFAULT_CLUB_SETTINGS: ClubSettings = {
   primarySport: "TENNIS",
   bookingWindowDays: 14,
-  maxActiveBookings: 2,
+  maxActiveBookings: null,
   bookingConfirmationMinutes: 120,
   matchAutoApproveHours: 48,
   matchReportMaxDaysAgo: 30,
