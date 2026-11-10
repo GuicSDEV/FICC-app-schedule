@@ -1,5 +1,7 @@
 import QRCode from "qrcode";
 
+import { isNativeApp, nativeShareImage } from "./native";
+
 /**
  * Fixed brand palette for the shareable pass image (club navy #05103C,
  * lime #C4F252, off-white #F4F5FB). The image looks the same whatever theme the sender uses.
@@ -143,6 +145,10 @@ export async function shareOrDownload(
   fileName: string,
   share: { title: string; text: string },
 ): Promise<"shared" | "downloaded" | "cancelled"> {
+  // The native app has no downloads: the phone's share sheet takes the image instead.
+  if (isNativeApp()) {
+    return (await nativeShareImage(blob, fileName, share)) ? "shared" : "cancelled";
+  }
   const file = new File([blob], fileName, { type: "image/png" });
   if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
     try {

@@ -10,6 +10,7 @@ import { markHydrated } from "@/lib/motion";
 import { startPwa } from "@/lib/pwa";
 
 import { ClubProvider } from "./club-provider";
+import { NativeShell } from "./native-shell";
 import { QueryProvider } from "./query-provider";
 import { SocketProvider } from "./socket-provider";
 
@@ -31,6 +32,7 @@ export function Providers({ children, club }: { children: ReactNode; club: ClubI
           <ClubProvider initialClub={club}>
             <SocketProvider>{children}</SocketProvider>
             <Toaster />
+            <NativeShell />
           </ClubProvider>
         </QueryProvider>
       </MotionConfig>

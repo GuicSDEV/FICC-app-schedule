@@ -1,6 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Post } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  type DeviceTokenInput,
+  type DeviceTokenRemoveInput,
+  deviceTokenRemoveSchema,
+  deviceTokenSchema,
   type PushEndpointInput,
   pushEndpointSchema,
   type PushSubscriptionInput,
@@ -12,7 +16,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import type { Env } from "../config/env";
 import { PrismaService } from "../prisma/prisma.service";
 
-/** Phones that receive this person's notifications by web push. */
+/** Phones that receive this person's notifications: web push and the native apps. */
 @Controller("push")
 export class PushController {
   constructor(
@@ -58,5 +62,30 @@ export class PushController {
     await this.prisma.pushSubscription.deleteMany({
       where: { endpoint: body.endpoint, userId: user.id },
     });
+  }
+
+  /** A native app install starts receiving the person's notifications (moves on a new login). */
+  @Post("devices")
+  @HttpCode(204)
+  @SkipAudit()
+  async registerDevice(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(deviceTokenSchema)) body: DeviceTokenInput,
+  ): Promise<void> {
+    await this.prisma.deviceToken.upsert({
+      where: { token: body.token },
+      create: { userId: user.id, token: body.token, platform: body.platform },
+      update: { userId: user.id, platform: body.platform },
+    });
+  }
+
+  @Delete("devices")
+  @HttpCode(204)
+  @SkipAudit()
+  async removeDevice(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(deviceTokenRemoveSchema)) body: DeviceTokenRemoveInput,
+  ): Promise<void> {
+    await this.prisma.deviceToken.deleteMany({ where: { token: body.token, userId: user.id } });
   }
 }

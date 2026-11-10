@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { isNativeApp } from "./native";
+
 /** Chrome / Edge / Android: the deferred install prompt. */
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -25,7 +27,8 @@ export function startPwa(): void {
     emit();
   });
   // In development the service worker would fight hot reload.
-  if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+  // The native app opens the live site and has its own offline page: no service worker there.
+  if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator && !isNativeApp()) {
     void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
   }
 }
@@ -38,6 +41,8 @@ export function clearOfflineData(): void {
 
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
+  // The App Store / Google Play app is already installed.
+  if (isNativeApp()) return true;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -46,7 +51,7 @@ export function isStandalone(): boolean {
 
 /** iPhone / iPad Safari: no install prompt, the person adds the app from the share sheet. */
 export function isIosSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
+  if (typeof navigator === "undefined" || isNativeApp()) return false;
   const ua = navigator.userAgent;
   const ios =
     /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);

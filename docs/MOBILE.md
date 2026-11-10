@@ -50,10 +50,66 @@ No Android Studio, escolha um emulador (Device Manager) e clique em ▶︎. Para
 
 ## Notificações push (Firebase)
 
-Sem os arquivos do Firebase o app funciona normalmente, só não recebe push. O guia completo de
-configuração e de publicação nas lojas fica neste arquivo à medida que a Fase 12 avança.
+O app recebe push pelo **Firebase Cloud Messaging** (grátis). Sem configurar, o app funciona
+normalmente, só não recebe notificações. Uma vez só:
 
-## Limitações conhecidas
+1. Em [console.firebase.google.com](https://console.firebase.google.com) → **Adicionar projeto**
+   (ex.: `ficc-tenis`; o Google Analytics pode ficar desligado).
+2. **Adicionar app → Android** com o pacote `br.com.ficctenis.app` → baixe o
+   `google-services.json` e coloque em `apps/mobile/android/app/`.
+3. **Adicionar app → iOS** com o bundle ID `br.com.ficctenis.app` → baixe o
+   `GoogleService-Info.plist` e coloque em `apps/mobile/ios/App/App/` (no Xcode, arraste o arquivo
+   para a pasta **App** marcando o alvo **App**).
+4. iPhone: no [developer.apple.com](https://developer.apple.com) → **Keys** → crie uma chave com
+   **Apple Push Notifications service (APNs)**, baixe o `.p8` e envie no Firebase → Configurações do
+   projeto → **Cloud Messaging** → configuração do app Apple. No Xcode, em **Signing &
+   Capabilities**, adicione **Push Notifications** e **Background Modes → Remote notifications**.
+5. Servidor: Firebase → Configurações do projeto → **Contas de serviço** → **Gerar nova chave
+   privada**. Converta e cole na variável `FIREBASE_SERVICE_ACCOUNT` do serviço **api** no Railway:
 
-- No iPhone a leitura de QR usa a câmera pela página (o plugin nativo de QR ainda não tem suporte
-  ao gerenciador de pacotes do Xcode); no Android usa o leitor nativo.
+   ```bash
+   base64 -i ficc-tenis-firebase-adminsdk.json | pbcopy   # copia para colar no Railway
+   ```
+
+6. Rode `pnpm --filter @ficc/mobile sync` de novo: com os dois arquivos no lugar, o plugin de push
+   entra no app.
+
+Os arquivos do Firebase e a chave ficam fora do Git (`.gitignore`). Guarde-os junto das outras
+chaves do projeto.
+
+No app, o sócio liga as notificações no **Perfil** (ou no aviso do início), como na versão web.
+
+## Links que abrem o app
+
+Links de torneio (`/t/…`) e do app (`/app/…`) abrem direto no app instalado quando o site tem um
+domínio próprio (ex.: `app.ficc.com.br`):
+
+- **Android:** no Play Console → **Integridade do app** → copie o **SHA-256** do certificado de
+  assinatura do app e coloque em `APP_LINKS_ANDROID_SHA256` no serviço **web** do Railway. No
+  `AndroidManifest.xml`, adicione dentro da `<activity>`:
+
+  ```xml
+  <intent-filter android:autoVerify="true">
+      <action android:name="android.intent.action.VIEW" />
+      <category android:name="android.intent.category.DEFAULT" />
+      <category android:name="android.intent.category.BROWSABLE" />
+      <data android:scheme="https" android:host="app.ficc.com.br" />
+  </intent-filter>
+  ```
+
+- **iPhone:** coloque o **Team ID** (developer.apple.com → Membership) em `APP_LINKS_IOS_TEAM_ID`
+  no serviço **web** e, no Xcode, **Signing & Capabilities → Associated Domains** →
+  `applinks:app.ficc.com.br`.
+
+Confira em `https://app.ficc.com.br/.well-known/assetlinks.json` e
+`/.well-known/apple-app-site-association`.
+
+## O que o app faz de nativo
+
+- Notificações push (Firebase), com toque abrindo a tela certa.
+- Vibração (haptics) nas confirmações.
+- Compartilhamento pelo menu do sistema (link de torneio, passe de convidado em imagem).
+- Barra de status acompanhando o tema, tela de abertura e ícone com a logo.
+- Botão voltar do Android navegando pelas telas (e saindo do app na primeira).
+- Leitura de QR na portaria com a câmera (a mesma tela do site, com a permissão da câmera do app).
+- Links do site abrindo no app (com domínio próprio, acima).

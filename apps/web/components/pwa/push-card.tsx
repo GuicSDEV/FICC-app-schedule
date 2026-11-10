@@ -9,7 +9,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { enter, haptic, popVariants } from "@/lib/motion";
-import { disablePush, enablePush, isPushEnabled, type PushSupport, pushSupport } from "@/lib/push";
+import {
+  disablePush,
+  enablePush,
+  isPushEnabled,
+  pushPermission,
+  type PushSupport,
+  pushSupport,
+} from "@/lib/push";
 
 const DISMISSED_KEY = "ficc:push-dismissed";
 
@@ -22,7 +29,7 @@ function usePushState() {
     const current = pushSupport();
     setSupport(current);
     if (current !== "supported") return;
-    setDenied(Notification.permission === "denied");
+    void pushPermission().then((permission) => setDenied(permission === "denied"));
     void isPushEnabled().then(setEnabled);
   }, []);
   return { support, enabled, setEnabled, denied, setDenied };
@@ -37,7 +44,7 @@ async function turnOn(
     const ok = await enablePush();
     setEnabled(ok);
     if (ok) haptic([10, 30, 10]);
-    else if (Notification.permission === "denied") setDenied(true);
+    else if ((await pushPermission()) === "denied") setDenied(true);
     else toast.error(failed);
   } catch {
     toast.error(failed);

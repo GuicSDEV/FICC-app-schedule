@@ -98,6 +98,7 @@ import type {
   SlotFavoriteInput,
   SlotFavoriteItem,
   SlotHoldInput,
+  DeviceTokenInput,
   PushSubscriptionInput,
   PartnerRequestItem,
   CreatePartnerRequestInput,
@@ -267,6 +268,10 @@ export const api = {
     subscribe: (input: PushSubscriptionInput) => post<void>("/push/subscriptions", input),
     unsubscribe: (endpoint: string) =>
       request<void>("/push/subscriptions", { method: "DELETE", body: { endpoint } }),
+    /** A native app install (Firebase token). */
+    registerDevice: (input: DeviceTokenInput) => post<void>("/push/devices", input),
+    removeDevice: (token: string) =>
+      request<void>("/push/devices", { method: "DELETE", body: { token } }),
   },
   slotHolds: {
     claim: (input: SlotHoldInput) => post<SlotHoldView>("/slot-holds", input),

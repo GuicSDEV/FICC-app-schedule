@@ -25,6 +25,9 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   - "chokidar@4.0.3"
   - "semver@6.3.1"
+  # Published by an OutSystems (Capacitor) maintainer 15 min after the trusted-published 7.0.5;
+  # still the latest 8.x months later. Approved by the product owner.
+  - "@capacitor/haptics@8.0.2"
 minimumReleaseAge: 1440
 
 # Patched versions of vulnerable transitive dependencies (pnpm audit). Remove an entry once the

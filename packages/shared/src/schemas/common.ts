@@ -33,3 +33,13 @@ export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
 
 export const pushEndpointSchema = z.object({ endpoint: z.url().max(2048) });
 export type PushEndpointInput = z.infer<typeof pushEndpointSchema>;
+
+/** A native app install (Firebase Cloud Messaging token) that receives push. */
+export const deviceTokenSchema = z.object({
+  token: z.string().trim().min(20).max(4096),
+  platform: z.enum(["IOS", "ANDROID"]),
+});
+export type DeviceTokenInput = z.infer<typeof deviceTokenSchema>;
+
+export const deviceTokenRemoveSchema = z.object({ token: z.string().trim().min(20).max(4096) });
+export type DeviceTokenRemoveInput = z.infer<typeof deviceTokenRemoveSchema>;

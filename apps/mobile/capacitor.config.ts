@@ -21,10 +21,11 @@ const firebaseReady =
 
 const PLUGINS = [
   "@capacitor/app",
+  "@capacitor/haptics",
+  "@capacitor/filesystem",
   "@capacitor/share",
   "@capacitor/splash-screen",
   "@capacitor/status-bar",
-  "@capacitor-mlkit/barcode-scanning",
   ...(firebaseReady ? ["@capacitor-firebase/messaging"] : []),
 ];
 

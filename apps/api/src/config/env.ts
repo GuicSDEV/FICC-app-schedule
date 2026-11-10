@@ -50,6 +50,11 @@ const envSchema = z
     VAPID_PRIVATE_KEY: z.string().trim().min(20).optional(),
     /** Contact the push services may use ("mailto:…" or an https URL). */
     VAPID_SUBJECT: z.string().trim().default("mailto:contato@ficc.app"),
+    /**
+     * Push to the native apps (Firebase Cloud Messaging): the Firebase service account JSON,
+     * base64-encoded (`base64 -i service-account.json`). Without it native push is off.
+     */
+    FIREBASE_SERVICE_ACCOUNT: z.string().trim().min(100).optional(),
   })
   .transform((env, ctx) => {
     const production = env.NODE_ENV === "production";

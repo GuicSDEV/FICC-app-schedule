@@ -32,6 +32,7 @@ import {
 } from "@/components/tournaments/tournament-panels";
 import { api } from "@/lib/api";
 import { enter, listItemVariants } from "@/lib/motion";
+import { isNativeApp, nativeShare } from "@/lib/native";
 import { queryKeys } from "@/lib/query-keys";
 import { ACTIVE_ENTRY, ENTRY_TONE, invalidateTournament } from "@/lib/tournaments";
 import { useErrorMessage } from "@/lib/use-error-message";
@@ -189,7 +190,8 @@ function TournamentScreen() {
     if (!tournament) return;
     const url = `${window.location.origin}/t/${tournament.publicId}`;
     try {
-      if (navigator.share) await navigator.share({ title: tournament.name, url });
+      if (isNativeApp()) await nativeShare({ title: tournament.name, url });
+      else if (navigator.share) await navigator.share({ title: tournament.name, url });
       else {
         await navigator.clipboard.writeText(url);
         toast.success(t("linkCopied"));

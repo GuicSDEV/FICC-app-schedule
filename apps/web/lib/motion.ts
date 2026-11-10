@@ -1,5 +1,7 @@
 import type { Transition, Variants } from "motion/react";
 
+import { isNativeApp, nativeHaptic } from "./native";
+
 /*
  * Motion system (docs/SPEC.md, MOTION SYSTEM). Every animation in the app takes its timing from
  * here: no ad-hoc durations elsewhere. Only `transform` and `opacity` are animated, and
@@ -121,8 +123,15 @@ export const shakeAnimation = {
   transition: { duration: duration.slow, ease: ease.inOut },
 } as const;
 
-/** Short vibration on key confirmations where supported. */
+/**
+ * Short vibration on key confirmations where supported: the phone's haptics in the native app (a
+ * pattern is a success buzz), the Vibration API in browsers.
+ */
 export function haptic(pattern: number | number[] = 10): void {
+  if (isNativeApp()) {
+    void nativeHaptic(Array.isArray(pattern) ? "success" : "tap").catch(() => undefined);
+    return;
+  }
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     try {
       navigator.vibrate(pattern);
