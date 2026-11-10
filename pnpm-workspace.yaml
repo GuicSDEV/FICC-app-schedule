@@ -36,6 +36,14 @@ overrides:
   deepmerge-ts: ">=8.0.0"
   # tsup → esbuild (build time): GHSA-g7r4-m6w7-qqqr
   esbuild: ">=0.28.1"
+  # @nestjs/platform-express → express → body-parser (runtime): GHSA-27r3-jxmh-p828
+  body-parser: ">=2.4.0"
+  # @nestjs/platform-express → multer (runtime): GHSA-q7qp-rjg7-q26m
+  multer: ">=2.5.0"
+  # supertest → superagent → qs (tests): GHSA-6pq8-jhm2-2vcw
+  qs: ">=6.16.1"
+  # @nestjs/cli → ajv → fast-uri (build tool): GHSA-w74x-v6f9-j3xg and others
+  fast-uri: ">=3.1.9 <4"
 
 auditConfig:
   # No patched release exists upstream; both are dev/test-only (never in the running apps).
@@ -44,3 +52,9 @@ auditConfig:
     - GHSA-vfj7-8cjw-p6xm
     # jest → … → js-yaml → argparse → sprintf-js (tests only)
     - GHSA-hp3w-g68c-fv3c
+    # @nestjs/cli → fork-ts-checker-webpack-plugin → deepmerge (build tool, no patched release)
+    - GHSA-gcqx-w48m-w2h4
+    # @nestjs/cli pins glob 13.0.6 (and its minimatch) exactly; build tool only, not in the
+    # running API. Drop these once a @nestjs/cli release moves to glob >= 14.0.2.
+    - GHSA-3g3m-2fjr-6pw4
+    - GHSA-g3hv-75wg-m249

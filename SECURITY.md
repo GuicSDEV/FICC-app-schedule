@@ -24,9 +24,11 @@ issue.
 - `pnpm audit` passes. Vulnerable transitive packages are pinned to patched versions in
   `pnpm-workspace.yaml` (`overrides`, each with its advisory); vitest was upgraded to 4.x for the
   tinypool and mocker advisories.
-- Two advisories have no patched release upstream and only affect tooling, never the running apps;
-  they are listed under `auditConfig.ignoreGhsas` with their path (`braces` via the Next.js ESLint
-  plugin, `sprintf-js` via Jest).
+- Advisories with no patched release upstream only affect tooling, never the running apps; they
+  are listed under `auditConfig.ignoreGhsas` with their path (`braces` via the Next.js ESLint
+  plugin, `sprintf-js` via Jest, `deepmerge`, `glob` and `minimatch` via the Nest CLI).
+- Runtime fixes are kept current: Next.js 15.5.29, NestJS 11.2.9 (express 5 with patched
+  `body-parser` and `multer`) and zod 4.6.7 (November 2026 advisories).
 - Supply chain (`pnpm-workspace.yaml`): `blockExoticSubdeps` (no git/tarball transitive
   dependencies), `trustPolicy: no-downgrade` (a release without provenance after provenance-signed
   ones is refused; reviewed exceptions in `trustPolicyExclude`) and `minimumReleaseAge: 1440`
