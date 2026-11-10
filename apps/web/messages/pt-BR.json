@@ -1094,13 +1094,15 @@
       "bookingRules": {
         "title": "Regras de reserva deste sócio",
         "hint": "Deixe em branco para seguir a regra do clube. Use para quem organiza grupos, por exemplo.",
-        "perDay": "Reservas por dia",
-        "active": "Reservas ativas",
+        "perDay": "Reservas no mesmo dia",
+        "active": "Reservas marcadas ao mesmo tempo",
         "clubRule": "Clube: {value}",
         "alone": "Pode reservar sem informar os jogadores",
         "aloneHint": "A reserva fica confirmada na hora no nome dele; os jogadores podem ser adicionados depois.",
         "save": "Salvar regras",
-        "saved": "Regras do sócio salvas"
+        "saved": "Regras do sócio salvas",
+        "perDayHint": "Quantas ele pode ter num único dia.",
+        "activeHint": "Total de reservas futuras, somando todos os dias."
       },
       "classes": "Classes no ranking"
     },

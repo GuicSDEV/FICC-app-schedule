@@ -372,7 +372,7 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
       <SectionLabel>{t("title")}</SectionLabel>
       <p className="text-small text-muted-foreground">{t("hint")}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Field label={t("perDay")} htmlFor="rules-per-day">
+        <Field label={t("perDay")} hint={t("perDayHint")} htmlFor="rules-per-day">
           <Input
             id="rules-per-day"
             type="number"
@@ -385,7 +385,7 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
             onChange={(event) => setPerDay(event.target.value)}
           />
         </Field>
-        <Field label={t("active")} htmlFor="rules-active">
+        <Field label={t("active")} hint={t("activeHint")} htmlFor="rules-active">
           <Input
             id="rules-active"
             type="number"
