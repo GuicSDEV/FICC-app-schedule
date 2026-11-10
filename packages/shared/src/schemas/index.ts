@@ -8,3 +8,4 @@ export * from "./lesson";
 export * from "./match";
 export * from "./operations";
 export * from "./tournament";
+export * from "./ranking";

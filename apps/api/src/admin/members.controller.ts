@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { Role, UserStatus } from "@ficc/db";
 import {
   type AdminMemberItem,
@@ -14,6 +14,8 @@ import {
   type MembershipImportResult,
   type MemberBookingRules,
   memberBookingRulesSchema,
+  type MemberCategoriesInput,
+  memberCategoriesSchema,
   normalizeMembershipId,
   parseMembershipCsv,
 } from "@ficc/shared";
@@ -30,6 +32,7 @@ import { conflict, localize, notFound } from "../common/domain.exception";
 import { NotificationsService } from "../notifications/notifications.service";
 import { playerSelect, toPlayerSummary } from "../common/mappers";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { serializable } from "../common/transactions";
 import { PrismaService } from "../prisma/prisma.service";
 import { tenant } from "../tenancy/tenant-context";
 
@@ -119,6 +122,28 @@ export class AdminMembersController {
         canBookAlone: member.canBookAlone,
       },
     }));
+  }
+
+  /** The ranking classes a member belongs to (replaces the whole set). */
+  @Put("members/:id/categories")
+  @RequirePermissions("MEMBERS_MANAGE")
+  async setCategories(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(memberCategoriesSchema)) body: MemberCategoriesInput,
+  ): Promise<string[]> {
+    const member = await this.prisma.user.findFirst({ where: { id, role: Role.MEMBER } });
+    if (!member) throw notFound("MEMBER_NOT_FOUND", "api.memberNotFound");
+    const categories = await this.prisma.category.findMany({ where: { key: { in: body.keys } } });
+    if (categories.length !== new Set(body.keys).size) {
+      throw notFound("CATEGORY_NOT_FOUND", "api.unknownCategory");
+    }
+    await serializable(this.prisma, async (tx) => {
+      await tx.userCategory.deleteMany({ where: { userId: id } });
+      await tx.userCategory.createMany({
+        data: categories.map((category) => ({ userId: id, categoryId: category.id })),
+      });
+    });
+    return categories.sort((a, b) => a.sortOrder - b.sortOrder).map((category) => category.key);
   }
 
   /** Exceptions to the club's booking rules for one member (e.g. a group organizer). */

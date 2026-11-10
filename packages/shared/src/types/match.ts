@@ -87,6 +87,46 @@ export interface LeaderboardResponse {
   sport: Sport;
   entries: LeaderboardEntry[];
   updatedAt: IsoDateTime;
+  /** The open season (wins and losses count from its start), or null when there are none. */
+  season: SeasonSummary | null;
+}
+
+export interface SeasonSummary {
+  id: string;
+  name: string;
+  startsAt: IsoDateTime;
+  /** The season closes on its own at this instant; null = no end date. */
+  endsAt: IsoDateTime | null;
+  closedAt: IsoDateTime | null;
+}
+
+export interface SeasonStandingEntry {
+  rank: number;
+  player: PlayerSummary;
+  elo: number;
+  wins: number;
+  losses: number;
+}
+
+/** A closed season and its final table (GET /ranking/seasons/:id). */
+export interface SeasonDetail {
+  season: SeasonSummary;
+  standings: SeasonStandingEntry[];
+}
+
+/** A closed season in the list, with its podium. */
+export interface SeasonListItem {
+  season: SeasonSummary;
+  podium: SeasonStandingEntry[];
+}
+
+/** A ranking class in the admin, with how many members are in it. */
+export interface AdminCategoryItem {
+  id: string;
+  key: string;
+  name: string;
+  sortOrder: number;
+  members: number;
 }
 
 export interface EloPoint {

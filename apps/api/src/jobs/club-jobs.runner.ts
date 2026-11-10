@@ -6,6 +6,7 @@ import { FreezesService } from "../freezes/freezes.service";
 import { GuestsService } from "../guests/guests.service";
 import { LessonsService } from "../lessons/lessons.service";
 import { MatchesService } from "../matches/matches.service";
+import { SeasonsService } from "../ranking/seasons.service";
 import { ClubsService } from "../tenancy/clubs.service";
 import { ResultsService } from "../tournaments/results.service";
 import { runWithTenant } from "../tenancy/tenant-context";
@@ -25,6 +26,7 @@ export class ClubJobsRunner {
     private readonly guests: GuestsService,
     private readonly tournamentResults: ResultsService,
     private readonly freePlay: FreePlayService,
+    private readonly seasons: SeasonsService,
   ) {}
 
   /** Returns a per-club summary; one club failing never stops the others. */
@@ -54,5 +56,6 @@ export class ClubJobsRunner {
       overdueAlerts: await this.tournamentResults.alertOverdue(),
     }),
     "free-play.tick": () => this.freePlay.tick(),
+    "ranking.close-seasons": () => this.seasons.closeExpired(),
   };
 }

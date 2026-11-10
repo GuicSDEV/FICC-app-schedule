@@ -17,6 +17,7 @@ import { playerSelect, toPlayerSummary } from "../common/mappers";
 import { matchInclude, toMatchDetail, toSetScores } from "../matches/matches.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { clubSettings } from "../tenancy/tenant-context";
+import { toSeasonSummary } from "./season-summary";
 
 const pct = (wins: number, matches: number) =>
   matches === 0 ? 0 : Math.round((wins / matches) * 100);
@@ -44,7 +45,12 @@ export class RankingService {
       }
     }
     const trendDays = clubSettings().rankingTrendDays;
-    const since = new Date(this.clock.now().getTime() - trendDays * 86_400_000);
+    // With seasons, wins and losses (and the trend) count from the open season's start.
+    const season = await this.prisma.rankingSeason.findFirst({
+      where: { sport, closedAt: null },
+    });
+    const trendSince = new Date(this.clock.now().getTime() - trendDays * 86_400_000);
+    const since = season && season.startsAt > trendSince ? season.startsAt : trendSince;
     const members = await this.prisma.user.findMany({
       where: {
         role: Role.MEMBER,
@@ -56,7 +62,13 @@ export class RankingService {
         // This board's sport (the summary's elo then shows the same rating).
         ratings: { where: { sport }, select: { elo: true } },
         matchPlayers: {
-          where: { match: { status: MatchStatus.CONFIRMED, sport } },
+          where: {
+            match: {
+              status: MatchStatus.CONFIRMED,
+              sport,
+              ...(season ? { confirmedAt: { gte: season.startsAt } } : {}),
+            },
+          },
           select: { side: true, match: { select: { winnerSide: true } } },
         },
         eloHistory: { where: { sport, createdAt: { gte: since } }, select: { delta: true } },
@@ -91,6 +103,7 @@ export class RankingService {
       sport,
       entries,
       updatedAt: this.clock.now().toISOString(),
+      season: season ? toSeasonSummary(season) : null,
     };
   }
 

@@ -120,6 +120,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Medal,
     permissions: ["TOURNAMENTS_MANAGE"],
   },
+  { href: "/admin/ranking", label: "ranking", icon: Trophy, permissions: ["RANKING_MANAGE"] },
   { href: "/admin/disputes", label: "disputes", icon: Scale, permissions: ["RANKING_MANAGE"] },
   { href: "/admin/guests", label: "guests", icon: UserCheck, permissions: ["GUESTS_MANAGE"] },
   {

@@ -408,6 +408,61 @@ function BookingRulesForm({ member }: { member: AdminMemberItem }) {
   );
 }
 
+/** The ranking classes this member is in (toggle chips, saved at once). */
+function MemberCategories({ member }: { member: AdminMemberItem }) {
+  const t = useTranslations("admin.members");
+  const client = useQueryClient();
+  const errorMessage = useErrorMessage();
+  const categories = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: api.categories,
+    staleTime: 60 * 60_000,
+  });
+  const [keys, setKeys] = useState<string[]>(member.player.categories);
+  useEffect(() => setKeys(member.player.categories), [member]);
+  const save = useMutation({
+    mutationFn: (next: string[]) => api.admin.memberCategories(member.player.id, next),
+    onSuccess: (saved) => {
+      haptic(10);
+      setKeys(saved);
+      void client.invalidateQueries({ queryKey: queryKeys.admin.root });
+      void client.invalidateQueries({ queryKey: queryKeys.leaderboard() });
+    },
+    onError: (failure) => {
+      setKeys(member.player.categories);
+      toast.error(errorMessage(failure));
+    },
+  });
+  if (!categories.data) return null;
+  return (
+    <section className="space-y-2">
+      <SectionLabel>{t("classes")}</SectionLabel>
+      <ChipGroup label={t("classes")}>
+        {categories.data.map((category) => {
+          const on = keys.includes(category.key);
+          return (
+            <ChoiceChip
+              key={category.key}
+              selected={on}
+              showCheck
+              disabled={save.isPending}
+              onClick={() => {
+                const next = on
+                  ? keys.filter((key) => key !== category.key)
+                  : [...keys, category.key];
+                setKeys(next);
+                save.mutate(next);
+              }}
+            >
+              {category.name}
+            </ChoiceChip>
+          );
+        })}
+      </ChipGroup>
+    </section>
+  );
+}
+
 function MemberSheet({
   member,
   onOpenChange,
@@ -473,6 +528,7 @@ function MemberSheet({
               </ul>
             </section>
           ) : null}
+          <MemberCategories member={member} />
           <BookingRulesForm member={member} />
           {canNoShows ? (
             <section className="space-y-2">

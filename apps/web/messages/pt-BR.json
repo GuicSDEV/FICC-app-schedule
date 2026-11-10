@@ -76,7 +76,8 @@
       "bookings": "Reservas",
       "settings": "Regras do clube",
       "staff": "Equipe"
-    }
+    },
+    "ranking": "Ranking"
   },
   "shell": {
     "signOut": "Sair",
@@ -608,7 +609,10 @@
     "searchPlaceholder": "Buscar sócio pelo nome",
     "clearSearch": "Limpar busca",
     "searchResults": "Resultado da busca",
-    "searchCount": "{count, plural, =0 {Nenhum sócio encontrado} one {# sócio encontrado} other {# sócios encontrados}}"
+    "searchCount": "{count, plural, =0 {Nenhum sócio encontrado} one {# sócio encontrado} other {# sócios encontrados}}",
+    "seasonEnds": "Termina {when}",
+    "seasonOpen": "Desde {date}, sem data para acabar",
+    "pastSeasons": "Anteriores"
   },
   "h2h": {
     "title": "Confronto direto",
@@ -1093,7 +1097,46 @@
         "aloneHint": "A reserva fica confirmada na hora no nome dele; os jogadores podem ser adicionados depois.",
         "save": "Salvar regras",
         "saved": "Regras do sócio salvas"
-      }
+      },
+      "classes": "Classes no ranking"
+    },
+    "ranking": {
+      "title": "Ranking",
+      "subtitle": "Temporadas e classes do ranking do clube.",
+      "seasonTitle": "Temporada atual",
+      "seasonHint": "Vitórias e derrotas contam a partir do início da temporada. Ao encerrar, a classificação final fica guardada e o Elo de todos volta ao valor inicial.",
+      "noSeason": "O ranking ainda não usa temporadas: vale tudo desde o início.",
+      "since": "Desde {date}",
+      "endsOn": "Termina no fim de {date}",
+      "noEnd": "Sem data de término",
+      "edit": "Editar",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "seasonSaved": "Temporada atualizada",
+      "seasonName": "Nome da temporada",
+      "seasonNamePlaceholder": "Ex.: 1º semestre 2027",
+      "endDate": "Último dia (opcional)",
+      "endDateHint": "Deixe em branco para uma temporada sem prazo. Com data, ela encerra sozinha no fim desse dia.",
+      "closeAndStart": "Encerrar temporada e começar nova",
+      "startFirst": "Começar a primeira temporada",
+      "newSeasonTitle": "Nova temporada",
+      "firstSeasonTitle": "Primeira temporada",
+      "resetWarning": "A temporada atual será encerrada: a classificação final fica guardada e o Elo de todos os sócios volta ao valor inicial. Não dá para desfazer.",
+      "firstSeasonHint": "O Elo atual de cada sócio continua; vitórias e derrotas passam a contar a partir de agora.",
+      "seasonStarted": "Nova temporada começou",
+      "pastTitle": "Temporadas anteriores",
+      "noGames": "Ninguém jogou nesta temporada.",
+      "categoriesTitle": "Classes",
+      "categoriesHint": "As classes aparecem como abas no ranking dos sócios. Coloque cada sócio nas classes dele na tela de Sócios.",
+      "membersCount": "{count, plural, =0 {nenhum sócio} one {# sócio} other {# sócios}}",
+      "categoryName": "Nome da classe",
+      "newCategoryPlaceholder": "Nova classe, ex.: Sênior +60",
+      "addCategory": "Criar",
+      "categoryCreated": "Classe {name} criada",
+      "categoryDeleted": "Classe {name} excluída",
+      "renameCategory": "Renomear {name}",
+      "deleteCategory": "Excluir {name}",
+      "confirmDelete": "Excluir"
     }
   },
   "tournaments": {
@@ -2095,5 +2138,16 @@
   "whatsapp": {
     "send": "Avisar no WhatsApp",
     "message": "Oi! Marquei a quadra {court} para {day} às {time}. Confirme no app do {club}: {link}"
+  },
+  "seasons": {
+    "title": "Temporadas anteriores",
+    "subtitle": "Classificação final de cada temporada.",
+    "empty": "Nenhuma temporada encerrada ainda",
+    "emptyDescription": "Quando a diretoria encerrar uma temporada, o pódio aparece aqui.",
+    "period": "{from} a {to}",
+    "noGames": "Ninguém jogou nesta temporada.",
+    "record": "{wins}V · {losses}D",
+    "loadFailed": "Não foi possível carregar as temporadas.",
+    "back": "Ranking"
   }
 }

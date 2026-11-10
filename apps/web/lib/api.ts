@@ -55,6 +55,13 @@ import type {
   MatchDetail,
   MemberNoShows,
   MemberBookingRules,
+  SeasonListItem,
+  SeasonDetail,
+  SeasonSummary,
+  StartSeasonInput,
+  UpdateSeasonInput,
+  AdminCategoryItem,
+  CategoryInput,
   MembershipImportResult,
   MyBookingsResponse,
   MyMatchesResponse,
@@ -312,6 +319,8 @@ export const api = {
     profile: (id: string) => request<PlayerProfile>(`/players/${id}`),
     eloHistory: (id: string) => request<EloPoint[]>(`/players/${id}/elo-history`),
     h2h: (a: string, b: string) => request<H2HResponse>("/h2h", { query: { a, b } }),
+    seasons: () => request<SeasonListItem[]>("/ranking/seasons"),
+    season: (id: string) => request<SeasonDetail>(`/ranking/seasons/${id}`),
   },
   guests: {
     mine: () => request<GuestPassItem[]>("/guest-passes"),
@@ -460,6 +469,18 @@ export const api = {
     memberNoShows: (id: string) => request<MemberNoShows>(`/admin/members/${id}/no-shows`),
     memberBookingRules: (id: string, input: MemberBookingRules) =>
       patch<MemberBookingRules>(`/admin/members/${id}/booking-rules`, input),
+    memberCategories: (id: string, keys: string[]) =>
+      request<string[]>(`/admin/members/${id}/categories`, { method: "PUT", body: { keys } }),
+    startSeason: (input: StartSeasonInput) => post<SeasonSummary>("/admin/ranking/seasons", input),
+    updateSeason: (id: string, input: UpdateSeasonInput) =>
+      patch<SeasonSummary>(`/admin/ranking/seasons/${id}`, input),
+    categories: () => request<AdminCategoryItem[]>("/admin/ranking/categories"),
+    createCategory: (input: CategoryInput) =>
+      post<AdminCategoryItem>("/admin/ranking/categories", input),
+    renameCategory: (id: string, input: CategoryInput) =>
+      patch<AdminCategoryItem>(`/admin/ranking/categories/${id}`, input),
+    deleteCategory: (id: string) =>
+      request<void>(`/admin/ranking/categories/${id}`, { method: "DELETE" }),
     updateSettings: (input: UpdateClubSettingsInput) => patch<ClubInfo>("/admin/settings", input),
     timeSlots: () => request<AdminTimeSlotItem[]>("/admin/time-slots"),
     createTimeSlot: (input: CreateTimeSlotInput) =>

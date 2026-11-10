@@ -2,7 +2,16 @@
 
 import type { LeaderboardEntry, LeaderboardResponse } from "@ficc/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Search, Swords, Trophy, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarRange,
+  History,
+  Search,
+  Swords,
+  Trophy,
+  X,
+} from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -215,6 +224,22 @@ export function RankingView() {
         onRefresh={() => client.invalidateQueries({ queryKey: queryKeys.leaderboard() })}
       >
         <div className="mt-4 space-y-5">
+          {data?.season ? (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+              <CalendarRange className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{data.season.name}</p>
+                <p className="text-caption text-muted-foreground">
+                  {data.season.endsAt
+                    ? t("seasonEnds", { when: format.relative(data.season.endsAt) })
+                    : t("seasonOpen", { date: format.day(data.season.startsAt.slice(0, 10)) })}
+                </p>
+              </div>
+              <ButtonLink href="/app/ranking/seasons" variant="ghost" size="sm">
+                <History /> {t("pastSeasons")}
+              </ButtonLink>
+            </div>
+          ) : null}
           <ButtonLink href="/app/ranking/h2h" variant="secondary" block>
             <Swords /> {t("h2h")}
           </ButtonLink>

@@ -343,6 +343,8 @@ model Club {
   queueEntries         CourtQueueEntry[]
   slotHolds            SlotHold[]
   partnerRequests      PartnerRequest[]
+  rankingSeasons       RankingSeason[]
+  seasonStandings      SeasonStanding[]
   staffRoles           StaffRole[]
   auditLogs            AuditLog[]
   noShows              NoShow[]
@@ -446,6 +448,7 @@ model User {
   queueEntries               CourtQueueEntry[]
   slotHolds                  SlotHold[]
   partnerRequests            PartnerRequest[]
+  seasonStandings            SeasonStanding[]
   noShows                    NoShow[]                 @relation("NoShowUser")
   noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
   newsPosts                  NewsPost[]
@@ -1466,6 +1469,45 @@ model PartnerRequest {
 
   @@index([date, status])
   @@index([userId, status])
+}
+
+/// A ranking season: wins and losses count from startsAt, and closing it saves the final
+/// standings and puts every rating back to the club's initial Elo. One open season per club and
+/// sport (partial unique index in the migration SQL); none = the ranking has no seasons.
+model RankingSeason {
+  id        String    @id @default(cuid())
+  clubId    String    @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  name      String
+  sport     Sport
+  startsAt  DateTime  @db.Timestamptz(3)
+  /// Optional: the season closes on its own at this instant (a new open one starts).
+  endsAt    DateTime? @db.Timestamptz(3)
+  closedAt  DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  standings SeasonStanding[]
+
+  @@index([closedAt])
+}
+
+/// A member's final place in a closed season.
+model SeasonStanding {
+  id       String @id @default(cuid())
+  clubId   String @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  seasonId String
+  userId   String
+  rank     Int
+  elo      Int
+  wins     Int
+  losses   Int
+
+  club   Club          @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  season RankingSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId, rank])
 }
 
 /// Editable group of permissions (Secretaria, Diretoria…).

@@ -8,15 +8,32 @@ import {
   leaderboardQuerySchema,
   type LeaderboardResponse,
   type PlayerProfile,
+  type SeasonDetail,
+  type SeasonListItem,
 } from "@ficc/shared";
 
 import { CurrentUser, type RequestUser } from "../common/auth.decorators";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { RankingService } from "./ranking.service";
+import { SeasonsService } from "./seasons.service";
 
 @Controller()
 export class RankingController {
-  constructor(private readonly ranking: RankingService) {}
+  constructor(
+    private readonly ranking: RankingService,
+    private readonly seasons: SeasonsService,
+  ) {}
+
+  /** Closed ranking seasons, newest first, with their podiums. */
+  @Get("ranking/seasons")
+  seasonList(): Promise<SeasonListItem[]> {
+    return this.seasons.list();
+  }
+
+  @Get("ranking/seasons/:id")
+  season(@Param("id") id: string): Promise<SeasonDetail> {
+    return this.seasons.detail(id);
+  }
 
   @Get("leaderboard")
   leaderboard(
