@@ -479,6 +479,18 @@ Phases 11 and 12.
   with the offline banner; logout empties the API cache; manifest served with the club's name; no
   hydration errors on the member, coach and gate pages.
 
+### Club branding (FICC logo)
+
+- The app is named **FICC Tênis** (club name + sport; manifest name and short name).
+- Colors follow the club's logo: navy `#01035A` background in the dark theme (default) and lime
+  `#B8FF01` as `--ball`; the light theme uses a navy-tinted off-white with navy text. Coach violet,
+  court and status colors are unchanged.
+- The emblem (`public/brand/emblem.png`, transparent) is the wordmark's mark; the full logo is in
+  `public/brand/logo.png`. App icons, favicon and maskable icon are the emblem on navy. The shareable
+  guest pass and tournament cards use the same palette.
+- The assets were cut from a JPEG the club sent; ask the club for the vector (SVG/PDF) to sharpen
+  them later.
+
 ## SPEC checklist
 
 Review of [`SPEC.md`](SPEC.md) at the end of Phase 10. ✅ done · ⚠️ partial / differs (reason

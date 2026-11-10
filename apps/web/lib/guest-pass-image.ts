@@ -1,18 +1,18 @@
 import QRCode from "qrcode";
 
 /**
- * Fixed brand palette for the shareable pass image (SPEC "Night Session": background #0B0F0D,
- * ball #D7F24A, off-white #F7F6F2). The image looks the same whatever theme the sender uses.
+ * Fixed brand palette for the shareable pass image (club navy #01035A,
+ * lime #B8FF01, off-white #F4F5FB). The image looks the same whatever theme the sender uses.
  */
 const IMAGE = {
-  background: "#0B0F0D",
-  card: "#141A17",
-  border: "rgba(247, 246, 242, 0.08)",
-  text: "#F7F6F2",
-  muted: "rgba(247, 246, 242, 0.62)",
-  accent: "#D7F24A",
-  qrDark: "#0B0F0D",
-  qrLight: "#F7F6F2",
+  background: "#01035A",
+  card: "#0A1072",
+  border: "rgba(244, 245, 251, 0.1)",
+  text: "#F4F5FB",
+  muted: "rgba(244, 245, 251, 0.66)",
+  accent: "#B8FF01",
+  qrDark: "#01035A",
+  qrLight: "#F4F5FB",
 } as const;
 
 const WIDTH = 1080;

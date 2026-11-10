@@ -14,15 +14,15 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     id: "/app",
     name,
-    short_name: club ?? t("app.brandFallback"),
+    short_name: name,
     description: t("app.description"),
     lang: locale,
     start_url: "/app",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0B0F0D",
-    theme_color: "#0B0F0D",
+    background_color: "#01035A",
+    theme_color: "#01035A",
     categories: ["sports", "lifestyle"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

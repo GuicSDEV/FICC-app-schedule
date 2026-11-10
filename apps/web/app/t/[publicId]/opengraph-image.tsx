@@ -6,10 +6,10 @@ export const alt = "Torneio";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const BACKGROUND = "#0B0F0D";
-const BALL = "#D7F24A";
+const BACKGROUND = "#01035A";
+const BALL = "#B8FF01";
 const GOLD = "#E7B43A";
-const MUTED = "#9AA59E";
+const MUTED = "#A9AEDB";
 
 /** "12/10 – 15/10" from ISO days (no locale data needed in the image runtime). */
 function range(start: string, end: string): string {
