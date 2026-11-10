@@ -12,10 +12,10 @@ export function normalizeMembershipId(value: string): string {
   return value.replace(/\D/g, "");
 }
 
-/** Matrículas are 4–10 digits; dependents add "-NN" (01–99) when `dependents` is allowed. */
+/** Matrículas are 3–10 digits (FICC is moving to 5; older ones have 3 or 4); dependents add "-NN" (01–99) when `dependents` is allowed. */
 export function isValidMembershipId(normalized: string, dependents = false): boolean {
-  if (dependents && /^\d{4,10}-(0[1-9]|[1-9]\d)$/.test(normalized)) return true;
-  return /^\d{4,10}$/.test(normalized);
+  if (dependents && /^\d{3,10}-(0[1-9]|[1-9]\d)$/.test(normalized)) return true;
+  return /^\d{3,10}$/.test(normalized);
 }
 
 /** The holder's matrícula of a dependent ("1234-01" → "1234"); itself for a holder. */
@@ -28,10 +28,12 @@ export function isDependentMembershipId(normalized: string): boolean {
   return normalized.includes("-");
 }
 
-const dotted = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+/** Thousands dots only for long numbers: matrículas up to 5 digits are shown as typed. */
+const dotted = (digits: string) =>
+  digits.length <= 5 ? digits : digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
 /**
- * Display form with thousands dots: 104218 → 104.218, 104218-01 → 104.218-01. Accepts partial
+ * Display form: 104218 → 104.218, 104218-01 → 104.218-01, 12345 → 12345, 123 → 123. Accepts partial
  * input while typing (a trailing "-" stays so a dependent's suffix can be typed).
  */
 export function formatMembershipId(value: string): string {

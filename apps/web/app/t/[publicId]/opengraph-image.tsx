@@ -6,8 +6,8 @@ export const alt = "Torneio";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const BACKGROUND = "#01035A";
-const BALL = "#B8FF01";
+const BACKGROUND = "#05103C";
+const BALL = "#C4F252";
 const GOLD = "#E7B43A";
 const MUTED = "#A9AEDB";
 

@@ -1,17 +1,17 @@
 import QRCode from "qrcode";
 
 /**
- * Fixed brand palette for the shareable pass image (club navy #01035A,
- * lime #B8FF01, off-white #F4F5FB). The image looks the same whatever theme the sender uses.
+ * Fixed brand palette for the shareable pass image (club navy #05103C,
+ * lime #C4F252, off-white #F4F5FB). The image looks the same whatever theme the sender uses.
  */
 const IMAGE = {
-  background: "#01035A",
-  card: "#0A1072",
+  background: "#05103C",
+  card: "#0E1D46",
   border: "rgba(244, 245, 251, 0.1)",
   text: "#F4F5FB",
   muted: "rgba(244, 245, 251, 0.66)",
-  accent: "#B8FF01",
-  qrDark: "#01035A",
+  accent: "#C4F252",
+  qrDark: "#05103C",
   qrLight: "#F4F5FB",
 } as const;
 

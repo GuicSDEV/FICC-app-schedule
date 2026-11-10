@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(60% 45% at 15% 0%, oklch(0.918 0.238 127.3 / 14%), transparent 70%), radial-gradient(55% 40% at 95% 10%, oklch(0.701 0.148 250.8 / 16%), transparent 70%), radial-gradient(80% 60% at 50% 110%, oklch(0.879 0.127 187.6 / 14%), transparent 70%)",
+            "radial-gradient(60% 45% at 15% 0%, oklch(0.9 0.19 124 / 14%), transparent 70%), radial-gradient(55% 40% at 95% 10%, oklch(0.701 0.148 250.8 / 16%), transparent 70%), radial-gradient(80% 60% at 50% 110%, oklch(0.879 0.127 187.6 / 14%), transparent 70%)",
         }}
       />
       <CourtLines className="-z-10 opacity-[0.07]" />

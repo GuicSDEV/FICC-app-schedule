@@ -149,19 +149,19 @@
   --surface: oklch(1 0 0);
   --surface-2: oklch(0.945 0.012 265);
   --surface-3: oklch(0.915 0.016 265);
-  --foreground: oklch(0.22 0.11 265);
+  --foreground: oklch(0.22 0.08 266);
   --muted-foreground: oklch(0.48 0.05 265);
   --border: oklch(0.22 0.11 265 / 9%);
   --border-strong: oklch(0.22 0.11 265 / 17%);
-  --on-color: oklch(0.216 0.143 264.8);
+  --on-color: oklch(0.2 0.085 266);
   /* Gate result screens (same in both themes; white text passes AA on both) */
   --gate-accepted: oklch(0.5 0.13 152);
   --gate-refused: oklch(0.5 0.17 27);
 
-  /* Club lime and navy (FICC logo: #B8FF01 on #01035A) */
-  --ball: oklch(0.918 0.238 127.3);
+  /* Club lime and navy, softened from the FICC logo (#B8FF01 on #01035A) */
+  --ball: oklch(0.9 0.19 124);
   --ball-ink: oklch(0.5 0.15 132);
-  --ball-soft: oklch(0.918 0.238 127.3 / 30%);
+  --ball-soft: oklch(0.9 0.19 124 / 30%);
   --lesson: oklch(0.657 0.176 286.1);
   --lesson-ink: oklch(0.492 0.208 280.9);
   --lesson-soft: oklch(0.657 0.176 286.1 / 14%);
@@ -209,17 +209,17 @@
 /* Dark theme (default) */
 .dark {
   color-scheme: dark;
-  --background: oklch(0.216 0.143 264.8);
-  --surface: oklch(0.262 0.13 265);
-  --surface-2: oklch(0.302 0.12 265);
-  --surface-3: oklch(0.342 0.11 265);
+  --background: oklch(0.2 0.085 266);
+  --surface: oklch(0.245 0.08 266);
+  --surface-2: oklch(0.285 0.075 266);
+  --surface-3: oklch(0.325 0.07 266);
   --foreground: oklch(0.96 0.012 265);
-  --muted-foreground: oklch(0.76 0.05 265);
+  --muted-foreground: oklch(0.75 0.035 266);
   --border: oklch(1 0 0 / 8%);
   --border-strong: oklch(1 0 0 / 14%);
 
-  --ball-ink: oklch(0.918 0.238 127.3);
-  --ball-soft: oklch(0.918 0.238 127.3 / 16%);
+  --ball-ink: oklch(0.9 0.19 124);
+  --ball-soft: oklch(0.9 0.19 124 / 16%);
   --lesson-ink: oklch(0.787 0.116 289);
   --lesson-soft: oklch(0.657 0.176 286.1 / 18%);
   --hartru-ink: oklch(0.761 0.095 157.6);
@@ -236,12 +236,12 @@
   --warning-soft: oklch(0.819 0.15 80.8 / 14%);
 
   --accent-ink: var(--ball-ink);
-  --ring: oklch(0.918 0.238 127.3 / 55%);
+  --ring: oklch(0.9 0.19 124 / 55%);
 
-  --glass: oklch(0.216 0.143 264.8 / 70%);
+  --glass: oklch(0.2 0.085 266 / 70%);
   --shadow-card: 0 1px 0 oklch(1 0 0 / 4%) inset, 0 10px 30px -14px oklch(0.1 0.08 265 / 75%);
   --shadow-raised: 0 1px 0 oklch(1 0 0 / 6%) inset, 0 22px 48px -18px oklch(0.1 0.08 265 / 90%);
-  --shadow-glow: 0 10px 34px -8px oklch(0.918 0.238 127.3 / 40%);
+  --shadow-glow: 0 10px 34px -8px oklch(0.9 0.19 124 / 40%);
 }
 
 /* Coach area: lesson violet replaces lime as the primary accent */

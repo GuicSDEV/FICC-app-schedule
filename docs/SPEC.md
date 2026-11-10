@@ -24,11 +24,11 @@ UX quality bar: Playtomic, Strava, Linear, Apple Fitness — smooth, tactile, fa
 Aesthetic: a premium club at night under floodlights. Dark mode by default, light mode included. Elegant and athletic, never generic.
 
 **Color tokens** (CSS variables in OKLCH, wired into the shadcn theme):
-- `--background`: the club's navy (#01035A, from the FICC logo) / light: off-white with a navy tint (#F7F8FC)
+- `--background`: the club's navy, softened (#05103C; FICC logo #01035A) / light: off-white with a navy tint (#F7F8FC)
 - `--surface`: elevated cards, 1px border at 8% white opacity
 - `--saibro`: terracotta (#D2603A) — courts Q5–Q6
 - `--hartru`: muted Har-Tru green (#4F8A68) — courts Q1–Q4
-- `--ball`: the club's lime (#B8FF01, from the FICC logo) — the **only** primary accent in the member area (CTAs, highlights, Elo gains)
+- `--ball`: the club's lime, softened (#C4F252; FICC logo #B8FF01) — the **only** primary accent in the member area (CTAs, highlights, Elo gains)
 - `--lesson`: soft violet (#8B7CF6) — lessons in the calendar and the primary accent of the coach area
 - `--success`, `--danger` (coral: Elo losses, disputes), `--warning` (amber: rain/maintenance)
 - WCAG AA contrast in both themes.

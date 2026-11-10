@@ -481,9 +481,11 @@ Phases 11 and 12.
 
 ### Club branding (FICC logo)
 
+- Matrículas accept 3 to 10 digits (FICC is moving to 5 digits; older ones have 3 or 4) and are
+  shown without dots up to 5 digits.
 - The app is named **FICC Tênis** (club name + sport; manifest name and short name).
-- Colors follow the club's logo: navy `#01035A` background in the dark theme (default) and lime
-  `#B8FF01` as `--ball`; the light theme uses a navy-tinted off-white with navy text. Coach violet,
+- Colors follow the club's logo, softened at the owner's request: navy `#05103C` background in the
+  dark theme (default) and lime `#C4F252` as `--ball` (logo: `#01035A` / `#B8FF01`); the light theme uses a navy-tinted off-white with navy text. Coach violet,
   court and status colors are unchanged.
 - The emblem (`public/brand/emblem.png`, transparent) is the wordmark's mark; the full logo is in
   `public/brand/logo.png`. App icons, favicon and maskable icon are the emblem on navy. The shareable

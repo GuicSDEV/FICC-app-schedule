@@ -22,7 +22,7 @@
       "member": "Sócio",
       "staff": "Equipe",
       "membershipId": "Matrícula",
-      "membershipPlaceholder": "000.000",
+      "membershipPlaceholder": "Ex.: 12345",
       "email": "E-mail",
       "emailPlaceholder": "voce@clube.com.br",
       "password": "Senha",

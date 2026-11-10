@@ -49,8 +49,12 @@ describe("membership ids", () => {
     expect(normalizeMembershipId("104.218")).toBe("104218");
     expect(isValidMembershipId("104218")).toBe(true);
     expect(isValidMembershipId("12")).toBe(false);
+    expect(isValidMembershipId("123")).toBe(true);
+    expect(isValidMembershipId("1042")).toBe(true);
     expect(formatMembershipId("104218")).toBe("104.218");
-    expect(formatMembershipId("1042")).toBe("1.042");
+    expect(formatMembershipId("1042")).toBe("1042");
+    expect(formatMembershipId("123")).toBe("123");
+    expect(formatMembershipId("12345")).toBe("12345");
     expect(formatMembershipId("10")).toBe("10");
   });
 
@@ -60,6 +64,7 @@ describe("membership ids", () => {
     expect(isValidMembershipId("1234-01")).toBe(false);
     expect(isValidMembershipId("1234-01", true)).toBe(true);
     expect(isValidMembershipId("1234-00", true)).toBe(false);
+    expect(isValidMembershipId("123-01", true)).toBe(true);
     expect(holderMembershipId("1234-02")).toBe("1234");
     expect(holderMembershipId("1234")).toBe("1234");
     expect(isDependentMembershipId("1234-02")).toBe(true);
