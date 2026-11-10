@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
 import { Role, UserStatus } from "@ficc/db";
 import {
   type AdminMemberItem,
@@ -12,6 +12,8 @@ import {
   type ImportMembershipsInput,
   importMembershipsSchema,
   type MembershipImportResult,
+  type MemberBookingRules,
+  memberBookingRulesSchema,
   normalizeMembershipId,
   parseMembershipCsv,
 } from "@ficc/shared";
@@ -67,6 +69,9 @@ export class AdminMembersController {
         guestPassesSuspendedAt: true,
         guestPassesSuspendedReason: true,
         bookingSuspendedUntil: true,
+        bookingsPerDayLimit: true,
+        activeBookingsLimit: true,
+        canBookAlone: true,
       },
       orderBy: { name: "asc" },
       take: 200,
@@ -108,7 +113,36 @@ export class AdminMembersController {
             entry.membershipId !== member.membershipId,
         )
         .map((entry) => ({ id: entry.id, name: entry.name, membershipId: entry.membershipId! })),
+      bookingRules: {
+        bookingsPerDay: member.bookingsPerDayLimit,
+        activeBookings: member.activeBookingsLimit,
+        canBookAlone: member.canBookAlone,
+      },
     }));
+  }
+
+  /** Exceptions to the club's booking rules for one member (e.g. a group organizer). */
+  @Patch("members/:id/booking-rules")
+  @RequirePermissions("MEMBERS_MANAGE")
+  async bookingRules(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(memberBookingRulesSchema)) body: MemberBookingRules,
+  ): Promise<MemberBookingRules> {
+    const member = await this.prisma.user.findFirst({ where: { id, role: Role.MEMBER } });
+    if (!member) throw notFound("MEMBER_NOT_FOUND", "api.memberNotFound");
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        bookingsPerDayLimit: body.bookingsPerDay,
+        activeBookingsLimit: body.activeBookings,
+        canBookAlone: body.canBookAlone,
+      },
+    });
+    return {
+      bookingsPerDay: updated.bookingsPerDayLimit,
+      activeBookings: updated.activeBookingsLimit,
+      canBookAlone: updated.canBookAlone,
+    };
   }
 
   /** Self sign-ups waiting for approval, oldest first. */

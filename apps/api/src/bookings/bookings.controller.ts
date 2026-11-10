@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
 import { BookingCancelReason, Role } from "@ficc/db";
 import {
+  type AddBookingPlayersInput,
+  addBookingPlayersSchema,
   type BookingDetail,
   type CreateBookingInput,
   createBookingSchema,
@@ -83,6 +85,18 @@ export class BookingsController {
   @Get(":id")
   get(@CurrentUser() user: RequestUser, @Param("id") id: string): Promise<BookingDetail> {
     return this.bookings.get(user.id, user.role, id);
+  }
+
+  /** The creator of a booking made alone names the players later (they get the invitation). */
+  @Post(":id/players")
+  @HttpCode(200)
+  @Roles(Role.MEMBER)
+  addPlayers(
+    @CurrentUser() user: RequestUser,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(addBookingPlayersSchema)) body: AddBookingPlayersInput,
+  ): Promise<BookingDetail> {
+    return this.bookings.addPlayers(user.id, id, body);
   }
 
   @Post(":id/confirm")

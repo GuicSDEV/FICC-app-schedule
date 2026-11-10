@@ -200,6 +200,7 @@ enum NotificationType {
   COURT_AVAILABLE
   NEWS_POSTED
   BOOKING_SUSPENDED
+  BOOKING_PLAYER_LEFT
 }
 
 // ── Club operations (Phase 9.8) ──────────────────────────────────────────────
@@ -401,6 +402,11 @@ model User {
   reviewedById               String?
   /// Set by the no-show penalty: no new bookings until then.
   bookingSuspendedUntil      DateTime?  @db.Timestamptz(3)
+  /// Admin overrides of the club's booking limits for this member (null = the club's rule).
+  bookingsPerDayLimit        Int?
+  activeBookingsLimit        Int?
+  /// May book a court without naming the other players (confirmed at once; names added later).
+  canBookAlone               Boolean    @default(false)
   createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime   @updatedAt @db.Timestamptz(3)
 

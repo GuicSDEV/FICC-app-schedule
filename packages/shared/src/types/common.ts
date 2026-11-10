@@ -66,6 +66,8 @@ export interface AuthUser {
   permissions: Permission[];
   /** Booking suspended by the no-show penalty until this instant. */
   bookingSuspendedUntil: IsoDateTime | null;
+  /** May book a court without naming the other players (admin permission). */
+  canBookAlone: boolean;
 }
 
 export interface CourtsResponse {

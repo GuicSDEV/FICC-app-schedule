@@ -75,6 +75,8 @@ export interface NotificationPayloads {
   NEWS_POSTED: { postId: string; title: string; authorName: string };
   /** The no-show penalty suspended the member's bookings. */
   BOOKING_SUSPENDED: { until: IsoDateTime; count: number; windowDays: number };
+  /** A player added to a booking made alone declined; the court stays booked. */
+  BOOKING_PLAYER_LEFT: SlotRef & { bookingId: string; playerName: string };
 }
 
 interface TournamentRef {

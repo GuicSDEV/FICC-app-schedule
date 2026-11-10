@@ -54,6 +54,7 @@ import type {
   ManageEntryInput,
   MatchDetail,
   MemberNoShows,
+  MemberBookingRules,
   MembershipImportResult,
   MyBookingsResponse,
   MyMatchesResponse,
@@ -231,7 +232,11 @@ export const api = {
     request<ScheduleDay>("/schedule", { query: { date, surface } }),
   freezes: { active: () => request<ActiveFreeze[]>("/freezes/active") },
   coaches: { profile: (id: string) => request<CoachProfile>(`/coaches/${id}`) },
-  members: { search: (q: string) => request<PlayerSummary[]>("/members/search", { query: { q } }) },
+  members: {
+    /** Every active member, A–Z (pickers filter it on the device). */
+    directory: () => request<PlayerSummary[]>("/members"),
+    search: (q: string) => request<PlayerSummary[]>("/members/search", { query: { q } }),
+  },
   bookings: {
     mine: () => request<MyBookingsResponse>("/bookings/mine"),
     get: (id: string) => request<BookingDetail>(`/bookings/${id}`),
@@ -242,6 +247,8 @@ export const api = {
     markNoShow: (id: string, userId: string, note?: string) =>
       post<NoShowItem>(`/bookings/${id}/no-shows`, { userId, note }),
     staffCancel: (id: string) => post<BookingDetail>(`/bookings/${id}/staff-cancel`),
+    addPlayers: (id: string, playerIds: string[]) =>
+      post<BookingDetail>(`/bookings/${id}/players`, { playerIds }),
   },
   slotHolds: {
     claim: (input: SlotHoldInput) => post<SlotHoldView>("/slot-holds", input),
@@ -451,6 +458,8 @@ export const api = {
     decideMember: (id: string, input: SignupDecisionInput) =>
       post<void>(`/admin/members/${id}/decision`, input),
     memberNoShows: (id: string) => request<MemberNoShows>(`/admin/members/${id}/no-shows`),
+    memberBookingRules: (id: string, input: MemberBookingRules) =>
+      patch<MemberBookingRules>(`/admin/members/${id}/booking-rules`, input),
     updateSettings: (input: UpdateClubSettingsInput) => patch<ClubInfo>("/admin/settings", input),
     timeSlots: () => request<AdminTimeSlotItem[]>("/admin/time-slots"),
     createTimeSlot: (input: CreateTimeSlotInput) =>

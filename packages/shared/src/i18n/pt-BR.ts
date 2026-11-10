@@ -52,6 +52,7 @@ export const ptBR = {
     pickAffected: "Selecione ao menos uma reserva ou aula",
     singlesPlayers: "Simples: escolha exatamente 1 adversário",
     doublesPlayers: "Duplas: escolha exatamente 3 jogadores",
+    alonePlayers: "Para reservar sem jogadores, não escolha ninguém",
     repeatedPlayer: "Jogador repetido",
     singlesSides: "Simples: 1 jogador por lado",
     doublesSides: "Duplas: 2 jogadores por lado",
@@ -98,6 +99,9 @@ export const ptBR = {
     dependentsDisabled: "O clube não usa matrículas de dependentes.",
     holderNotRegistered: "O titular {holder} ainda não tem cadastro no clube.",
     bookingNotOpenYet: "As reservas para este dia abrem {when}.",
+    bookAloneNotAllowed: "Você precisa escolher com quem vai jogar.",
+    bookingFull: "Esta reserva já tem todos os jogadores.",
+    onlyCreatorAddsPlayers: "Só quem fez a reserva pode adicionar jogadores.",
     slotHeld: "Outro sócio está reservando esta quadra agora. Se ele desistir, ela fica livre.",
     partnerRequestExists: "Você já está procurando parceiro para esse horário.",
     partnerRequestLimit:

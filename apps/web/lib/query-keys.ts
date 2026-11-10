@@ -22,6 +22,7 @@ export const queryKeys = {
   eloHistory: (id: string) => ["players", id, "elo-history"] as const,
   h2h: (a: string, b: string) => ["h2h", a, b] as const,
   memberSearch: (q: string) => ["members", "search", q] as const,
+  memberDirectory: ["members", "directory"] as const,
   guestPasses: ["guest-passes"] as const,
   coachAgenda: (date?: string) =>
     date ? (["coach", "agenda", date] as const) : (["coach", "agenda"] as const),

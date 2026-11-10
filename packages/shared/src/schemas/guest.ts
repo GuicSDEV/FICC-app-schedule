@@ -78,3 +78,11 @@ export const adminMembersQuerySchema = z.object({
   status: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
 });
 export type AdminMembersQuery = z.infer<typeof adminMembersQuerySchema>;
+
+/** Admin exceptions to the club's booking rules for one member (null = the club's rule). */
+export const memberBookingRulesSchema = z.object({
+  bookingsPerDay: z.number().int().min(1).max(10).nullable(),
+  activeBookings: z.number().int().min(1).max(20).nullable(),
+  canBookAlone: z.boolean(),
+});
+export type MemberBookingRules = z.infer<typeof memberBookingRulesSchema>;

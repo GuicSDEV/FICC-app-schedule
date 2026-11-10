@@ -3,6 +3,7 @@
 import {
   type AdminMemberItem,
   formatMembershipId,
+  memberBookingRulesSchema,
   hasPermission,
   type MembershipImportResult,
   parseMembershipCsv,
@@ -14,10 +15,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp, Search, UserCheck, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AdminHeader } from "@/components/admin/admin-header";
+import { useClub } from "@/components/providers/club-provider";
 import { useSession } from "@/components/providers/session-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +30,7 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { enter, haptic, listItemVariants, popVariants, tap } from "@/lib/motion";
@@ -318,6 +321,93 @@ function ApprovalsPanel() {
 }
 
 /** A member's details: status, dependents and no-show history. */
+/**
+ * Exceptions to the club's booking rules for one member: their own daily and active limits
+ * (empty = the club's rule) and permission to book without naming the players.
+ */
+function BookingRulesForm({ member }: { member: AdminMemberItem }) {
+  const t = useTranslations("admin.members.bookingRules");
+  const club = useClub();
+  const client = useQueryClient();
+  const errorMessage = useErrorMessage();
+  const issueMessage = useIssueMessage();
+  const [perDay, setPerDay] = useState("");
+  const [active, setActive] = useState("");
+  const [alone, setAlone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setPerDay(member.bookingRules.bookingsPerDay?.toString() ?? "");
+    setActive(member.bookingRules.activeBookings?.toString() ?? "");
+    setAlone(member.bookingRules.canBookAlone);
+    setError(null);
+  }, [member]);
+
+  const value = {
+    bookingsPerDay: perDay.trim() === "" ? null : Number(perDay),
+    activeBookings: active.trim() === "" ? null : Number(active),
+    canBookAlone: alone,
+  };
+  const save = useMutation({
+    mutationFn: () => api.admin.memberBookingRules(member.player.id, value),
+    onSuccess: () => {
+      haptic();
+      toast.success(t("saved"));
+      void client.invalidateQueries({ queryKey: queryKeys.admin.root });
+    },
+    onError: (failure) => toast.error(errorMessage(failure)),
+  });
+
+  function submit() {
+    const parsed = memberBookingRulesSchema.safeParse(value);
+    if (!parsed.success) {
+      setError(issueMessage(parsed.error.issues[0]));
+      return;
+    }
+    setError(null);
+    save.mutate();
+  }
+
+  return (
+    <section className="space-y-3">
+      <SectionLabel>{t("title")}</SectionLabel>
+      <p className="text-small text-muted-foreground">{t("hint")}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t("perDay")} htmlFor="rules-per-day">
+          <Input
+            id="rules-per-day"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={10}
+            className="num"
+            value={perDay}
+            placeholder={t("clubRule", { value: club?.settings.maxBookingsPerDay ?? "" })}
+            onChange={(event) => setPerDay(event.target.value)}
+          />
+        </Field>
+        <Field label={t("active")} htmlFor="rules-active">
+          <Input
+            id="rules-active"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={20}
+            className="num"
+            value={active}
+            placeholder={t("clubRule", { value: club?.settings.maxActiveBookings ?? "" })}
+            onChange={(event) => setActive(event.target.value)}
+          />
+        </Field>
+      </div>
+      <Switch checked={alone} onChange={setAlone} label={t("alone")} hint={t("aloneHint")} />
+      {error ? <p className="text-small text-danger-ink">{error}</p> : null}
+      <Button variant="secondary" block loading={save.isPending} onClick={submit}>
+        {t("save")}
+      </Button>
+    </section>
+  );
+}
+
 function MemberSheet({
   member,
   onOpenChange,
@@ -383,6 +473,7 @@ function MemberSheet({
               </ul>
             </section>
           ) : null}
+          <BookingRulesForm member={member} />
           {canNoShows ? (
             <section className="space-y-2">
               <SectionLabel>{t("noShows.title")}</SectionLabel>

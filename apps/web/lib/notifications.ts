@@ -39,6 +39,20 @@ export function useNotificationCopy() {
             tone: "ball",
           };
         }
+        case "BOOKING_PLAYER_LEFT": {
+          const { playerName, courtName, date, startTime } = item.payload;
+          return {
+            title: t("BOOKING_PLAYER_LEFT.title"),
+            body: t("BOOKING_PLAYER_LEFT.body", {
+              name: playerName,
+              court: courtName,
+              day: format.day(date),
+              time: startTime,
+            }),
+            href: "/app",
+            tone: "warning",
+          };
+        }
         case "BOOKING_CONFIRMED": {
           const { courtName, date, startTime } = item.payload;
           return {

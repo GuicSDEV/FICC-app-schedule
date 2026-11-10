@@ -15,8 +15,19 @@ export const createBookingSchema = z
     type: bookingTypeSchema,
     /** User ids of the other players; the creator is added automatically. */
     playerIds: z.array(idSchema).max(3),
+    /**
+     * Book without naming the other players (only members the admin allowed): no one else to
+     * confirm, so the booking is confirmed at once; names can be added later.
+     */
+    alone: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.alone) {
+      if (value.playerIds.length > 0) {
+        ctx.addIssue({ code: "custom", path: ["playerIds"], message: "validation.alonePlayers" });
+      }
+      return;
+    }
     const expected = OTHER_PLAYERS_BY_TYPE[value.type];
     if (value.playerIds.length !== expected) {
       ctx.addIssue({
@@ -31,6 +42,16 @@ export const createBookingSchema = z
     }
   });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+
+/** Players added later to a booking made without them (by its creator). */
+export const addBookingPlayersSchema = z
+  .object({ playerIds: z.array(idSchema).min(1).max(3) })
+  .superRefine((value, ctx) => {
+    if (new Set(value.playerIds).size !== value.playerIds.length) {
+      ctx.addIssue({ code: "custom", path: ["playerIds"], message: "validation.repeatedPlayer" });
+    }
+  });
+export type AddBookingPlayersInput = z.infer<typeof addBookingPlayersSchema>;
 
 /** A court + date + slot a member taps to keep while booking it. */
 export const slotHoldSchema = z.object({

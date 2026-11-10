@@ -24,6 +24,7 @@ import { useSession } from "@/components/providers/session-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Switch } from "@/components/ui/switch";
 import { Sheet } from "@/components/ui/sheet";
 import { api, ApiError } from "@/lib/api";
 import { enter, fadeVariants, haptic, listItemVariants, tap } from "@/lib/motion";
@@ -80,6 +81,8 @@ export function BookingSheet({
   const client = useQueryClient();
   const [type, setType] = useState<BookingType>("SINGLES");
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
+  /** Book without naming the players (members the admin allowed, e.g. a group organizer). */
+  const [alone, setAlone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<BookingDetail | null>(null);
   const [alternatives, setAlternatives] = useState<SlotAlternative[]>([]);
@@ -99,6 +102,7 @@ export function BookingSheet({
     if (requested) {
       setType(requested.type ?? "SINGLES");
       setPlayers(requested.partners ?? []);
+      setAlone(false);
       setError(null);
       setBooked(null);
       setAlternatives([]);
@@ -147,13 +151,14 @@ export function BookingSheet({
   }
 
   const mutation = useMutation({
-    mutationFn: (input: { type: BookingType; players: PlayerSummary[] }) =>
+    mutationFn: (input: { type: BookingType; players: PlayerSummary[]; alone: boolean }) =>
       api.bookings.create({
         courtId: target!.court.id,
         timeSlotId: target!.slot.id,
         date: target!.date,
         type: input.type,
         playerIds: input.players.map((player) => player.id),
+        ...(input.alone ? { alone: true } : {}),
       }),
     onMutate: async (input) => {
       await client.cancelQueries({ queryKey: queryKeys.schedule(target!.date) });
@@ -170,7 +175,7 @@ export function BookingSheet({
           booking: {
             id: "optimistic",
             type: input.type,
-            status: "PENDING",
+            status: input.alone ? "CONFIRMED" : "PENDING",
             players: [
               ...me,
               ...input.players.map((player) => ({ user: player, status: "PENDING" as const })),
@@ -213,19 +218,22 @@ export function BookingSheet({
 
   function submit() {
     if (!target) return;
+    const bookAlone = alone && Boolean(user?.canBookAlone);
+    const chosen = bookAlone ? [] : players;
     const parsed = createBookingSchema.safeParse({
       courtId: target.court.id,
       timeSlotId: target.slot.id,
       date: target.date,
       type,
-      playerIds: players.map((player) => player.id),
+      playerIds: chosen.map((player) => player.id),
+      ...(bookAlone ? { alone: true } : {}),
     });
     if (!parsed.success) {
       setError(issueMessage(parsed.error.issues[0]));
       return;
     }
     setError(null);
-    mutation.mutate({ type, players });
+    mutation.mutate({ type, players: chosen, alone: bookAlone });
   }
 
   const needed = OTHER_PLAYERS_BY_TYPE[type];
@@ -249,7 +257,7 @@ export function BookingSheet({
             onClick={submit}
             disabled={!target}
           >
-            {players.length < needed
+            {players.length < needed && !(alone && user?.canBookAlone)
               ? t("booking.choosePlayers", { count: needed - players.length })
               : t("booking.submit", {
                   court: target?.court.name ?? "",
@@ -336,21 +344,35 @@ export function BookingSheet({
               onChange={changeType}
             />
 
-            <MemberPicker
-              label={type === "SINGLES" ? t("booking.opponent") : t("booking.partners")}
-              selected={players}
-              onChange={(next) => {
-                setPlayers(next);
-                setError(null);
-              }}
-              max={needed}
-              excludeIds={user ? [user.id] : []}
-              invalid={Boolean(error)}
-            />
-            {type === "DOUBLES" ? (
+            {user?.canBookAlone ? (
+              <Switch
+                checked={alone}
+                onChange={(next) => {
+                  setAlone(next);
+                  setError(null);
+                }}
+                label={t("booking.alone")}
+                hint={t("booking.aloneHint")}
+              />
+            ) : null}
+
+            {alone && user?.canBookAlone ? null : (
+              <MemberPicker
+                label={type === "SINGLES" ? t("booking.opponent") : t("booking.partners")}
+                selected={players}
+                onChange={(next) => {
+                  setPlayers(next);
+                  setError(null);
+                }}
+                max={needed}
+                excludeIds={user ? [user.id] : []}
+                invalid={Boolean(error)}
+              />
+            )}
+            {type === "DOUBLES" && !alone ? (
               <p className="-mt-3 text-small text-muted-foreground">{t("booking.doublesHint")}</p>
             ) : null}
-            {onAskPartner && players.length === 0 ? (
+            {onAskPartner && players.length === 0 && !alone ? (
               <Button
                 variant="outline"
                 block

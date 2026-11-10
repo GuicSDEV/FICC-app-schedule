@@ -16,6 +16,20 @@ import { PrismaService } from "../prisma/prisma.service";
 export class MembersController {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Every active member, A–Z: the pickers load it once and filter on the device, so names show as
+   * soon as the field is tapped (a club has hundreds of members, not thousands).
+   */
+  @Get()
+  async directory(): Promise<PlayerSummary[]> {
+    const members = await this.prisma.user.findMany({
+      where: { role: Role.MEMBER, isActive: true },
+      select: playerSelect(),
+      orderBy: { name: "asc" },
+    });
+    return members.map(toPlayerSummary);
+  }
+
   /** Active members by name or matrícula (for booking, reporting and H2H pickers). */
   @Get("search")
   async search(

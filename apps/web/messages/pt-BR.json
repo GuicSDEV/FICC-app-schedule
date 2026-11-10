@@ -123,6 +123,10 @@
       "title": "Reserva confirmada",
       "body": "{court} · {day}, {time}. Todos confirmaram."
     },
+    "BOOKING_PLAYER_LEFT": {
+      "title": "Jogador saiu da reserva",
+      "body": "{name} não vai jogar na {court} em {day}, {time}. A quadra continua reservada para você."
+    },
     "BOOKING_CANCELLED": {
       "title": "Reserva cancelada",
       "body": "{court} · {day}, {time}. {reason}.",
@@ -284,7 +288,8 @@
     "remove": "Remover {name}",
     "placeholder": "Nome ou matrícula",
     "results": "Resultados",
-    "noResults": "Nenhum sócio encontrado para “{query}”."
+    "noResults": "Nenhum sócio encontrado para “{query}”.",
+    "keepTyping": "{count, plural, one {+ # sócio: digite para encontrar} other {+ # sócios: digite para encontrar}}"
   },
   "booking": {
     "title": "Reservar quadra",
@@ -300,7 +305,9 @@
     "confirmedTitle": "Quadra reservada!",
     "confirmedWaiting": "{count, plural, one {Enviamos o convite. O outro jogador tem até {deadline} para confirmar.} other {Enviamos o convite. Os # jogadores têm até {deadline} para confirmar.}}",
     "confirmedAll": "Todos confirmados. Bom jogo!",
-    "alternatives": "Ainda livres agora:"
+    "alternatives": "Ainda livres agora:",
+    "alone": "Reservar sem informar os jogadores",
+    "aloneHint": "A quadra fica reservada no seu nome na hora. Você pode adicionar os jogadores depois."
   },
   "bookingInfo": {
     "mine": "Sua reserva",
@@ -322,7 +329,10 @@
     "noShow": "Falta registrada",
     "noShowMarked": "Falta registrada",
     "staffCancel": "Cancelar reserva (equipe)",
-    "staffCancelConfirm": "Confirmar cancelamento — os jogadores serão avisados"
+    "staffCancelConfirm": "Confirmar cancelamento — os jogadores serão avisados",
+    "addPlayers": "Adicionar jogadores",
+    "invite": "{count, plural, one {Convidar # jogador} other {Convidar # jogadores}}",
+    "playersAdded": "{count, plural, one {Convite enviado} other {Convites enviados}}"
   },
   "coachSheet": {
     "title": "Aula do clube",
@@ -1070,6 +1080,17 @@
         "rejectHint": "A pessoa lê este motivo ao tentar entrar.",
         "reason": "Motivo",
         "reasonPlaceholder": "Ex.: matrícula de outro sócio. Procure a secretaria."
+      },
+      "bookingRules": {
+        "title": "Regras de reserva deste sócio",
+        "hint": "Deixe em branco para seguir a regra do clube. Use para quem organiza grupos, por exemplo.",
+        "perDay": "Reservas por dia",
+        "active": "Reservas ativas",
+        "clubRule": "Clube: {value}",
+        "alone": "Pode reservar sem informar os jogadores",
+        "aloneHint": "A reserva fica confirmada na hora no nome dele; os jogadores podem ser adicionados depois.",
+        "save": "Salvar regras",
+        "saved": "Regras do sócio salvas"
       }
     }
   },

@@ -9,6 +9,7 @@ import {
   Role,
 } from "@ficc/db";
 import {
+  type AddBookingPlayersInput,
   addDays,
   type BookingDetail,
   bookingAvailability,
@@ -19,6 +20,7 @@ import {
   fromDbDate,
   isSlotPast,
   type MyBookingsResponse,
+  OTHER_PLAYERS_BY_TYPE,
   overlapsSlot,
   type SlotAlternative,
   slotEndsAt,
@@ -131,6 +133,15 @@ export class BookingsService {
       if (input.playerIds.includes(creatorId)) {
         throw unprocessable("INVALID_PLAYERS", "api.creatorIncluded");
       }
+      const alone = input.alone === true;
+      if (alone) {
+        const creator = await tx.user.findUnique({
+          where: { id: creatorId },
+          select: { canBookAlone: true },
+        });
+        if (!creator?.canBookAlone)
+          throw forbidden("BOOK_ALONE_NOT_ALLOWED", "api.bookAloneNotAllowed");
+      }
       const players = await tx.user.findMany({
         where: { id: { in: playerIds }, role: Role.MEMBER, isActive: true },
         select: { id: true, name: true },
@@ -167,12 +178,16 @@ export class BookingsService {
           date: toDbDate(input.date),
           createdById: creatorId,
           // Pending bookings expire unless everyone confirms in time (capped at the slot start).
-          expiresAt: new Date(
-            Math.min(
-              now.getTime() + clubSettings().bookingConfirmationMinutes * 60_000,
-              startsAt.getTime(),
-            ),
-          ),
+          // A booking made alone has nobody else to wait for: confirmed now, "expires" at start.
+          ...(alone ? { status: BookingStatus.CONFIRMED, confirmedAt: now } : {}),
+          expiresAt: alone
+            ? startsAt
+            : new Date(
+                Math.min(
+                  now.getTime() + clubSettings().bookingConfirmationMinutes * 60_000,
+                  startsAt.getTime(),
+                ),
+              ),
           players: {
             create: playerIds.map((userId) => ({
               userId,
@@ -225,6 +240,71 @@ export class BookingsService {
     return toBookingDetail(booking, creatorId);
   }
 
+  /**
+   * The creator of a booking made alone names the players later. Each one gets the usual
+   * invitation; the booking stays confirmed, and a decline only removes that player.
+   */
+  async addPlayers(
+    creatorId: string,
+    bookingId: string,
+    input: AddBookingPlayersInput,
+  ): Promise<BookingDetail> {
+    const now = this.clock.now();
+    const updated = await serializable(this.prisma, async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: bookingInclude(),
+      });
+      if (!booking) throw notFound("BOOKING_NOT_FOUND", "api.bookingNotFound");
+      if (booking.createdById !== creatorId) {
+        throw forbidden("ONLY_CREATOR", "api.onlyCreatorAddsPlayers");
+      }
+      if (!ACTIVE_STATUSES.includes(booking.status)) {
+        throw conflict("BOOKING_NOT_ACTIVE", "api.bookingNotActive");
+      }
+      const date = fromDbDate(booking.date);
+      if (isSlotPast(date, booking.timeSlot, now, clubTimeZone())) {
+        throw unprocessable("SLOT_IN_PAST", "api.slotInPast");
+      }
+      const current = booking.players.filter(
+        (player) => player.status !== BookingPlayerStatus.DECLINED,
+      );
+      const newIds = input.playerIds.filter(
+        (id) => !booking.players.some((player) => player.userId === id),
+      );
+      if (current.length + newIds.length > 1 + OTHER_PLAYERS_BY_TYPE[booking.type]) {
+        throw unprocessable("BOOKING_FULL", "api.bookingFull");
+      }
+      const players = await tx.user.findMany({
+        where: { id: { in: newIds }, role: Role.MEMBER, isActive: true },
+        select: { id: true, name: true },
+      });
+      if (players.length !== newIds.length) {
+        throw unprocessable("INVALID_PLAYERS", "api.invalidPlayers");
+      }
+      const nameOf = (id: string) => players.find((player) => player.id === id)?.name ?? id;
+      await this.assertNotSuspended(tx, creatorId, newIds, now, nameOf);
+      await this.assertPlayersFree(tx, newIds, date, booking.timeSlotId, nameOf);
+      await this.assertBookingLimit(tx, newIds, now, nameOf);
+      await this.assertDailyLimit(tx, newIds, date, nameOf);
+      await tx.bookingPlayer.createMany({
+        data: newIds.map((userId) => ({ bookingId, userId })),
+      });
+      return tx.booking.findUniqueOrThrow({ where: { id: bookingId }, include: bookingInclude() });
+    });
+    const creator = updated.players.find((player) => player.userId === creatorId)?.user.name ?? "";
+    const added = updated.players
+      .filter((player) => input.playerIds.includes(player.userId))
+      .map((player) => player.userId);
+    await this.notifications.notify(added, "BOOKING_INVITE", {
+      ...this.slotRef(updated),
+      bookingId,
+      invitedBy: creator,
+    });
+    this.slotEvents.changed("booking.confirmed", [updated]);
+    return toBookingDetail(updated, creatorId);
+  }
+
   /** The caller confirms their place; the booking is confirmed once everyone has. */
   async confirm(userId: string, bookingId: string): Promise<BookingDetail> {
     const now = this.clock.now();
@@ -234,6 +314,7 @@ export class BookingsService {
       throw conflict("BOOKING_EXPIRED", "api.bookingExpired");
     }
 
+    const wasConfirmed = booking.status === BookingStatus.CONFIRMED;
     const updated = await serializable(this.prisma, async (tx) => {
       await tx.bookingPlayer.update({
         where: { bookingId_userId: { bookingId, userId } },
@@ -249,7 +330,7 @@ export class BookingsService {
       });
     });
 
-    if (updated.status === BookingStatus.CONFIRMED) {
+    if (updated.status === BookingStatus.CONFIRMED && !wasConfirmed) {
       await this.notifications.notify(
         updated.players.map((player) => player.userId),
         "BOOKING_CONFIRMED",
@@ -260,9 +341,29 @@ export class BookingsService {
     return toBookingDetail(updated, userId);
   }
 
-  /** Any decline cancels the booking and frees the slot. */
+  /**
+   * A decline cancels a pending booking and frees the slot. On a booking that is already
+   * confirmed (made alone, players added later) only the one who declines leaves it.
+   */
   async decline(userId: string, bookingId: string): Promise<BookingDetail> {
-    await this.loadForAnswer(userId, bookingId);
+    const booking = await this.loadForAnswer(userId, bookingId);
+    if (booking.status === BookingStatus.CONFIRMED) {
+      await this.prisma.bookingPlayer.delete({
+        where: { bookingId_userId: { bookingId, userId } },
+      });
+      const remaining = await this.prisma.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        include: bookingInclude(),
+      });
+      const name = booking.players.find((player) => player.userId === userId)?.user.name ?? "";
+      await this.notifications.notify([booking.createdById], "BOOKING_PLAYER_LEFT", {
+        ...this.slotRef(remaining),
+        bookingId,
+        playerName: name,
+      });
+      this.slotEvents.changed("booking.confirmed", [remaining]);
+      return toBookingDetail(remaining, userId);
+    }
     await this.prisma.bookingPlayer.update({
       where: { bookingId_userId: { bookingId, userId } },
       data: { status: BookingPlayerStatus.DECLINED, respondedAt: this.clock.now() },
@@ -377,9 +478,8 @@ export class BookingsService {
     );
     return {
       upcoming,
-      invites: upcoming.filter(
-        (booking) => booking.status === "PENDING" && booking.myStatus === "PENDING",
-      ),
+      // Includes confirmed bookings made alone that the viewer was added to later.
+      invites: upcoming.filter((booking) => booking.myStatus === "PENDING"),
       recent: details
         .filter(
           (booking) =>
@@ -415,7 +515,8 @@ export class BookingsService {
     if (!booking) throw notFound("BOOKING_NOT_FOUND", "api.bookingNotFound");
     const player = booking.players.find((entry) => entry.userId === userId);
     if (!player) throw forbidden("NOT_A_PLAYER", "api.notBookingPlayer");
-    if (booking.status !== BookingStatus.PENDING) {
+    // A confirmed booking still takes answers from players its creator added later.
+    if (!ACTIVE_STATUSES.includes(booking.status)) {
       throw conflict("BOOKING_NOT_PENDING", "api.bookingNotPending");
     }
     if (player.status !== BookingPlayerStatus.PENDING) {
@@ -550,31 +651,37 @@ export class BookingsService {
     }
   }
 
-  /** Every player may hold at most the club's maxActiveBookings future active bookings. */
+  /**
+   * Every player may hold at most the club's maxActiveBookings future active bookings, or the
+   * limit the admin set for them.
+   */
   private async assertBookingLimit(
     tx: Tx,
     playerIds: string[],
     now: Date,
     nameOf: (id: string) => string,
   ): Promise<void> {
-    const rows = await tx.bookingPlayer.findMany({
-      where: {
-        userId: { in: playerIds },
-        status: { not: BookingPlayerStatus.DECLINED },
-        booking: {
-          status: { in: ACTIVE_STATUSES },
-          date: { gte: toDbDate(clubToday(now, clubTimeZone())) },
+    const [rows, limits] = await Promise.all([
+      tx.bookingPlayer.findMany({
+        where: {
+          userId: { in: playerIds },
+          status: { not: BookingPlayerStatus.DECLINED },
+          booking: {
+            status: { in: ACTIVE_STATUSES },
+            date: { gte: toDbDate(clubToday(now, clubTimeZone())) },
+          },
         },
-      },
-      include: { booking: { include: { timeSlot: true } } },
-    });
+        include: { booking: { include: { timeSlot: true } } },
+      }),
+      this.memberLimits(tx, playerIds),
+    ]);
     for (const userId of playerIds) {
       const future = rows.filter(
         (row) =>
           row.userId === userId &&
           !isSlotPast(fromDbDate(row.booking.date), row.booking.timeSlot, now, clubTimeZone()),
       );
-      const max = clubSettings().maxActiveBookings;
+      const max = limits.get(userId)?.activeBookingsLimit ?? clubSettings().maxActiveBookings;
       if (future.length >= max) {
         throw unprocessable("BOOKING_LIMIT", {
           key: "api.bookingLimit",
@@ -582,6 +689,15 @@ export class BookingsService {
         });
       }
     }
+  }
+
+  /** Admin exceptions to the club's booking limits, per member. */
+  private async memberLimits(tx: Tx, userIds: string[]) {
+    const users = await tx.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, bookingsPerDayLimit: true, activeBookingsLimit: true },
+    });
+    return new Map(users.map((user) => [user.id, user]));
   }
 
   private slotTaken(byLesson: boolean, alternatives?: SlotAlternative[]) {
@@ -680,28 +796,32 @@ export class BookingsService {
     }
   }
 
-  /** At most the club's maxBookingsPerDay active bookings per player on one date. */
+  /** At most the club's maxBookingsPerDay (or the member's own limit) bookings on one date. */
   private async assertDailyLimit(
     tx: Tx,
     playerIds: string[],
     date: string,
     nameOf: (id: string) => string,
   ): Promise<void> {
-    const max = clubSettings().maxBookingsPerDay;
-    const rows = await tx.bookingPlayer.groupBy({
-      by: ["userId"],
-      where: {
-        userId: { in: playerIds },
-        status: { not: BookingPlayerStatus.DECLINED },
-        booking: { date: toDbDate(date), status: { in: ACTIVE_STATUSES } },
-      },
-      _count: { _all: true },
-    });
-    const over = rows.find((row) => row._count._all >= max);
+    const [rows, limits] = await Promise.all([
+      tx.bookingPlayer.groupBy({
+        by: ["userId"],
+        where: {
+          userId: { in: playerIds },
+          status: { not: BookingPlayerStatus.DECLINED },
+          booking: { date: toDbDate(date), status: { in: ACTIVE_STATUSES } },
+        },
+        _count: { _all: true },
+      }),
+      this.memberLimits(tx, playerIds),
+    ]);
+    const maxOf = (userId: string) =>
+      limits.get(userId)?.bookingsPerDayLimit ?? clubSettings().maxBookingsPerDay;
+    const over = rows.find((row) => row._count._all >= maxOf(row.userId));
     if (over) {
       throw unprocessable("MAX_BOOKINGS_PER_DAY", {
         key: "api.maxBookingsPerDay",
-        params: { name: nameOf(over.userId), max },
+        params: { name: nameOf(over.userId), max: maxOf(over.userId) },
       });
     }
   }

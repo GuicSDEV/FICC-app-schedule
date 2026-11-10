@@ -1,11 +1,18 @@
 "use client";
 
-import type { CourtSummary, ScheduleBookingInfo, SlotSummary } from "@ficc/shared";
+import {
+  type CourtSummary,
+  OTHER_PLAYERS_BY_TYPE,
+  type PlayerSummary,
+  type ScheduleBookingInfo,
+  type SlotSummary,
+} from "@ficc/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { MemberPicker } from "@/components/members/member-picker";
 import { useSession } from "@/components/providers/session-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +89,27 @@ export function BookingInfoSheet({
     },
   });
 
+  /** Players the creator of a booking made alone is about to invite. */
+  const [adding, setAdding] = useState<PlayerSummary[]>([]);
+  const addPlayers = useMutation({
+    mutationFn: () =>
+      api.bookings.addPlayers(
+        booking!.id,
+        adding.map((player) => player.id),
+      ),
+    onSuccess: () => {
+      haptic([10, 30, 10]);
+      toast.success(t("bookingInfo.playersAdded", { count: adding.length }));
+      setAdding([]);
+      onOpenChange(false);
+    },
+    onError: (failure) => toast.error(errorMessage(failure)),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.schedule() });
+      void client.invalidateQueries({ queryKey: queryKeys.bookingsMine });
+    },
+  });
+
   const [marked, setMarked] = useState<string[]>([]);
   const noShow = useMutation({
     mutationFn: (userId: string) => api.bookings.markNoShow(booking!.id, userId),
@@ -105,11 +133,23 @@ export function BookingInfoSheet({
 
   function close(open: boolean) {
     if (!open) setMarked([]);
+    if (!open) setAdding([]);
     if (!open) setConfirmCancel(false);
     onOpenChange(open);
   }
 
-  const canAnswer = me?.status === "PENDING" && booking?.status === "PENDING" && !target?.past;
+  // Also a confirmed booking made alone, for the players its creator added later.
+  const canAnswer = me?.status === "PENDING" && booking?.status !== "CANCELLED" && !target?.past;
+  const openSpots = booking
+    ? 1 +
+      OTHER_PLAYERS_BY_TYPE[booking.type] -
+      booking.players.filter((player) => player.status !== "DECLINED").length
+    : 0;
+  const canAddPlayers =
+    detail.data?.createdById === user?.id &&
+    openSpots > 0 &&
+    !target?.past &&
+    booking?.status !== "CANCELLED";
   const canCancel =
     Boolean(me) && me?.status !== "DECLINED" && !target?.past && booking?.status !== "CANCELLED";
   /** After the slot started, a co-player (or staff) can say someone did not show up. */
@@ -126,7 +166,16 @@ export function BookingInfoSheet({
       onOpenChange={close}
       title={me ? t("bookingInfo.mine") : t("bookingInfo.taken")}
       footer={
-        canAnswer ? (
+        canAddPlayers && adding.length > 0 ? (
+          <Button
+            size="lg"
+            block
+            loading={addPlayers.isPending}
+            onClick={() => addPlayers.mutate()}
+          >
+            {t("bookingInfo.invite", { count: adding.length })}
+          </Button>
+        ) : canAnswer ? (
           <div className="flex gap-2">
             <Button
               variant="dangerSoft"
@@ -261,6 +310,15 @@ export function BookingInfoSheet({
               })}
             </ul>
           </div>
+          {canAddPlayers ? (
+            <MemberPicker
+              label={t("bookingInfo.addPlayers")}
+              selected={adding}
+              onChange={setAdding}
+              max={openSpots}
+              excludeIds={booking.players.map((player) => player.user.id)}
+            />
+          ) : null}
         </div>
       ) : null}
     </Sheet>

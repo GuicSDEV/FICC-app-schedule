@@ -1,11 +1,11 @@
 "use client";
 
-import { formatMembershipId, type PlayerSummary } from "@ficc/shared";
+import { formatMembershipId, normalizeMembershipId, type PlayerSummary } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { enter, listItemVariants, popVariants, spring, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
-import { useDebounced } from "@/lib/use-debounced";
+import { matchesName } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
+/** Rows shown at once; typing narrows the rest. */
+const MAX_ROWS = 60;
+
 /**
- * Picks members by name or matrícula. Chosen players show as avatar chips that pop in and out;
- * the search hides once `max` people are chosen.
+ * Picks members by name or matrícula. The club's members (A–Z) show as soon as the field is
+ * tapped and narrow as the person types, filtered on the device. Chosen players show as avatar
+ * chips that pop in and out; the search hides once `max` people are chosen.
  */
 export function MemberPicker({
   label,
@@ -40,22 +44,37 @@ export function MemberPicker({
   const inputId = useId();
   const listId = useId();
   const [term, setTerm] = useState("");
-  const query = useDebounced(term.trim());
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const full = selected.length >= max;
-  const enabled = query.length >= 2 && !full;
 
-  const results = useQuery({
-    queryKey: queryKeys.memberSearch(query),
-    queryFn: () => api.members.search(query),
-    enabled,
-    staleTime: 60_000,
+  const directory = useQuery({
+    queryKey: queryKeys.memberDirectory,
+    queryFn: api.members.directory,
+    staleTime: 5 * 60_000,
   });
   const hidden = new Set([...excludeIds, ...selected.map((player) => player.id)]);
-  const options = (results.data ?? []).filter((player) => !hidden.has(player.id));
+  const query = term.trim();
+  const digits = normalizeMembershipId(query);
+  const matching = (directory.data ?? []).filter(
+    (player) =>
+      !hidden.has(player.id) &&
+      (query === "" ||
+        matchesName(player.name, query) ||
+        (digits.length >= 2 && (player.membershipId ?? "").startsWith(digits))),
+  );
+  const options = matching.slice(0, MAX_ROWS);
+  const showList = open && !full;
 
   function add(player: PlayerSummary) {
     onChange([...selected, player].slice(0, max));
     setTerm("");
+  }
+
+  function focus() {
+    setOpen(true);
+    // Once the phone keyboard is up, keep the field and the first names above it.
+    setTimeout(() => inputRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 350);
   }
 
   return (
@@ -109,14 +128,17 @@ export function MemberPicker({
             className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <Input
+            ref={inputRef}
             id={inputId}
             value={term}
             onChange={(event) => setTerm(event.target.value)}
+            onFocus={focus}
+            onBlur={() => setOpen(false)}
             placeholder={t("placeholder")}
             autoComplete="off"
             enterKeyHint="search"
             role="combobox"
-            aria-expanded={enabled}
+            aria-expanded={showList}
             aria-controls={listId}
             aria-invalid={invalid || undefined}
             className="pl-11"
@@ -124,9 +146,14 @@ export function MemberPicker({
         </div>
       )}
 
-      {enabled ? (
-        <ul id={listId} role="listbox" aria-label={t("results")} className="space-y-1">
-          {results.isLoading
+      {showList ? (
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label={t("results")}
+          className="max-h-72 space-y-1 overflow-y-auto overscroll-contain rounded-lg border border-border p-1"
+        >
+          {directory.isLoading
             ? [0, 1, 2].map((index) => (
                 <li key={index} className="flex h-14 items-center gap-3 px-2">
                   <Skeleton className="size-10 rounded-full" />
@@ -146,6 +173,8 @@ export function MemberPicker({
                   <motion.button
                     type="button"
                     whileTap={tap}
+                    // Keep the field focused (and the keyboard up) while picking.
+                    onPointerDown={(event) => event.preventDefault()}
                     onClick={() => add(player)}
                     className="flex h-14 w-full items-center gap-3 rounded-md px-2 text-left transition-tokens hover:bg-surface-2"
                   >
@@ -160,9 +189,14 @@ export function MemberPicker({
                   </motion.button>
                 </motion.li>
               ))}
-          {!results.isLoading && options.length === 0 ? (
+          {!directory.isLoading && options.length === 0 && query !== "" ? (
             <li className={cn("px-2 py-3 text-small text-muted-foreground")}>
               {t("noResults", { query })}
+            </li>
+          ) : null}
+          {matching.length > MAX_ROWS ? (
+            <li className="px-2 py-2 text-caption text-muted-foreground">
+              {t("keepTyping", { count: matching.length - MAX_ROWS })}
             </li>
           ) : null}
         </ul>

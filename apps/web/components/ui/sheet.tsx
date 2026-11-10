@@ -27,7 +27,14 @@ export function Sheet({
   className?: string;
 }) {
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange} shouldScaleBackground>
+    // repositionInputs off: vaul's own keyboard handling resized the sheet on iPhone and left it
+    // blank above the keyboard; the browser scrolls the focused field into view instead.
+    <Drawer.Root
+      open={open}
+      onOpenChange={onOpenChange}
+      shouldScaleBackground
+      repositionInputs={false}
+    >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/55" />
         <Drawer.Content

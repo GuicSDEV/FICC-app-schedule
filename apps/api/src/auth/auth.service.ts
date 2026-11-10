@@ -199,5 +199,6 @@ export function toAuthUser(user: UserWithCoach): AuthUser {
       : null,
     permissions: permissionsOf(user.staffRoles.map((entry) => entry.role)),
     bookingSuspendedUntil: user.bookingSuspendedUntil?.toISOString() ?? null,
+    canBookAlone: user.canBookAlone,
   };
 }

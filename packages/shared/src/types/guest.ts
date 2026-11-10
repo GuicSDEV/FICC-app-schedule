@@ -1,3 +1,4 @@
+import type { MemberBookingRules } from "../schemas/guest";
 import type { IsoDate } from "../dates";
 import type {
   GateScanMethod,
@@ -108,4 +109,6 @@ export interface AdminMemberItem {
   bookingSuspendedUntil: IsoDateTime | null;
   /** Dependents (holder + dependents mode) of this holder. */
   dependents: { id: string; name: string; membershipId: string }[];
+  /** Admin exceptions to the club's booking rules. */
+  bookingRules: MemberBookingRules;
 }
