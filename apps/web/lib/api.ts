@@ -98,6 +98,7 @@ import type {
   SlotFavoriteInput,
   SlotFavoriteItem,
   SlotHoldInput,
+  PushSubscriptionInput,
   PartnerRequestItem,
   CreatePartnerRequestInput,
   SlotHoldView,
@@ -260,6 +261,12 @@ export const api = {
     staffCancel: (id: string) => post<BookingDetail>(`/bookings/${id}/staff-cancel`),
     addPlayers: (id: string, playerIds: string[]) =>
       post<BookingDetail>(`/bookings/${id}/players`, { playerIds }),
+  },
+  push: {
+    key: () => request<{ publicKey: string | null }>("/push/key"),
+    subscribe: (input: PushSubscriptionInput) => post<void>("/push/subscriptions", input),
+    unsubscribe: (endpoint: string) =>
+      request<void>("/push/subscriptions", { method: "DELETE", body: { endpoint } }),
   },
   slotHolds: {
     claim: (input: SlotHoldInput) => post<SlotHoldView>("/slot-holds", input),

@@ -15,6 +15,7 @@ import { ResultApprovals } from "@/components/dashboard/result-approvals";
 import { useClub } from "@/components/providers/club-provider";
 import { LatestNews } from "@/components/news/latest-news";
 import { InstallCard } from "@/components/pwa/install-card";
+import { PushPrompt } from "@/components/pwa/push-card";
 import { MyTournamentsCard } from "@/components/tournaments/my-tournaments-card";
 import { useSession } from "@/components/providers/session-provider";
 import { NotificationBell } from "@/components/shell/notification-bell";
@@ -197,6 +198,7 @@ export function MemberDashboard() {
             </Section>
             {/* Last, so appearing when the browser allows installing never pushes content. */}
             <InstallCard />
+            <PushPrompt />
           </div>
         </div>
       </PullToRefresh>

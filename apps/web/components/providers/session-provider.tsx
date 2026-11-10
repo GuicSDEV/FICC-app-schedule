@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
 import { api, ApiError } from "@/lib/api";
+import { disablePush } from "@/lib/push";
 import { clearOfflineData } from "@/lib/pwa";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -47,6 +48,8 @@ export function useLogout() {
   const client = useQueryClient();
   const router = useRouter();
   return useCallback(async () => {
+    // This phone stops getting the person's notifications before the session ends.
+    await disablePush().catch(() => undefined);
     await api.auth.logout().catch(() => undefined);
     client.clear();
     clearOfflineData();

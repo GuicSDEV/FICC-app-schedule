@@ -44,6 +44,15 @@ openssl rand -base64 32
 
 Nunca use os valores do `.env.example`: a api se recusa a iniciar com eles.
 
+Para as **notificações no celular**, gere também o par de chaves de push (uma vez só):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Ele mostra uma **Public Key** e uma **Private Key**. A privada é secreta como as outras. Sem elas
+o app funciona normalmente, só não manda notificações para o celular.
+
 ## 3. Variáveis
 
 No serviço **api** → **Variables** → **Raw Editor**, cole e preencha:
@@ -59,6 +68,9 @@ WEB_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 DEFAULT_CLUB_SLUG=ficc
 JOBS_ENABLED=true
 QUEUE_PREFIX=ficc
+VAPID_PUBLIC_KEY=<Public Key>
+VAPID_PRIVATE_KEY=<Private Key>
+VAPID_SUBJECT=mailto:<email do clube>
 ```
 
 (`?family=0` faz o Redis funcionar na rede privada do Railway.)

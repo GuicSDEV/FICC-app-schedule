@@ -347,6 +347,7 @@ model Club {
   rankingSeasons       RankingSeason[]
   seasonStandings      SeasonStanding[]
   friendRankings       FriendRanking[]
+  pushSubscriptions    PushSubscription[]
   staffRoles           StaffRole[]
   auditLogs            AuditLog[]
   noShows              NoShow[]
@@ -453,6 +454,7 @@ model User {
   seasonStandings            SeasonStanding[]
   friendRankingsOwned        FriendRanking[]          @relation("FriendRankingOwner")
   friendRankings             FriendRankingMember[]
+  pushSubscriptions          PushSubscription[]
   noShows                    NoShow[]                 @relation("NoShowUser")
   noShowsMarked              NoShow[]                 @relation("NoShowMarkedBy")
   newsPosts                  NewsPost[]
@@ -1554,6 +1556,23 @@ model FriendRankingMember {
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([rankingId, userId])
+  @@index([userId])
+}
+
+/// A phone or browser that receives this member's notifications by web push.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  clubId    String   @default(dbgenerated("current_setting('app.club_id'::text, true)"))
+  userId    String
+  /// The push service URL for this device (unique per browser install).
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

@@ -42,6 +42,14 @@ const envSchema = z
     QUEUE_PREFIX: z.string().trim().min(1).default("ficc"),
     /** Encrypts guest document numbers at rest (LGPD). */
     DATA_ENCRYPTION_KEY: encryptionKey.optional(),
+    /**
+     * Web push (notifications on the phone). Generate the pair once with
+     * `npx web-push generate-vapid-keys`; without them push is simply off.
+     */
+    VAPID_PUBLIC_KEY: z.string().trim().min(20).optional(),
+    VAPID_PRIVATE_KEY: z.string().trim().min(20).optional(),
+    /** Contact the push services may use ("mailto:…" or an https URL). */
+    VAPID_SUBJECT: z.string().trim().default("mailto:contato@ficc.app"),
   })
   .transform((env, ctx) => {
     const production = env.NODE_ENV === "production";

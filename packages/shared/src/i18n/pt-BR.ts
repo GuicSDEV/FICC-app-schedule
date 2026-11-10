@@ -264,6 +264,28 @@ export const ptBR = {
     tournamentSlotPast: "Esse horário já passou.",
     matchDecided: "Esta partida já foi decidida.",
   },
+  /** Phone notifications (web push): the service worker shows them as sent. */
+  push: {
+    BOOKING_INVITE: {
+      title: "Convite para jogar",
+      body: "{invitedBy} reservou a {court} para {day}, {time}. Toque para confirmar.",
+    },
+    BOOKING_CONFIRMED: { title: "Reserva confirmada", body: "{court} · {day}, {time}." },
+    BOOKING_CANCELLED: { title: "Reserva cancelada", body: "{court} · {day}, {time}." },
+    BOOKING_PLAYER_LEFT: {
+      title: "Jogador saiu da reserva",
+      body: "{name} não vai jogar na {court} ({day}, {time}). A quadra continua sua.",
+    },
+    MATCH_REPORTED: {
+      title: "Resultado para aprovar",
+      body: "{reportedBy} lançou {score}. Toque para aprovar.",
+    },
+    COURT_AVAILABLE: { title: "Quadra livre para você", body: "{court} está liberada. Corra!" },
+    FRIEND_RANKING_ADDED: {
+      title: "Ranking de amigos",
+      body: "{name} colocou você no ranking “{ranking}”.",
+    },
+  },
   labels: {
     surface: { HARTRU: "Har-Tru", SAIBRO: "Saibro" },
     sport: { TENNIS: "Tênis" },

@@ -23,3 +23,13 @@ export const emailSchema = z
   .trim()
   .toLowerCase()
   .pipe(z.email({ message: "validation.invalidEmail" }));
+
+/** A browser's web-push subscription (PushSubscription.toJSON()). */
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.url().max(2048),
+  keys: z.object({ p256dh: z.string().min(10).max(256), auth: z.string().min(8).max(64) }),
+});
+export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
+
+export const pushEndpointSchema = z.object({ endpoint: z.url().max(2048) });
+export type PushEndpointInput = z.infer<typeof pushEndpointSchema>;

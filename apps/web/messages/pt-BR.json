@@ -2091,6 +2091,17 @@
       "retry": "Tentar de novo",
       "bannerTitle": "Você está offline",
       "bannerBody": "Mostrando os últimos dados salvos. Reservas e alterações voltam quando a conexão voltar."
+    },
+    "push": {
+      "title": "Receba os avisos no celular",
+      "body": "Convites para jogar, resultados para aprovar e quadras liberadas, na hora.",
+      "enable": "Ativar",
+      "dismiss": "Agora não",
+      "toggle": "Notificações no celular",
+      "hint": "Convites, resultados para aprovar e quadras liberadas, mesmo com o app fechado.",
+      "denied": "Bloqueadas nas configurações do celular. Libere as notificações do app por lá.",
+      "needsInstall": "No iPhone, as notificações funcionam com o app adicionado à Tela de Início (Compartilhar › Adicionar à Tela de Início).",
+      "failed": "Não foi possível ativar as notificações agora."
     }
   },
   "hold": {

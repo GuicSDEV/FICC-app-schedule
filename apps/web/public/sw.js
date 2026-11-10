@@ -119,3 +119,39 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(cacheFirst(request));
   }
 });
+
+// ── Web push: show what the API sent, open its screen on tap ────────────────
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {
+    message = { body: event.data ? event.data.text() : "" };
+  }
+  const title = message.title || "FICC";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: message.body || "",
+      tag: message.tag,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: message.url || "/app" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/app", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((client) => client.url.startsWith(self.location.origin));
+      if (open) {
+        await open.focus();
+        return open.navigate(url);
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
+});

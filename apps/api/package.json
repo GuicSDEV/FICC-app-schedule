@@ -47,6 +47,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.4",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -60,6 +61,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.5",
     "@types/supertest": "^6.0.3",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9.39.5",
     "jest": "^30.5.2",
     "socket.io-client": "^4.8.4",
