@@ -6,6 +6,13 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>pt-BR</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Usado só em testes, para abrir o app a partir de um computador na mesma rede Wi-Fi.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>A câmera é usada para ler o QR code dos convidados na portaria.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
