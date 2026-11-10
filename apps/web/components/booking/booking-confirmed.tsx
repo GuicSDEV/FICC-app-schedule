@@ -9,6 +9,7 @@ import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 import { TicketCard } from "./ticket-card";
+import { WhatsAppInvite } from "./whatsapp-invite";
 
 /** A check mark that draws itself (circle, then tick) in the court's surface color. */
 export function DrawnCheck({
@@ -87,6 +88,13 @@ export function BookingConfirmed({ booking }: { booking: BookingDetail }) {
       >
         <TicketCard booking={booking} />
       </motion.div>
+      {others > 0 ? (
+        <WhatsAppInvite
+          court={booking.court.name}
+          date={booking.date}
+          time={booking.slot.startTime}
+        />
+      ) : null}
     </div>
   );
 }

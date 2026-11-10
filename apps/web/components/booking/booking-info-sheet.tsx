@@ -27,6 +27,7 @@ import { useFormat } from "@/lib/use-format";
 import { useLastDefined } from "@/lib/use-last-defined";
 
 import { FavoriteToggle } from "./favorite-toggle";
+import { WhatsAppInvite } from "./whatsapp-invite";
 
 export interface BookingInfoTarget {
   date: string;
@@ -310,6 +311,18 @@ export function BookingInfoSheet({
               })}
             </ul>
           </div>
+          {me &&
+          !target.past &&
+          booking.status !== "CANCELLED" &&
+          booking.players.some(
+            (player) => player.status === "PENDING" && player.user.id !== user?.id,
+          ) ? (
+            <WhatsAppInvite
+              court={target.court.name}
+              date={target.date}
+              time={target.slot.startTime}
+            />
+          ) : null}
           {canAddPlayers ? (
             <MemberPicker
               label={t("bookingInfo.addPlayers")}

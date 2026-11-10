@@ -9,9 +9,10 @@ import {
   type GuestPassItem,
   isValidDocument,
   normalizeDocument,
+  guestsAllowedAt,
 } from "@ficc/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -250,27 +251,43 @@ export function GuestPassSheet({
                 <div className="flex flex-wrap gap-2">
                   {sameDay.map((booking) => {
                     const selected = bookingId === booking.id;
+                    // The club keeps some times free of guests.
+                    const blocked =
+                      club !== null &&
+                      !guestsAllowedAt(club.settings, booking.date, booking.slot.startTime);
                     return (
                       <motion.button
                         key={booking.id}
                         type="button"
-                        whileTap={tap}
+                        whileTap={blocked ? undefined : tap}
                         aria-pressed={selected}
+                        disabled={blocked}
+                        title={blocked ? t("guestsBlockedAt") : undefined}
                         onClick={() => setBookingId(selected ? null : booking.id)}
                         className={cn(
-                          "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-small font-medium transition-tokens",
+                          "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-small font-medium transition-tokens disabled:opacity-50",
                           selected
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-border bg-surface-2",
                         )}
                       >
                         {selected ? <Check className="size-4" /> : null}
+                        {blocked ? (
+                          <Lock className="size-4" aria-label={t("guestsBlockedAt")} />
+                        ) : null}
                         {booking.court.name} · <span className="num">{booking.slot.startTime}</span>
                       </motion.button>
                     );
                   })}
                 </div>
                 <p className="text-small text-muted-foreground">{t("linkBookingHint")}</p>
+                {club !== null &&
+                sameDay.some(
+                  (booking) =>
+                    !guestsAllowedAt(club.settings, booking.date, booking.slot.startTime),
+                ) ? (
+                  <p className="text-small text-muted-foreground">{t("guestsBlockedHint")}</p>
+                ) : null}
               </div>
             ) : null}
 

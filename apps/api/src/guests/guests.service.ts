@@ -29,6 +29,7 @@ import {
   type HostGuestStats,
   maskDocument,
   toDbDate,
+  guestsAllowedAt,
 } from "@ficc/shared";
 
 import type { RequestUser } from "../common/auth.decorators";
@@ -118,8 +119,16 @@ export class GuestsService {
           status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
           players: { some: { userId: hostId, status: { not: BookingPlayerStatus.DECLINED } } },
         },
+        include: { timeSlot: true },
       });
       if (!booking) throw unprocessable("INVALID_BOOKING", "api.guestBookingInvalid");
+      // The club may keep some times free of guests (busy hours, members-only events).
+      if (!guestsAllowedAt(clubSettings(), input.visitDate, booking.timeSlot.startTime)) {
+        throw unprocessable("GUEST_BLOCKED_TIME", {
+          key: "api.guestBlockedTime",
+          params: { time: booking.timeSlot.startTime },
+        });
+      }
     }
 
     const pass = await this.prisma.guestPass.create({

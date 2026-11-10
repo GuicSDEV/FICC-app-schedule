@@ -170,4 +170,44 @@ describe("Booking rules per member (admin exceptions, booking alone)", () => {
     expect(confirmed.status).toBe("CONFIRMED");
     expect(confirmed.myStatus).toBe("CONFIRMED");
   });
+
+  it("keeps guests out of bookings at the times the admin blocked", async () => {
+    // Tuesday 18:30: no guests; 10:00 still allowed.
+    await admin$
+      .patch(ctx.api("/admin/settings"))
+      .send({ guestBlockedTimes: { TUE: ["18:30"] } })
+      .expect(200);
+    const evening = (
+      await bia$
+        .post(ctx.api("/bookings"))
+        .send({ ...at("Q1", "18:30"), type: "SINGLES", playerIds: [ids.caio] })
+        .expect(201)
+    ).body as BookingDetail;
+    const pass = (bookingId: string) =>
+      bia$.post(ctx.api("/guest-passes")).send({
+        guestName: "Paulo Souza",
+        documentType: "CPF",
+        documentNumber: "52998224725",
+        visitDate: TUESDAY,
+        bookingId,
+      });
+    expect((await pass(evening.id).expect(422)).body.code).toBe("GUEST_BLOCKED_TIME");
+
+    const morning = (
+      await ronaldo$
+        .post(ctx.api("/bookings"))
+        .send({ ...at("Q2", "10:00"), type: "SINGLES", playerIds: [ids.dani] })
+        .expect(201)
+    ).body as BookingDetail;
+    await ronaldo$
+      .post(ctx.api("/guest-passes"))
+      .send({
+        guestName: "Paulo Souza",
+        documentType: "CPF",
+        documentNumber: "52998224725",
+        visitDate: TUESDAY,
+        bookingId: morning.id,
+      })
+      .expect(201);
+  });
 });

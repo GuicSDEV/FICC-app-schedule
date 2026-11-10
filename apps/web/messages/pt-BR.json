@@ -690,7 +690,9 @@
       "host": "Convidado de {name}",
       "footer": "Apresente este QR e um documento na portaria.",
       "fileName": "passe-convidado"
-    }
+    },
+    "guestsBlockedAt": "Convidados não permitidos neste horário",
+    "guestsBlockedHint": "Reservas com cadeado estão em horários em que o clube não permite convidados."
   },
   "profile": {
     "title": "Perfil",
@@ -1945,7 +1947,10 @@
       "added": "Horário {time} adicionado. Inclua-o na grade dos dias em que deve valer.",
       "retired": "Horário {time} retirado",
       "restored": "Horário {time} reativado"
-    }
+    },
+    "guestsTitle": "Convidados",
+    "guestsHint": "Marque os horários em que reservas não podem ter convidados. O sócio continua podendo convidar para outros horários.",
+    "guestsBlockedOf": "Horários sem convidados: {day}"
   },
   "adminStaff": {
     "title": "Equipe",
@@ -2086,5 +2091,9 @@
     "posted": "Pronto! Os sócios já veem que você procura parceiro.",
     "noCourt": "Não há mais quadra livre às {time}.",
     "askFromBooking": "Sem parceiro? Avise os outros sócios"
+  },
+  "whatsapp": {
+    "send": "Avisar no WhatsApp",
+    "message": "Oi! Marquei a quadra {court} para {day} às {time}. Confirme no app do {club}: {link}"
   }
 }

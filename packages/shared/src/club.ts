@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { courtModeSchema, type Sport, sportSchema, weekdaySchema } from "./enums";
+import { type IsoDate, weekdayOf } from "./dates";
 import type { Locale } from "./i18n";
 
 /**
@@ -70,6 +71,11 @@ export const clubSettingsSchema = z.object({
   /** Duration of new time slots (the grid itself is the club's TimeSlot rows). */
   defaultSlotDurationMinutes: z.number().int().min(15).max(240),
   guestPassMaxDaysAhead: z.number().int().min(0).max(365),
+  /**
+   * Start times ("HH:mm") per weekday at which a booking cannot have guests (a guest pass cannot
+   * be linked to it). Not listed = guests allowed at every time.
+   */
+  guestBlockedTimes: z.partialRecord(weekdaySchema, z.array(timeOfDay).max(48)),
   /** Guest names and documents are anonymized this many days after the visit (LGPD). */
   guestDataRetentionDays: z.number().int().min(1).max(3650),
   /**
@@ -121,6 +127,7 @@ export const DEFAULT_CLUB_SETTINGS: ClubSettings = {
   slotOpenedNotifyDays: 14,
   defaultSlotDurationMinutes: 75,
   guestPassMaxDaysAhead: 60,
+  guestBlockedTimes: {},
   guestDataRetentionDays: 90,
   scheduleGrids: {},
   dayModes: {},
@@ -162,4 +169,13 @@ export interface CategoryItem {
   key: string;
   name: string;
   sortOrder: number;
+}
+
+/** Whether a booking at this date and start time can have guests (ClubSettings.guestBlockedTimes). */
+export function guestsAllowedAt(
+  settings: Pick<ClubSettings, "guestBlockedTimes">,
+  date: IsoDate,
+  startTime: string,
+): boolean {
+  return !(settings.guestBlockedTimes[weekdayOf(date)] ?? []).includes(startTime);
 }

@@ -168,6 +168,57 @@ function WeekdayRow({
   );
 }
 
+/** Times of one weekday at which bookings cannot have guests. */
+function GuestBlockRow({
+  day,
+  settings,
+  slots,
+  onChange,
+}: {
+  day: Weekday;
+  settings: ClubSettings;
+  slots: SlotSummary[];
+  onChange: (next: ClubSettings) => void;
+}) {
+  const t = useTranslations("adminSettings");
+  const labels = useTranslations("labels");
+  const grid = settings.scheduleGrids[day];
+  if ((grid !== undefined && grid.length === 0) || settings.dayModes[day] === "FREE_PLAY") {
+    return null;
+  }
+  const times = timesOf(settings, day, slots);
+  const blocked = settings.guestBlockedTimes[day] ?? [];
+
+  function toggle(time: string) {
+    const next = blocked.includes(time)
+      ? blocked.filter((entry) => entry !== time)
+      : [...blocked, time].sort();
+    const all = { ...settings.guestBlockedTimes };
+    if (next.length === 0) delete all[day];
+    else all[day] = next;
+    onChange({ ...settings, guestBlockedTimes: all });
+  }
+
+  return (
+    <li className="space-y-3 py-4 first:pt-0 last:pb-0">
+      <span className="font-medium">{labels(`weekdayLong.${day}`)}</span>
+      <ChipGroup label={t("guestsBlockedOf", { day: labels(`weekdayLong.${day}`) })}>
+        {times.map((time) => (
+          <ChoiceChip
+            key={time}
+            selected={blocked.includes(time)}
+            showCheck
+            className="num"
+            onClick={() => toggle(time)}
+          >
+            {time}
+          </ChoiceChip>
+        ))}
+      </ChipGroup>
+    </li>
+  );
+}
+
 function Toggle({
   selected,
   onClick,
@@ -363,6 +414,28 @@ export function RulesForm({ settings }: { settings: ClubSettings }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {NUMBER_FIELDS.booking.map(numberField)}
         </div>
+      </Card>
+
+      <Card className="space-y-4 p-5">
+        <div>
+          <SectionLabel>{t("guestsTitle")}</SectionLabel>
+          <p className="mt-1 text-small text-muted-foreground">{t("guestsHint")}</p>
+        </div>
+        {courts.data ? (
+          <ul className="divide-y divide-border">
+            {WEEKDAYS.map((day) => (
+              <GuestBlockRow
+                key={day}
+                day={day}
+                settings={draft}
+                slots={slots}
+                onChange={setDraft}
+              />
+            ))}
+          </ul>
+        ) : (
+          <Skeleton className="h-40 rounded-lg" />
+        )}
       </Card>
 
       <Card className="space-y-4 p-5">
