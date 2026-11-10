@@ -31,3 +31,10 @@ apps/web/playwright-report/
 
 # Local Redis snapshots
 dump.rdb
+
+# Native apps: signing keys and per-account Firebase files (see docs/MOBILE.md)
+*.jks
+*.keystore
+keystore.properties
+apps/mobile/android/app/google-services.json
+apps/mobile/ios/App/App/GoogleService-Info.plist

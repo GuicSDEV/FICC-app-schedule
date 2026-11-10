@@ -9,3 +9,6 @@ pnpm-lock.yaml
 docs/SPEC.md
 # Third-party Claude Code skills
 .claude/
+# Native projects (Xcode, Gradle)
+apps/mobile/android/
+apps/mobile/ios/
