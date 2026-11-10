@@ -82,7 +82,8 @@ export const COACH_NAV: NavItem[] = [
 ];
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "freezes", icon: Ban, exact: true, permissions: ["COURTS_MANAGE"] },
+  { href: "/admin", label: "home", icon: Home, exact: true },
+  { href: "/admin/freezes", label: "freezes", icon: Ban, permissions: ["COURTS_MANAGE"] },
   {
     href: "/admin/bookings",
     label: "bookings",

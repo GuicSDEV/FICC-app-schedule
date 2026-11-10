@@ -77,7 +77,24 @@
       "settings": "Regras do clube",
       "staff": "Equipe"
     },
-    "ranking": "Ranking"
+    "ranking": "Ranking",
+    "menu": "Menu",
+    "descriptions": {
+      "freezes": "Chuva e manutenção: bloquear quadras",
+      "bookings": "Ver e cancelar reservas",
+      "courtsNow": "Uso livre e fila das quadras",
+      "news": "Avisos para os sócios",
+      "members": "Cadastros, aprovações e regras por sócio",
+      "coaches": "Professores e suas quadras",
+      "lessons": "Grade de aulas",
+      "tournaments": "Torneios e circuitos",
+      "ranking": "Temporadas e classes",
+      "disputes": "Resultados contestados",
+      "guests": "Convidados e bloqueios",
+      "settings": "Horários, limites e regras",
+      "staff": "Contas da equipe e permissões",
+      "gate": "Ler o QR dos convidados"
+    }
   },
   "shell": {
     "signOut": "Sair",
@@ -1143,6 +1160,10 @@
       "renameCategory": "Renomear {name}",
       "deleteCategory": "Excluir {name}",
       "confirmDelete": "Excluir"
+    },
+    "home": {
+      "title": "Administração",
+      "greeting": "Olá, {name}. O que vamos fazer?"
     }
   },
   "tournaments": {

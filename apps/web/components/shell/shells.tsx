@@ -1,11 +1,11 @@
 "use client";
 
 import type { Role } from "@ficc/shared";
-import { LogOut, Plus } from "lucide-react";
+import { ChevronLeft, LogOut, Plus } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { EloCelebration } from "@/components/matches/elo-celebration";
 import { useLogout, useSession } from "@/components/providers/session-provider";
@@ -121,21 +121,15 @@ export function CoachShell({ children, roleHint }: { children: ReactNode; roleHi
   );
 }
 
-/** Admin: sidebar on wide screens, a scrollable tab row on phones. */
+/** Admin: sidebar on wide screens; on phones a menu page (/admin) and a header back to it. */
 export function AdminShell({ children }: { children: ReactNode }) {
   const t = useTranslations("shell");
   const nav = useTranslations("nav");
   const pathname = usePathname();
   const { user } = useSession();
-  const router = useRouter();
   const items = adminNavFor(user?.permissions ?? []);
-  // The admin home is the freezes page; staff without that permission land on their first page.
-  const landing = items[0]?.href;
-  useEffect(() => {
-    if (user && pathname === "/admin" && !user.permissions.includes("COURTS_MANAGE") && landing) {
-      router.replace(landing);
-    }
-  }, [user, pathname, landing, router]);
+  const current = items.find((item) => item.href !== "/admin" && isActive(pathname, item));
+  const home = pathname === "/admin";
   return (
     <AreaGuard area="/admin">
       <div className="flex min-h-dvh">
@@ -146,30 +140,28 @@ export function AdminShell({ children }: { children: ReactNode }) {
           footer={<SidebarFooter />}
         />
         <main className="min-w-0 flex-1 px-4 pb-12 md:px-8">
-          <nav
-            aria-label={nav("sections")}
-            className="sticky top-0 z-40 -mx-4 no-scrollbar flex gap-2 overflow-x-auto border-b border-border glass px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden"
-          >
-            {items.map((item) => {
-              const active = isActive(pathname, item);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-small font-medium transition-tokens",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-surface-2 text-muted-foreground",
-                  )}
-                >
-                  <item.icon className="size-4" />
-                  {nav(`items.${item.label}`)}
-                </Link>
-              );
-            })}
-          </nav>
+          <header className="sticky top-0 z-40 -mx-4 flex min-h-14 items-center gap-2 border-b border-border glass px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden">
+            {home ? (
+              <Brand subtitle={t("adminArea")} />
+            ) : (
+              <Link
+                href="/admin"
+                className="-ml-2 inline-flex h-11 items-center gap-1 rounded-full px-2 text-small font-medium text-accent-ink hover:bg-surface-2"
+              >
+                <ChevronLeft className="size-5" aria-hidden />
+                {nav("menu")}
+              </Link>
+            )}
+            {!home && current ? (
+              <span className="min-w-0 flex-1 truncate text-center font-medium text-muted-foreground">
+                {nav(`items.${current.label}`)}
+              </span>
+            ) : (
+              <span className="flex-1" />
+            )}
+            {/* Keeps the title centred against the back link. */}
+            {!home ? <span className="w-16" aria-hidden /> : null}
+          </header>
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>

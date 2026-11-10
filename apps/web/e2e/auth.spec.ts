@@ -14,7 +14,7 @@ const ROLES: { name: string; who: Who; area: RegExp; heading: RegExp }[] = [
     name: "admin (super admin)",
     who: { email: "admin@ficc.test" },
     area: /\/admin$/,
-    heading: /Interdições/,
+    heading: /Administração/,
   },
   { name: "secretaria", who: { email: "secretaria@ficc.test" }, area: /\/admin/, heading: /.+/ },
   { name: "gate", who: { email: "portaria@ficc.test" }, area: /\/gate$/, heading: /Portaria/ },
