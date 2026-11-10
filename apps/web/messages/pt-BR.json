@@ -720,7 +720,9 @@
     "noMatches": "Nenhuma partida confirmada",
     "settings": "Preferências",
     "guests": "Meus convidados",
-    "theme": "Tema"
+    "theme": "Tema",
+    "privacy": "Privacidade",
+    "terms": "Termos de uso"
   },
   "lessons": {
     "newTitle": "Nova aula",
@@ -2211,5 +2213,124 @@
     "deleted": "Ranking excluído",
     "owner": "criador",
     "loadFailed": "Não foi possível carregar o ranking."
+  },
+  "account": {
+    "delete": {
+      "open": "Excluir minha conta",
+      "title": "Excluir minha conta",
+      "bookings": "Suas reservas futuras são canceladas e os outros jogadores são avisados.",
+      "data": "Seu nome, foto, preferências, notificações e acessos são apagados.",
+      "history": "Partidas já jogadas continuam no histórico dos outros jogadores como “Ex-sócio”.",
+      "again": "Sua matrícula fica livre: você pode criar uma conta nova quando quiser.",
+      "password": "Digite sua senha para confirmar",
+      "confirm": "Excluir conta definitivamente",
+      "deleting": "Excluindo…",
+      "done": "Sua conta foi excluída."
+    }
+  },
+  "legal": {
+    "updated": "Atualizado em novembro de 2026",
+    "contactFallback": "a secretaria do clube",
+    "clubFallback": "o clube",
+    "privacy": {
+      "title": "Política de privacidade",
+      "intro": "Esta política explica quais dados o app de tênis do {club} usa, para quê e quais são os seus direitos, de acordo com a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).",
+      "sections": [
+        {
+          "title": "Quem cuida dos seus dados",
+          "body": [
+            "O {club} é o controlador dos dados dos sócios: é ele quem decide como o app é usado. O app é operado por um prestador contratado pelo clube, que trata os dados apenas para fazer o app funcionar."
+          ]
+        },
+        {
+          "title": "Dados que usamos",
+          "body": [
+            "Cadastro: nome, matrícula, foto (se você enviar) e categorias do clube.",
+            "Uso do clube: reservas de quadra, aulas, partidas, resultados, ranking, torneios, avisos e convidados que você cadastrar.",
+            "Convidados: nome e documento do convidado, guardados criptografados e apagados {retentionDays} dias depois da visita.",
+            "Aparelho: o identificador para enviar notificações ao seu celular, se você ligar as notificações."
+          ]
+        },
+        {
+          "title": "Para que usamos",
+          "body": [
+            "Para você entrar no app, reservar quadras, marcar aulas, registrar partidas e participar do ranking e de torneios; para avisar os outros jogadores sobre reservas e resultados; para a portaria conferir convidados; e para o clube aplicar as próprias regras."
+          ]
+        },
+        {
+          "title": "Com quem compartilhamos",
+          "body": [
+            "Seus dados não são vendidos nem usados para publicidade.",
+            "Outros sócios veem seu nome, foto, ranking e partidas dentro do app. A equipe do clube vê o que precisa para administrar.",
+            "Usamos serviços de hospedagem e de banco de dados para manter o app no ar e, para as notificações, os serviços do Google (Firebase) e da Apple, que recebem apenas o texto da notificação e o identificador do aparelho."
+          ]
+        },
+        {
+          "title": "Por quanto tempo",
+          "body": [
+            "Enquanto você for sócio e tiver conta no app. Dados de convidados são apagados {retentionDays} dias depois da visita. Ao excluir a conta, seus dados pessoais são apagados; as partidas já jogadas ficam no histórico dos outros jogadores sem o seu nome."
+          ]
+        },
+        {
+          "title": "Seus direitos",
+          "body": [
+            "Você pode ver e corrigir seus dados no app, desligar as notificações a qualquer momento e excluir sua conta em Perfil → Excluir minha conta.",
+            "Para pedir uma cópia dos seus dados ou tirar dúvidas, fale com {contact}."
+          ]
+        },
+        {
+          "title": "Segurança",
+          "body": [
+            "As senhas são guardadas com criptografia forte, a conexão é sempre segura (HTTPS) e os documentos de convidados são criptografados. Só a equipe autorizada do clube acessa a área administrativa."
+          ]
+        },
+        {
+          "title": "Mudanças nesta política",
+          "body": [
+            "Se esta política mudar, a nova versão fica nesta página com a data de atualização."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Termos de uso",
+      "intro": "Estes termos valem para o uso do app de tênis do {club}. Ao entrar no app você concorda com eles.",
+      "sections": [
+        {
+          "title": "Quem pode usar",
+          "body": [
+            "O app é para sócios, dependentes autorizados e a equipe do {club}. A conta é pessoal: não compartilhe sua senha."
+          ]
+        },
+        {
+          "title": "Regras do clube",
+          "body": [
+            "Reservas, aulas, convidados, ranking e torneios seguem as regras do clube, que podem mudar a qualquer momento. Em caso de dúvida, vale o que a administração do clube decidir."
+          ]
+        },
+        {
+          "title": "Uso correto",
+          "body": [
+            "Informe resultados verdadeiros, respeite os horários reservados e cadastre convidados com dados corretos. O clube pode suspender reservas ou o acesso de quem descumprir as regras."
+          ]
+        },
+        {
+          "title": "Disponibilidade",
+          "body": [
+            "O app pode ficar fora do ar por manutenção ou problemas técnicos. Nesses casos, as regras do clube continuam valendo e a secretaria ajuda com as reservas."
+          ]
+        },
+        {
+          "title": "Sua conta",
+          "body": [
+            "Você pode excluir sua conta quando quiser em Perfil → Excluir minha conta. Ao deixar de ser sócio, o acesso pode ser encerrado pelo clube."
+          ]
+        },
+        {
+          "title": "Contato",
+          "body": ["Dúvidas sobre o app: {contact}."]
+        }
+      ]
+    }
   }
 }

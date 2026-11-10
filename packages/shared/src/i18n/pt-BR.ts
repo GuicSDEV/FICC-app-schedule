@@ -92,6 +92,8 @@ export const ptBR = {
     clubNotFound: "Clube não encontrado.",
     accountDisabled: "Conta desativada.",
     invalidCredentialsMember: "Matrícula ou senha incorretos.",
+    wrongPassword: "Senha incorreta.",
+    accountDeletionMembersOnly: "Contas da equipe são excluídas pela administração do clube.",
     invalidCredentialsStaff: "E-mail ou senha incorretos.",
     signupPending: "Seu cadastro está aguardando aprovação da secretaria.",
     signupRejected: "Seu cadastro não foi aprovado: {reason}",
@@ -287,6 +289,8 @@ export const ptBR = {
     },
   },
   labels: {
+    /** Shown instead of the name of a member who deleted their account. */
+    deletedMember: "Ex-sócio",
     surface: { HARTRU: "Har-Tru", SAIBRO: "Saibro" },
     sport: { TENNIS: "Tênis" },
     freezeReason: { RAIN: "Chuva", MAINTENANCE: "Manutenção" },

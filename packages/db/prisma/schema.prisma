@@ -385,7 +385,8 @@ model Category {
 // ─── People & access ────────────────────────────────────────────────────────
 
 /// Any account: member, coach, admin or gate staff.
-/// CHECK: members must have a membershipId; every user has a login (membershipId or email).
+/// CHECK: members must have a membershipId; every user has a login (membershipId or email);
+/// both are waived once the account is deleted (deletedAt).
 model User {
   id                         String     @id @default(cuid())
   clubId                     String     @default(dbgenerated("current_setting('app.club_id'::text, true)"))
@@ -413,6 +414,8 @@ model User {
   activeBookingsLimit        Int?
   /// May book a court without naming the other players (confirmed at once; names added later).
   canBookAlone               Boolean    @default(false)
+  /// The member deleted their account: personal data cleared, the matrícula free again.
+  deletedAt                  DateTime?  @db.Timestamptz(3)
   createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime   @updatedAt @db.Timestamptz(3)
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
-import { isNativeApp, nativeStatusBar, startNativeShell } from "@/lib/native";
+import { isNativeApp, nativePlatform, nativeStatusBar, startNativeShell } from "@/lib/native";
 import { onNativeNotificationTap } from "@/lib/push";
 
 /**
@@ -17,6 +17,8 @@ export function NativeShell() {
 
   useEffect(() => {
     if (!isNativeApp()) return;
+    // iPhone: text follows the phone's text size setting (Dynamic Type), see globals.css.
+    if (nativePlatform() === "ios") document.documentElement.classList.add("native-ios");
     let stopped = false;
     const cleanups: (() => void)[] = [];
     const navigate = (path: string) => router.push(path);

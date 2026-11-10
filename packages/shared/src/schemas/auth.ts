@@ -43,3 +43,7 @@ export const loginSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/** The member confirms with their password before deleting their account. */
+export const deleteAccountSchema = z.object({ password: z.string().min(1).max(128) });
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

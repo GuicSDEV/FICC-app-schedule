@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { PlayerProfileView } from "@/components/players/player-profile";
+import { DeleteAccount } from "@/components/profile/delete-account";
 import { useLogout, useSession } from "@/components/providers/session-provider";
 import { InstallCard } from "@/components/pwa/install-card";
 import { PushToggle } from "@/components/pwa/push-card";
@@ -51,6 +52,15 @@ export default function ProfilePage() {
                 <Button variant="dangerSoft" block onClick={() => void logout()}>
                   <LogOut /> {shell("signOut")}
                 </Button>
+                <DeleteAccount />
+                <p className="flex justify-center gap-4 pt-2 text-small text-muted-foreground">
+                  <Link href="/privacidade" className="underline-offset-4 hover:underline">
+                    {t("privacy")}
+                  </Link>
+                  <Link href="/termos" className="underline-offset-4 hover:underline">
+                    {t("terms")}
+                  </Link>
+                </p>
               </section>
             }
           />

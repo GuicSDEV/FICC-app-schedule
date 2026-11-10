@@ -104,6 +104,19 @@ domínio próprio (ex.: `app.ficc.com.br`):
 Confira em `https://app.ficc.com.br/.well-known/assetlinks.json` e
 `/.well-known/apple-app-site-association`.
 
+## Exigências das lojas (já no app)
+
+- **Excluir minha conta** em Perfil (exigência da Apple): pede a senha, cancela as reservas futuras
+  (avisando os outros jogadores), apaga os dados pessoais e libera a matrícula. Partidas passadas
+  ficam no histórico dos outros como "Ex-sócio".
+- **Política de privacidade** em `/privacidade` e **Termos de uso** em `/termos`, públicas (sem
+  login), com links no login e no Perfil. Use `https://<domínio>/privacidade` no cadastro das lojas.
+  O contato mostrado vem de `LEGAL_CONTACT_EMAIL` no serviço **web**.
+- **Continuar logado:** a sessão renova a cada uso e só expira depois de `REFRESH_TOKEN_TTL_DAYS`
+  dias sem abrir o app (padrão 30). Para o app, recomendamos `REFRESH_TOKEN_TTL_DAYS=90` na **api**.
+- **Tamanho de letra:** no iPhone o texto acompanha o tamanho de letra do celular (Ajustes → Tela e
+  Brilho → Tamanho do Texto).
+
 ## O que o app faz de nativo
 
 - Notificações push (Firebase), com toque abrindo a tela certa.

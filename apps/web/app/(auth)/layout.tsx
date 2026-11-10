@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Brand } from "@/components/shell/brand";
@@ -5,7 +7,8 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { CourtLines } from "@/components/ui/court-lines";
 
 /** Full-bleed night-court hero behind the auth forms. */
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default async function AuthLayout({ children }: { children: ReactNode }) {
+  const legal = await getTranslations("legal");
   return (
     <div className="grain relative flex min-h-dvh flex-col overflow-hidden">
       {/* Floodlights */}
@@ -24,6 +27,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       </header>
       <main className="flex flex-1 flex-col justify-end px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center sm:justify-center">
         {children}
+        <nav className="mt-6 flex justify-center gap-4 text-caption text-muted-foreground">
+          <Link href="/privacidade" className="underline-offset-4 hover:underline">
+            {legal("privacy.title")}
+          </Link>
+          <Link href="/termos" className="underline-offset-4 hover:underline">
+            {legal("terms.title")}
+          </Link>
+        </nav>
       </main>
     </div>
   );

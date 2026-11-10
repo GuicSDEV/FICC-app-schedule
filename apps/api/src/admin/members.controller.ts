@@ -56,6 +56,8 @@ export class AdminMembersController {
     const members = await this.prisma.user.findMany({
       where: {
         role: Role.MEMBER,
+        // Deleted accounts are gone for the club (their history stays under a neutral name).
+        deletedAt: null,
         ...(query.status ? { status: query.status } : {}),
         ...(query.q
           ? {

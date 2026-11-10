@@ -225,6 +225,11 @@ const patch = <T>(path: string, body: unknown) => request<T>(path, { method: "PA
 
 /** One function per endpoint, typed with the shared DTOs. */
 export const api = {
+  account: {
+    /** Deletes the member's own account (password confirmed). */
+    delete: (password: string) =>
+      request<void>("/account", { method: "DELETE", body: { password } }),
+  },
   auth: {
     me: () => request<AuthUser>("/auth/me"),
     login: (input: LoginInput) =>

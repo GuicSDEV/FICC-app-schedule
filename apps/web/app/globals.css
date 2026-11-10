@@ -254,6 +254,13 @@
 }
 
 @layer base {
+  /*
+   * iPhone app: the root size follows the phone's text size (Dynamic Type; 17px by default), so
+   * every rem-based size grows with it. The family stays ours (set on body).
+   */
+  html.native-ios {
+    font: -apple-system-body;
+  }
   * {
     @apply border-border outline-ring/60;
   }
