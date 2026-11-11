@@ -638,6 +638,12 @@ tenancy, tournament, operations and audit models; enums, indexes, unique slot co
 **Performance target (Phase 10)** — ⚠️ Lighthouse mobile ≥ 90 not reached in this environment
 (see Phase 10 above); accessibility 100.
 
+## Requested next
+
+- Admin: show coach lessons in **Reservas** (`/admin/bookings`) and in the admin court calendar,
+  and cancel them there with a tap (this day / this and following), like the **Aulas** page does.
+  Requested by the product owner; start after their current round of app testing.
+
 ## Known issues
 
 - Lighthouse mobile performance below the 90 target in this environment (see Phase 10 above).
