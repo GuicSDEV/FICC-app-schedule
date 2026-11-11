@@ -19,6 +19,13 @@ export function NativeShell() {
     if (!isNativeApp()) return;
     // iPhone: text follows the phone's text size setting (Dynamic Type), see globals.css.
     if (nativePlatform() === "ios") document.documentElement.classList.add("native-ios");
+    // An app does not zoom: no pinch or double-tap zoom inside the native app.
+    document
+      .querySelector('meta[name="viewport"]')
+      ?.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      );
     let stopped = false;
     const cleanups: (() => void)[] = [];
     const navigate = (path: string) => router.push(path);

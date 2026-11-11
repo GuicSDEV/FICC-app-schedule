@@ -1,7 +1,7 @@
 "use client";
 
 import { clubTimeOfDay } from "@ficc/shared";
-import { useTranslations } from "next-intl";
+import { useNow, useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
 import { motion } from "motion/react";
@@ -32,8 +32,8 @@ import { enter, listItemVariants, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 
 /** Part of the day at the club, for the greeting. */
-function dayPart(timeZone: string): "night" | "morning" | "afternoon" {
-  const hour = Number(clubTimeOfDay(new Date(), timeZone).slice(0, 2));
+function dayPart(now: Date, timeZone: string): "night" | "morning" | "afternoon" {
+  const hour = Number(clubTimeOfDay(now, timeZone).slice(0, 2));
   if (hour < 5) return "night";
   if (hour < 12) return "morning";
   if (hour < 18) return "afternoon";
@@ -66,6 +66,8 @@ function Section({
 
 export function MemberDashboard() {
   const t = useTranslations("dashboard");
+  // The provider's "now" (the server's while hydrating), for the greeting.
+  const now = useNow();
   const club = useClub();
   const { user } = useSession();
   const client = useQueryClient();
@@ -107,7 +109,7 @@ export function MemberDashboard() {
         title={t("title")}
         subtitle={
           user && club
-            ? t(`greeting.${dayPart(club.timezone)}`, {
+            ? t(`greeting.${dayPart(now, club.timezone)}`, {
                 name: user.name.split(" ")[0] ?? user.name,
               })
             : " "

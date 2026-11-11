@@ -266,6 +266,8 @@
   }
   html {
     -webkit-tap-highlight-color: transparent;
+    /* No double-tap zoom (quick taps stay taps); pinch zoom still works in browsers. */
+    touch-action: manipulation;
     text-size-adjust: 100%;
   }
   body {

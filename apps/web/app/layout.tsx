@@ -66,7 +66,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     >
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers club={club}>
+          <Providers club={club} renderedAt={new Date().toISOString()}>
             {/* vaul scales this wrapper behind open sheets. */}
             <div {...{ "vaul-drawer-wrapper": "" }} className="min-h-dvh bg-background">
               {children}

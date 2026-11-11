@@ -3,7 +3,7 @@
 import type { ClubInfo } from "@ficc/shared";
 import { useQuery } from "@tanstack/react-query";
 import { NextIntlClientProvider, useLocale, useMessages } from "next-intl";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -21,12 +21,23 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 export function ClubProvider({
   children,
   initialClub,
+  renderedAt,
 }: {
   children: ReactNode;
   /** Fetched by the root layout on the server, so the first paint already has the club. */
   initialClub: ClubInfo | null;
+  /** When the server rendered the page: the first client render uses the same "now". */
+  renderedAt: string;
 }) {
   const locale = useLocale();
+  // "há 5 minutos", greetings…: the server's instant while hydrating (so the text matches), then
+  // the real time, refreshed every minute.
+  const [now, setNow] = useState(() => new Date(renderedAt));
+  useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const messages = useMessages();
   const { data: club } = useQuery({
     queryKey: queryKeys.club,
@@ -42,6 +53,7 @@ export function ClubProvider({
         locale={club?.locale ?? locale}
         messages={messages}
         timeZone={club?.timezone ?? deviceTimeZone()}
+        now={now}
       >
         {children}
       </NextIntlClientProvider>

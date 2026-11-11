@@ -14,7 +14,15 @@ import { NativeShell } from "./native-shell";
 import { QueryProvider } from "./query-provider";
 import { SocketProvider } from "./socket-provider";
 
-export function Providers({ children, club }: { children: ReactNode; club: ClubInfo | null }) {
+export function Providers({
+  children,
+  club,
+  renderedAt,
+}: {
+  children: ReactNode;
+  club: ClubInfo | null;
+  renderedAt: string;
+}) {
   useEffect(() => {
     markHydrated();
     startPwa();
@@ -29,7 +37,7 @@ export function Providers({ children, club }: { children: ReactNode; club: ClubI
       {/* Respect prefers-reduced-motion: transforms become fades, layout animations are skipped. */}
       <MotionConfig reducedMotion="user">
         <QueryProvider>
-          <ClubProvider initialClub={club}>
+          <ClubProvider initialClub={club} renderedAt={renderedAt}>
             <SocketProvider>{children}</SocketProvider>
             <Toaster />
             <NativeShell />
