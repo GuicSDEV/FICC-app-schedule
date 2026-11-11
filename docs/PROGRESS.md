@@ -643,6 +643,10 @@ tenancy, tournament, operations and audit models; enums, indexes, unique slot co
 - Admin: show coach lessons in **Reservas** (`/admin/bookings`) and in the admin court calendar,
   and cancel them there with a tap (this day / this and following), like the **Aulas** page does.
   Requested by the product owner; start after their current round of app testing.
+- Booking with a **guest as a player**: in the booking sheet, pick one of the member's guest passes
+  for that day (or create one there) to fill a player spot. The guest needs no confirmation, the
+  pass is linked to the booking and the club's guest-blocked times apply. Today the player picker
+  lists members only and a pass can only be attached to a booking that already exists.
 
 ## Known issues
 
