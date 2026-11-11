@@ -309,6 +309,15 @@ export function BookingInfoSheet({
                   </li>
                 );
               })}
+              {(booking.guests ?? []).map((guest) => (
+                <li key={guest.id} className="flex h-14 items-center gap-3">
+                  <Avatar name={guest.name ?? t("bookingInfo.guest")} size="md" />
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {guest.name ?? t("bookingInfo.guest")}
+                  </span>
+                  <Badge>{t("bookingInfo.guest")}</Badge>
+                </li>
+              ))}
             </ul>
           </div>
           {me &&

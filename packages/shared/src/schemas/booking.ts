@@ -20,16 +20,29 @@ export const createBookingSchema = z
      * confirm, so the booking is confirmed at once; names can be added later.
      */
     alone: z.boolean().optional(),
+    /**
+     * The creator's guest passes for that day that fill player spots (guests need no
+     * confirmation; a booking with only guests besides the creator is confirmed at once).
+     */
+    guestPassIds: z.array(idSchema).max(3).optional(),
   })
   .superRefine((value, ctx) => {
+    const guests = value.guestPassIds ?? [];
+    if (new Set(guests).size !== guests.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["guestPassIds"],
+        message: "validation.repeatedPlayer",
+      });
+    }
     if (value.alone) {
-      if (value.playerIds.length > 0) {
+      if (value.playerIds.length > 0 || guests.length > 0) {
         ctx.addIssue({ code: "custom", path: ["playerIds"], message: "validation.alonePlayers" });
       }
       return;
     }
     const expected = OTHER_PLAYERS_BY_TYPE[value.type];
-    if (value.playerIds.length !== expected) {
+    if (value.playerIds.length + guests.length !== expected) {
       ctx.addIssue({
         code: "custom",
         path: ["playerIds"],

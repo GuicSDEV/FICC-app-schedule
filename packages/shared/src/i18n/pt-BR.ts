@@ -215,6 +215,7 @@ export const ptBR = {
     bookingPlayersMismatch: "Os jogadores não batem com os da reserva.",
     guestBookingInvalid: "Escolha uma das suas reservas nesse dia.",
     guestBlockedTime: "O clube não permite convidados em reservas às {time} neste dia.",
+    invalidGuestPasses: "Escolha convidados cadastrados por você para este dia.",
     passNotFound: "Convite não encontrado.",
     passNotActive: "Esse convite não pode mais ser cancelado.",
     visitInPast: "Escolha hoje ou uma data futura.",

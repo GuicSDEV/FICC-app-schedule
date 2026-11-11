@@ -17,6 +17,7 @@ export function Sheet({
   children,
   footer,
   className,
+  nested = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,16 +26,14 @@ export function Sheet({
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  /** Opened on top of another sheet (keeps the one below open). */
+  nested?: boolean;
 }) {
+  const Root = nested ? Drawer.NestedRoot : Drawer.Root;
   return (
     // repositionInputs off: vaul's own keyboard handling resized the sheet on iPhone and left it
     // blank above the keyboard; the browser scrolls the focused field into view instead.
-    <Drawer.Root
-      open={open}
-      onOpenChange={onOpenChange}
-      shouldScaleBackground
-      repositionInputs={false}
-    >
+    <Root open={open} onOpenChange={onOpenChange} shouldScaleBackground repositionInputs={false}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/55" />
         <Drawer.Content
@@ -68,6 +67,6 @@ export function Sheet({
           )}
         </Drawer.Content>
       </Drawer.Portal>
-    </Drawer.Root>
+    </Root>
   );
 }

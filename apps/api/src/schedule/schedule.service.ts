@@ -77,7 +77,14 @@ export class ScheduleService {
           status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
           court: courtWhere,
         },
-        include: { players: { include: { user: { select: playerSelect() } } } },
+        include: {
+          players: { include: { user: { select: playerSelect() } } },
+          guestPasses: {
+            where: { status: { not: "CANCELLED" } },
+            select: { id: true, guestName: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
       }),
       this.prisma.tournamentMatch.findMany({
         where: { scheduledDate: dbDate, court: courtWhere },
@@ -159,6 +166,7 @@ export class ScheduleService {
                   user: toPlayerSummary(player.user),
                   status: player.status,
                 })),
+                guests: booking.guestPasses.map((pass) => ({ id: pass.id, name: pass.guestName })),
               }
             : null,
           tournament: tournament

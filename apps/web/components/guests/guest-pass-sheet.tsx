@@ -41,9 +41,17 @@ type Errors = Partial<Record<"guestName" | "documentNumber" | "visitDate" | "for
 export function GuestPassSheet({
   open,
   onOpenChange,
+  forDate,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Opened from the booking sheet: the visit is that day, the sheet sits on top of the booking
+   * and closes once the pass exists (the booking takes the guest as a player).
+   */
+  forDate?: string;
+  onCreated?: (pass: GuestPassItem) => void;
 }) {
   const t = useTranslations("guests");
   const issueMessage = useIssueMessage();
@@ -66,12 +74,12 @@ export function GuestPassSheet({
       setGuestName("");
       setDocumentType("CPF");
       setDocumentNumber("");
-      setVisitDate("");
+      setVisitDate(forDate ?? "");
       setBookingId(null);
       setErrors({});
       setCreated(null);
     }
-  }, [open]);
+  }, [open, forDate]);
 
   const date = visitDate || today;
   const bookings = useQuery({
@@ -87,6 +95,12 @@ export function GuestPassSheet({
     mutationFn: api.guests.create,
     onSuccess: (pass) => {
       haptic([12, 40, 12]);
+      void client.invalidateQueries({ queryKey: queryKeys.guestPasses });
+      if (onCreated) {
+        onCreated(pass);
+        onOpenChange(false);
+        return;
+      }
       setCreated(pass);
       void client.invalidateQueries({ queryKey: queryKeys.guestPasses });
       void client.invalidateQueries({ queryKey: queryKeys.bookingsMine });
@@ -140,6 +154,7 @@ export function GuestPassSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
+      nested={forDate !== undefined}
       title={created ? t("createdTitle") : t("newTitle")}
       description={created ? t("createdDescription") : t("newDescription")}
       footer={
@@ -230,22 +245,24 @@ export function GuestPassSheet({
               )}
             </div>
 
-            <Field label={t("visitDate")} htmlFor="guest-date" error={errors.visitDate}>
-              <Input
-                id="guest-date"
-                type="date"
-                value={date}
-                min={today || undefined}
-                max={latest}
-                onChange={(event) => {
-                  setVisitDate(event.target.value);
-                  setBookingId(null);
-                }}
-                className="num"
-              />
-            </Field>
+            {forDate ? null : (
+              <Field label={t("visitDate")} htmlFor="guest-date" error={errors.visitDate}>
+                <Input
+                  id="guest-date"
+                  type="date"
+                  value={date}
+                  min={today || undefined}
+                  max={latest}
+                  onChange={(event) => {
+                    setVisitDate(event.target.value);
+                    setBookingId(null);
+                  }}
+                  className="num"
+                />
+              </Field>
+            )}
 
-            {sameDay.length > 0 ? (
+            {sameDay.length > 0 && !forDate ? (
               <div className="space-y-2">
                 <Label>{t("linkBooking")}</Label>
                 <div className="flex flex-wrap gap-2">

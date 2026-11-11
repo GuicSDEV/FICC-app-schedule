@@ -7,7 +7,7 @@ import type {
 } from "../enums";
 import type { CourtSummary, IsoDateTime, PlayerSummary, SlotSummary } from "./common";
 import type { SlotAlternative } from "./operations";
-import type { BookingPlayerInfo } from "./schedule";
+import type { BookingGuestInfo, BookingPlayerInfo } from "./schedule";
 
 export interface BookingDetail {
   id: string;
@@ -26,6 +26,8 @@ export interface BookingDetail {
   players: BookingPlayerInfo[];
   cancelReason: BookingCancelReason | null;
   guestCount: number;
+  /** Guests playing in this booking (their passes), shown with the players. */
+  guests: BookingGuestInfo[];
 }
 
 export interface MyBookingsResponse {

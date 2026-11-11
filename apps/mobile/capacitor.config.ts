@@ -22,6 +22,7 @@ const firebaseReady =
 const PLUGINS = [
   "@capacitor/app",
   "@capacitor/haptics",
+  "@capacitor/keyboard",
   "@capacitor/filesystem",
   "@capacitor/share",
   "@capacitor/splash-screen",

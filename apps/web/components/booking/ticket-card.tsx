@@ -114,6 +114,14 @@ export function TicketCard({
                 ) : null}
               </li>
             ))}
+            {booking.guests.map((guest) => (
+              <li key={guest.id} className="flex min-w-0 items-center gap-1.5">
+                <Avatar name={guest.name ?? t("ticket.guest")} size="xs" />
+                <span className="max-w-[9rem] truncate text-small">
+                  {(guest.name ?? t("ticket.guest")).split(" ")[0]}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         {footer ? <div className="px-4 pb-4">{footer}</div> : null}

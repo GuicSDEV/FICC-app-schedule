@@ -643,10 +643,16 @@ tenancy, tournament, operations and audit models; enums, indexes, unique slot co
 - Admin: show coach lessons in **Reservas** (`/admin/bookings`) and in the admin court calendar,
   and cancel them there with a tap (this day / this and following), like the **Aulas** page does.
   Requested by the product owner; start after their current round of app testing.
-- Booking with a **guest as a player**: in the booking sheet, pick one of the member's guest passes
-  for that day (or create one there) to fill a player spot. The guest needs no confirmation, the
-  pass is linked to the booking and the club's guest-blocked times apply. Today the player picker
-  lists members only and a pass can only be attached to a booking that already exists.
+
+### Guests as players
+
+- `createBooking` takes `guestPassIds`: the creator's ACTIVE passes for that day, not already in
+  another active booking, at a time open to guests. Members + guests fill the format; with only
+  guests besides the creator the booking is confirmed at once. Passes get `bookingId`;
+  `BookingDetail.guests` and `ScheduleBookingInfo.guests` list them.
+- Booking sheet: "Jogar com convidado" chips and "Novo convidado" (the guest pass sheet nested on
+  top, date fixed); the member picker hides when guests fill every spot. In the iPhone app the
+  keyboard's form bar (‹ › Done) is hidden (@capacitor/keyboard).
 
 ## Known issues
 

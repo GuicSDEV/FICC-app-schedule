@@ -4,6 +4,7 @@ import {
   BookingPlayerStatus,
   BookingStatus,
   CourtStatus,
+  GuestPassStatus,
   MatchStatus,
   Prisma,
   Role,
@@ -18,6 +19,7 @@ import {
   clubToday,
   type CreateBookingInput,
   fromDbDate,
+  guestsAllowedAt,
   isSlotPast,
   type MyBookingsResponse,
   OTHER_PLAYERS_BY_TYPE,
@@ -51,6 +53,11 @@ export function bookingInclude() {
     timeSlot: true,
     players: { include: { user: { select: playerSelect() } }, orderBy: { user: { name: "asc" } } },
     _count: { select: { guestPasses: { where: { status: { not: "CANCELLED" } } } } },
+    guestPasses: {
+      where: { status: { not: "CANCELLED" } },
+      select: { id: true, guestName: true },
+      orderBy: { createdAt: "asc" },
+    },
   } satisfies Prisma.BookingInclude;
 }
 
@@ -82,6 +89,7 @@ export function toBookingDetail(booking: BookingWithRelations, viewerId?: string
     })),
     cancelReason: booking.cancelReason,
     guestCount: booking._count.guestPasses,
+    guests: booking.guestPasses.map((pass) => ({ id: pass.id, name: pass.guestName })),
   };
 }
 
@@ -151,6 +159,32 @@ export class BookingsService {
       }
       const nameOf = (id: string) => players.find((player) => player.id === id)?.name ?? id;
 
+      // Guests fill spots with the creator's own passes for that day, at a time open to guests.
+      const guestPassIds = input.guestPassIds ?? [];
+      if (guestPassIds.length > 0) {
+        const passes = await tx.guestPass.count({
+          where: {
+            id: { in: guestPassIds },
+            hostId: creatorId,
+            status: GuestPassStatus.ACTIVE,
+            visitDate: toDbDate(input.date),
+            // Not already playing in another active booking.
+            OR: [{ bookingId: null }, { booking: { status: { notIn: ACTIVE_STATUSES } } }],
+          },
+        });
+        if (passes !== guestPassIds.length) {
+          throw unprocessable("INVALID_GUESTS", "api.invalidGuestPasses");
+        }
+        if (!guestsAllowedAt(clubSettings(), input.date, slot.startTime)) {
+          throw unprocessable("GUEST_BLOCKED_TIME", {
+            key: "api.guestBlockedTime",
+            params: { time: slot.startTime },
+          });
+        }
+      }
+      // Nobody else to wait for (alone, or only guests besides the creator): confirmed now.
+      const settled = alone || input.playerIds.length === 0;
+
       await this.assertNotSuspended(tx, creatorId, playerIds, now, nameOf);
       await this.assertPlayersFree(tx, playerIds, input.date, input.timeSlotId, nameOf);
       await this.assertBookingLimit(tx, playerIds, now, nameOf);
@@ -179,8 +213,8 @@ export class BookingsService {
           createdById: creatorId,
           // Pending bookings expire unless everyone confirms in time (capped at the slot start).
           // A booking made alone has nobody else to wait for: confirmed now, "expires" at start.
-          ...(alone ? { status: BookingStatus.CONFIRMED, confirmedAt: now } : {}),
-          expiresAt: alone
+          ...(settled ? { status: BookingStatus.CONFIRMED, confirmedAt: now } : {}),
+          expiresAt: settled
             ? startsAt
             : new Date(
                 Math.min(
@@ -202,6 +236,16 @@ export class BookingsService {
       await tx.slotOccupancy.create({
         data: { courtId: court.id, date: created.date, timeSlotId: slot.id, bookingId: created.id },
       });
+      if (guestPassIds.length > 0) {
+        await tx.guestPass.updateMany({
+          where: { id: { in: guestPassIds } },
+          data: { bookingId: created.id },
+        });
+        return tx.booking.findUniqueOrThrow({
+          where: { id: created.id },
+          include: bookingInclude(),
+        });
+      }
       return created;
     }).catch(async (error: unknown) => {
       const taken =

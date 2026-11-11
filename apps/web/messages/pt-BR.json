@@ -329,7 +329,14 @@
     "confirmedAll": "Todos confirmados. Bom jogo!",
     "alternatives": "Ainda livres agora:",
     "alone": "Reservar sem informar os jogadores",
-    "aloneHint": "A quadra fica reservada no seu nome na hora. Você pode adicionar os jogadores depois."
+    "aloneHint": "A quadra fica reservada no seu nome na hora. Você pode adicionar os jogadores depois.",
+    "guests": {
+      "label": "Jogar com convidado",
+      "new": "Novo convidado",
+      "hint": "O convidado ocupa uma vaga de jogador e não precisa confirmar. Ele entra no clube com o QR do convite.",
+      "blocked": "O clube não permite convidados neste horário.",
+      "unnamed": "Convidado"
+    }
   },
   "bookingInfo": {
     "mine": "Sua reserva",
@@ -354,7 +361,8 @@
     "staffCancelConfirm": "Confirmar cancelamento — os jogadores serão avisados",
     "addPlayers": "Adicionar jogadores",
     "invite": "{count, plural, one {Convidar # jogador} other {Convidar # jogadores}}",
-    "playersAdded": "{count, plural, one {Convite enviado} other {Convites enviados}}"
+    "playersAdded": "{count, plural, one {Convite enviado} other {Convites enviados}}",
+    "guest": "Convidado"
   },
   "coachSheet": {
     "title": "Aula do clube",
@@ -381,7 +389,8 @@
     "cancelled": "Cancelada",
     "confirmed": "Confirmada",
     "waiting": "{count, plural, one {Falta 1 confirmar} other {Faltam # confirmar}}",
-    "pendingPlayer": "(aguardando)"
+    "pendingPlayer": "(aguardando)",
+    "guest": "Convidado"
   },
   "calendar": {
     "title": "Quadras",

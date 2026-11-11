@@ -6,6 +6,7 @@ import {
   type CourtSummary,
   type CourtsResponse,
   createBookingSchema,
+  type GuestPassItem,
   OTHER_PLAYERS_BY_TYPE,
   type PlayerSummary,
   type SlotAlternative,
@@ -37,6 +38,7 @@ import { useLastDefined } from "@/lib/use-last-defined";
 import { cn } from "@/lib/utils";
 
 import { BookingConfirmed } from "./booking-confirmed";
+import { GuestPlayers } from "./guest-players";
 import { formatClock } from "./hold-wait-sheet";
 import { FavoriteToggle } from "./favorite-toggle";
 
@@ -81,6 +83,7 @@ export function BookingSheet({
   const client = useQueryClient();
   const [type, setType] = useState<BookingType>("SINGLES");
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
+  const [guests, setGuests] = useState<GuestPassItem[]>([]);
   /** Book without naming the players (members the admin allowed, e.g. a group organizer). */
   const [alone, setAlone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +105,7 @@ export function BookingSheet({
     if (requested) {
       setType(requested.type ?? "SINGLES");
       setPlayers(requested.partners ?? []);
+      setGuests([]);
       setAlone(false);
       setError(null);
       setBooked(null);
@@ -151,7 +155,12 @@ export function BookingSheet({
   }
 
   const mutation = useMutation({
-    mutationFn: (input: { type: BookingType; players: PlayerSummary[]; alone: boolean }) =>
+    mutationFn: (input: {
+      type: BookingType;
+      players: PlayerSummary[];
+      guests: GuestPassItem[];
+      alone: boolean;
+    }) =>
       api.bookings.create({
         courtId: target!.court.id,
         timeSlotId: target!.slot.id,
@@ -159,6 +168,7 @@ export function BookingSheet({
         type: input.type,
         playerIds: input.players.map((player) => player.id),
         ...(input.alone ? { alone: true } : {}),
+        ...(input.guests.length > 0 ? { guestPassIds: input.guests.map((pass) => pass.id) } : {}),
       }),
     onMutate: async (input) => {
       await client.cancelQueries({ queryKey: queryKeys.schedule(target!.date) });
@@ -175,7 +185,8 @@ export function BookingSheet({
           booking: {
             id: "optimistic",
             type: input.type,
-            status: input.alone ? "CONFIRMED" : "PENDING",
+            // Nobody to wait for when alone or only with guests.
+            status: input.alone || input.players.length === 0 ? "CONFIRMED" : "PENDING",
             players: [
               ...me,
               ...input.players.map((player) => ({ user: player, status: "PENDING" as const })),
@@ -213,6 +224,7 @@ export function BookingSheet({
   function changeType(next: BookingType) {
     setType(next);
     setPlayers((current) => current.slice(0, OTHER_PLAYERS_BY_TYPE[next]));
+    setGuests((current) => current.slice(0, OTHER_PLAYERS_BY_TYPE[next]));
     setError(null);
   }
 
@@ -220,6 +232,7 @@ export function BookingSheet({
     if (!target) return;
     const bookAlone = alone && Boolean(user?.canBookAlone);
     const chosen = bookAlone ? [] : players;
+    const chosenGuests = bookAlone ? [] : guests;
     const parsed = createBookingSchema.safeParse({
       courtId: target.court.id,
       timeSlotId: target.slot.id,
@@ -227,16 +240,19 @@ export function BookingSheet({
       type,
       playerIds: chosen.map((player) => player.id),
       ...(bookAlone ? { alone: true } : {}),
+      ...(chosenGuests.length > 0 ? { guestPassIds: chosenGuests.map((pass) => pass.id) } : {}),
     });
     if (!parsed.success) {
       setError(issueMessage(parsed.error.issues[0]));
       return;
     }
     setError(null);
-    mutation.mutate({ type, players: chosen, alone: bookAlone });
+    mutation.mutate({ type, players: chosen, guests: chosenGuests, alone: bookAlone });
   }
 
   const needed = OTHER_PLAYERS_BY_TYPE[type];
+  // Members and guests share the player spots.
+  const missing = needed - players.length - guests.length;
   const surface = target?.court.surface ?? "HARTRU";
 
   return (
@@ -257,8 +273,8 @@ export function BookingSheet({
             onClick={submit}
             disabled={!target}
           >
-            {players.length < needed && !(alone && user?.canBookAlone)
-              ? t("booking.choosePlayers", { count: needed - players.length })
+            {missing > 0 && !(alone && user?.canBookAlone)
+              ? t("booking.choosePlayers", { count: missing })
               : t("booking.submit", {
                   court: target?.court.name ?? "",
                   time: target?.slot.startTime ?? "",
@@ -356,7 +372,8 @@ export function BookingSheet({
               />
             ) : null}
 
-            {alone && user?.canBookAlone ? null : (
+            {/* Hidden once guests fill every spot (untap a guest to pick a member again). */}
+            {(alone && user?.canBookAlone) || needed - guests.length <= 0 ? null : (
               <MemberPicker
                 label={type === "SINGLES" ? t("booking.opponent") : t("booking.partners")}
                 selected={players}
@@ -364,15 +381,27 @@ export function BookingSheet({
                   setPlayers(next);
                   setError(null);
                 }}
-                max={needed}
+                max={needed - guests.length}
                 excludeIds={user ? [user.id] : []}
                 invalid={Boolean(error)}
+              />
+            )}
+            {alone && user?.canBookAlone ? null : (
+              <GuestPlayers
+                date={target.date}
+                startTime={target.slot.startTime}
+                selected={guests}
+                onChange={(next) => {
+                  setGuests(next);
+                  setError(null);
+                }}
+                room={needed - players.length - guests.length}
               />
             )}
             {type === "DOUBLES" && !alone ? (
               <p className="-mt-3 text-small text-muted-foreground">{t("booking.doublesHint")}</p>
             ) : null}
-            {onAskPartner && players.length === 0 && !alone ? (
+            {onAskPartner && players.length === 0 && guests.length === 0 && !alone ? (
               <Button
                 variant="outline"
                 block

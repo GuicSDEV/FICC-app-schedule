@@ -22,6 +22,14 @@ export interface ScheduleLessonInfo {
   note: string | null;
 }
 
+/** A guest playing in a booking (their guest pass). */
+export interface BookingGuestInfo {
+  /** The guest pass id. */
+  id: string;
+  /** Null once the guest's data was anonymized. */
+  name: string | null;
+}
+
 export interface BookingPlayerInfo {
   user: PlayerSummary;
   status: BookingPlayerStatus;
@@ -32,6 +40,8 @@ export interface ScheduleBookingInfo {
   type: BookingType;
   status: BookingStatus;
   players: BookingPlayerInfo[];
+  /** Guests playing in it (absent on an optimistic cell). */
+  guests?: BookingGuestInfo[];
 }
 
 export interface FreezeSummary {

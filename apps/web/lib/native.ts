@@ -69,15 +69,20 @@ export async function nativeStatusBar(theme: "dark" | "light"): Promise<void> {
 }
 
 /**
- * App-wide native wiring: Android back button walks the history (and leaves the app on the first
+ * App-wide native wiring: no form bar above the iPhone keyboard, Android back button walks the history (and leaves the app on the first
  * screen), and links that open the app (tournaments, guest passes) go to their page. Returns a
  * cleanup function.
  */
 export async function startNativeShell(navigate: (path: string) => void): Promise<() => void> {
-  const [{ App }, { SplashScreen }] = await Promise.all([
+  const [{ App }, { SplashScreen }, { Keyboard }] = await Promise.all([
     import("@capacitor/app"),
     import("@capacitor/splash-screen"),
+    import("@capacitor/keyboard"),
   ]);
+  // iPhone: no "‹ › Done" bar above the keyboard (a web form thing, not an app one).
+  if (nativePlatform() === "ios") {
+    await Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => undefined);
+  }
   const handles = await Promise.all([
     App.addListener("backButton", ({ canGoBack }) => {
       if (canGoBack) window.history.back();
