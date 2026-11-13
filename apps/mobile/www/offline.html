@@ -2,11 +2,17 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>FICC Tênis</title>
     <style>
       :root {
         color-scheme: dark;
+        /* An app screen: no double-tap zoom. */
+        touch-action: manipulation;
+        -webkit-text-size-adjust: 100%;
       }
       body {
         margin: 0;
@@ -26,6 +32,9 @@
           Roboto,
           sans-serif;
         text-align: center;
+        overflow-wrap: anywhere;
+        -webkit-user-select: none;
+        user-select: none;
       }
       img {
         width: 96px;
