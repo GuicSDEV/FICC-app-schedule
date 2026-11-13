@@ -13,6 +13,7 @@ import { useSocketEvent } from "@/components/providers/socket-provider";
 import { Button } from "@/components/ui/button";
 import { CourtLines } from "@/components/ui/court-lines";
 import { duration, haptic, spring, transitions } from "@/lib/motion";
+import { playSound } from "@/lib/sounds";
 
 type Title = NotificationPayloads["TOURNAMENT_CHAMPION"] & { key: string };
 
@@ -52,6 +53,7 @@ function ChampionScreen({ title, onClose }: { title: Title; onClose: () => void 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
     haptic([20, 60, 20, 60, 40]);
+    playSound("celebrate");
     const timer = setTimeout(() => !reduce && shower(), reduce ? 0 : duration.slow * 1000);
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

@@ -27,6 +27,7 @@ import { useIssueMessage } from "@/lib/use-issue-message";
 import { useLastDefined } from "@/lib/use-last-defined";
 import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/lib/sounds";
 
 /** What the sheet opens with: the day, and the time and game type when they are already known. */
 export interface PartnerRequestDraft {
@@ -88,6 +89,7 @@ export function PartnerRequestSheet({
       }),
     onSuccess: () => {
       haptic([12, 40, 12]);
+      playSound("success");
       toast.success(t("partners.posted"));
       void client.invalidateQueries({ queryKey: queryKeys.partnerRequests(draft!.day.date) });
       onOpenChange(false);

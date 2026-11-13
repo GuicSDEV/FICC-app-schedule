@@ -25,6 +25,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
 import { useLastDefined } from "@/lib/use-last-defined";
+import { playSound } from "@/lib/sounds";
 
 import { FavoriteToggle } from "./favorite-toggle";
 import { WhatsAppInvite } from "./whatsapp-invite";
@@ -100,6 +101,7 @@ export function BookingInfoSheet({
       ),
     onSuccess: () => {
       haptic([10, 30, 10]);
+      playSound("success");
       toast.success(t("bookingInfo.playersAdded", { count: adding.length }));
       setAdding([]);
       onOpenChange(false);

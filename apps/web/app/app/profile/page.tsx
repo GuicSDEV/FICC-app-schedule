@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { PlayerProfileView } from "@/components/players/player-profile";
 import { DeleteAccount } from "@/components/profile/delete-account";
+import { SoundToggle } from "@/components/profile/sound-toggle";
 import { useLogout, useSession } from "@/components/providers/session-provider";
 import { InstallCard } from "@/components/pwa/install-card";
 import { PushToggle } from "@/components/pwa/push-card";
@@ -36,6 +37,7 @@ export default function ProfilePage() {
                 <InstallCard dismissible={false} />
                 <div className="divide-y divide-border rounded-lg border border-border bg-card">
                   <PushToggle />
+                  <SoundToggle />
                   <Link
                     href="/app/guests"
                     className="flex min-h-14 items-center gap-3 px-4 transition-tokens hover:bg-surface-2"

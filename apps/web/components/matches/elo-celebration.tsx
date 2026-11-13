@@ -16,6 +16,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { duration, ease, enter, haptic, popVariants, spring, transitions } from "@/lib/motion";
 import { formatDelta } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/lib/sounds";
 
 type Result = NotificationPayloads["MATCH_CONFIRMED"];
 
@@ -44,6 +45,7 @@ function Celebration({ result, onClose }: { result: Result; onClose: () => void 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
     haptic(won ? [12, 50, 12, 50, 24] : 12);
+    if (won) playSound("celebrate");
     // Let the screen land, then roll the number and pop the chip.
     const roll = setTimeout(
       () => {

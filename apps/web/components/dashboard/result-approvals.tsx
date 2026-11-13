@@ -14,6 +14,7 @@ import { enter, haptic, listItemVariants } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useFormat } from "@/lib/use-format";
+import { playSound } from "@/lib/sounds";
 
 function sideNames(match: MatchDetail, side: "A" | "B"): string {
   return match.players
@@ -33,6 +34,7 @@ export function ResultApprovals({ matches }: { matches: MatchDetail[] }) {
     mutationFn: (id: string) => api.matches.approve(id),
     onSuccess: () => {
       haptic([12, 40, 12]);
+      playSound("success");
       toast.success(t("approved"), { description: t("approvedDescription") });
     },
     onError: (failure) => toast.error(errorMessage(failure, t("failed"))),

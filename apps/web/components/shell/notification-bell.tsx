@@ -20,6 +20,7 @@ import { type NotificationTone, useNotificationCopy } from "@/lib/notifications"
 import { queryKeys } from "@/lib/query-keys";
 import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/lib/sounds";
 
 const TONE_DOT: Record<NotificationTone, string> = {
   ball: "bg-ball",
@@ -47,6 +48,7 @@ export function NotificationBell() {
     // Elo results get their own celebration screen; everything else gets a toast.
     if (notification.type === "MATCH_CONFIRMED") return;
     const copy = describeNotification(notification);
+    playSound("notify");
     toast(copy.title, {
       description: copy.body,
       action: copy.href ? { label: t("view"), onClick: () => router.push(copy.href!) } : undefined,

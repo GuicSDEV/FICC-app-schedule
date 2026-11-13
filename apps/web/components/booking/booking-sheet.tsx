@@ -36,6 +36,7 @@ import { useFormat } from "@/lib/use-format";
 import { useIssueMessage } from "@/lib/use-issue-message";
 import { useLastDefined } from "@/lib/use-last-defined";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/lib/sounds";
 
 import { BookingConfirmed } from "./booking-confirmed";
 import { GuestPlayers } from "./guest-players";
@@ -212,6 +213,7 @@ export function BookingSheet({
     },
     onSuccess: (booking) => {
       haptic([12, 40, 12]);
+      playSound("success");
       setBooked(booking);
       onBooked(booking);
     },

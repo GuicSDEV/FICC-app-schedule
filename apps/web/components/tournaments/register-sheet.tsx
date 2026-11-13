@@ -29,6 +29,7 @@ import { datesBetween, formatMoney, invalidateTournament } from "@/lib/tournamen
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
 import { useLastDefined } from "@/lib/use-last-defined";
+import { playSound } from "@/lib/sounds";
 
 import { RestrictionsFields } from "./restrictions-fields";
 
@@ -90,6 +91,7 @@ export function RegisterSheet({
     mutationFn: () => api.tournaments.register(tournament.id, category!.id, request),
     onSuccess: (entry: EntrySummary) => {
       haptic([12, 40, 12]);
+      playSound("success");
       toast.success(
         entry.status === "WAITLISTED"
           ? t("waitlisted")

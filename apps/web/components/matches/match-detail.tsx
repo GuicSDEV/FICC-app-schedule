@@ -23,6 +23,7 @@ import { useErrorMessage } from "@/lib/use-error-message";
 import { formatDelta, useFormat } from "@/lib/use-format";
 import { useIssueMessage } from "@/lib/use-issue-message";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/lib/sounds";
 
 import { ScoreRow, scoreboard, STATUS_TONE } from "./match-card";
 
@@ -42,6 +43,7 @@ function useMatchActions(match: MatchDetail) {
     mutationFn: () => api.matches.approve(match.id),
     onSuccess: (updated) => {
       haptic([12, 40, 12]);
+      playSound("success");
       settle(updated);
     },
     onError: (failure) => {

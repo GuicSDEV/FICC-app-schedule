@@ -8,6 +8,10 @@ import { useMemo, useState } from "react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { type BookingInfoTarget, BookingInfoSheet } from "@/components/booking/booking-info-sheet";
 import {
+  type LessonActionTarget,
+  LessonActionsSheet,
+} from "@/components/lessons/lesson-actions-sheet";
+import {
   CalendarLegend,
   CourtCalendar,
   CourtCalendarSkeleton,
@@ -15,12 +19,16 @@ import {
 import { DayStrip } from "@/components/calendar/day-strip";
 import { DayPlanBanner } from "@/components/operations/day-plan-banner";
 import { useClub } from "@/components/providers/club-provider";
+import { useSession } from "@/components/providers/session-provider";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { useNow } from "@/lib/use-now";
 
-/** Staff view of every booking: cancel one, or mark a player who did not show up. */
+/**
+ * Staff view of the courts: cancel a booking or mark a player who did not show up; tap a coach's
+ * lesson to cancel or change it (staff who manage lessons).
+ */
 export default function AdminBookingsPage() {
   const t = useTranslations("adminBookings");
   const club = useClub();
@@ -36,6 +44,14 @@ export default function AdminBookingsPage() {
   const [chosen, setChosen] = useState<string | null>(null);
   const date = chosen ?? today ?? "";
   const [target, setTarget] = useState<BookingInfoTarget | null>(null);
+  const [lessonTarget, setLessonTarget] = useState<LessonActionTarget | null>(null);
+  const { user } = useSession();
+  const manageLessons = user?.permissions.includes("LESSONS_MANAGE") ?? false;
+  const coaches = useQuery({
+    queryKey: queryKeys.admin.coaches,
+    queryFn: api.admin.coaches,
+    enabled: manageLessons,
+  });
   const schedule = useQuery({
     queryKey: queryKeys.schedule(date),
     queryFn: () => api.schedule(date),
@@ -46,7 +62,21 @@ export default function AdminBookingsPage() {
     const day = schedule.data;
     const court = day?.courts.find((entry) => entry.id === cell.courtId);
     const slot = day?.slots.find((entry) => entry.id === cell.timeSlotId);
-    if (!court || !slot || cell.state !== "booking" || !cell.booking) return;
+    if (!court || !slot) return;
+    if (cell.state === "lesson" && cell.lesson && manageLessons && !cell.past) {
+      setLessonTarget({
+        id: cell.lesson.id,
+        seriesId: cell.lesson.seriesId,
+        date: cell.date,
+        court,
+        slot,
+        coach: cell.lesson.coach,
+        studentNames: cell.lesson.studentNames,
+        note: cell.lesson.note,
+      });
+      return;
+    }
+    if (cell.state !== "booking" || !cell.booking) return;
     setTarget({
       date: cell.date,
       court,
@@ -84,6 +114,15 @@ export default function AdminBookingsPage() {
         <CalendarLegend />
       </div>
       <BookingInfoSheet target={target} onOpenChange={(open) => !open && setTarget(null)} staff />
+      <LessonActionsSheet
+        target={lessonTarget}
+        onOpenChange={(open) => !open && setLessonTarget(null)}
+        mode="admin"
+        courts={schedule.data?.courts ?? []}
+        slots={schedule.data?.slots ?? []}
+        coaches={coaches.data}
+        minDate={today ?? undefined}
+      />
     </>
   );
 }

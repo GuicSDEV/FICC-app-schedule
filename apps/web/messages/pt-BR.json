@@ -748,7 +748,9 @@
     "guests": "Meus convidados",
     "theme": "Tema",
     "privacy": "Privacidade",
-    "terms": "Termos de uso"
+    "terms": "Termos de uso",
+    "sounds": "Sons do app",
+    "soundsHint": "Um som curto ao reservar, lançar resultados e receber avisos."
   },
   "lessons": {
     "newTitle": "Nova aula",

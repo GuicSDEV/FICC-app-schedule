@@ -26,6 +26,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 import { enter, fadeVariants, haptic, tap } from "@/lib/motion";
 import { queryKeys } from "@/lib/query-keys";
+import { playSound } from "@/lib/sounds";
 import { useErrorMessage } from "@/lib/use-error-message";
 import { useIssueMessage } from "@/lib/use-issue-message";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ export function GuestPassSheet({
     mutationFn: api.guests.create,
     onSuccess: (pass) => {
       haptic([12, 40, 12]);
+      playSound("success");
       void client.invalidateQueries({ queryKey: queryKeys.guestPasses });
       if (onCreated) {
         onCreated(pass);
